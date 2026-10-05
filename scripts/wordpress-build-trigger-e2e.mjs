@@ -54,7 +54,19 @@ async function findCaptchaInput() {
   }
 
   const candidates = page.locator('#loginform input:visible:not(#user_login):not(#user_pass):not(#wp-submit):not([type="hidden"]):not([type="checkbox"]):not([type="submit"])');
-  return (await candidates.count()) === 1 ? candidates.first() : null;
+  const count = await candidates.count();
+  if (count === 1) return candidates.first();
+
+  if (count > 1) {
+    for (let index = 0; index < count; index += 1) {
+      const candidate = candidates.nth(index);
+      const type = (await candidate.getAttribute('type') || '').toLowerCase();
+      const autocomplete = (await candidate.getAttribute('autocomplete') || '').toLowerCase();
+      if (type === 'number' || autocomplete === 'off') return candidate;
+    }
+  }
+
+  return null;
 }
 
 async function login() {
@@ -111,14 +123,19 @@ try {
       body: body.toString(),
     });
 
-    return {
-      status: response.status,
-      payload: await response.json().catch(async () => ({ raw: await response.text() })),
-    };
+    const raw = await response.text();
+    let payload;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      payload = { raw };
+    }
+
+    return { status: response.status, payload };
   });
 
   if (result.status !== 200 || result.payload?.success !== true) {
-    const message = result.payload?.data?.message || JSON.stringify(result.payload);
+    const message = result.payload?.data?.message || result.payload?.raw || JSON.stringify(result.payload);
     throw new Error(`Build Website trigger failed (HTTP ${result.status}): ${message}`);
   }
 

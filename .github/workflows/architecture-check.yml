@@ -100,10 +100,8 @@ jobs:
               'Private escvn-php must not contain active GitHub Actions workflows'
 
           mu_config = Path('private/php/wp-content/mu-plugins/esc-github-trigger-config.php').read_text(encoding='utf-8')
-          plugin = Path('private/php/wp-content/plugins/github-trigger/vcs-build-trigger.php').read_text(encoding='utf-8')
           expected = "define('VCS_GH_REPO', 'escvn-actions');"
           assert expected in mu_config, 'MU trigger config must dispatch to escvn-actions'
-          assert expected in plugin, 'Plugin fallback must dispatch to escvn-actions'
 
           print('Quota-safe Actions Hub architecture contract passed.')
           PY

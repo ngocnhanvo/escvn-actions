@@ -1,0 +1,4 @@
+source_repo=ngocnhanvo/escvn-astro
+source_branch=github
+source_sha=cc12f70312c1e4253b39ae4ea87efdd832bec949
+reason=CI architecture migration verification

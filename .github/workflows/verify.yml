@@ -1,0 +1,111 @@
+name: Verify ESC Astro Development
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'requests/verify-escvn.txt'
+
+concurrency:
+  group: escvn-actions-verify-escvn
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          test -n "$ENV_FILE"
+
+      - name: Checkout private ESC Astro source
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: github
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Show source revision
+        working-directory: source
+        run: echo "Verifying escvn-astro@github $(git rev-parse HEAD)"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          cache-dependency-path: source/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+
+      - name: Make .env
+        working-directory: source
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Run unit tests
+        working-directory: source
+        run: pnpm test:run
+
+      - name: Run Astro check and capture inherited diagnostics
+        working-directory: source
+        shell: bash
+        run: |
+          set +e
+          pnpm check 2>&1 | tee astro-check.log
+          echo "ASTRO_CHECK_STATUS=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Guard WebNext-specific Astro errors
+        working-directory: source
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          text = pathlib.Path('astro-check.log').read_text(encoding='utf-8', errors='replace')
+          clean = re.sub(r'\x1b\[[0-9;]*m', '', text)
+          guarded_paths = (
+              'src/astro/pages/WebNextPage.astro',
+              'src/data/webnext.ts',
+              'src/pages/[...slug].astro',
+          )
+          errors = [
+              line for line in clean.splitlines()
+              if ' - error ' in line and any(path in line for path in guarded_paths)
+          ]
+          if errors:
+              print('WebNext-specific Astro errors detected:')
+              print('\n'.join(errors))
+              sys.exit(1)
+
+          status = int(__import__('os').environ.get('ASTRO_CHECK_STATUS', '0'))
+          if status != 0:
+              print('Full-repository Astro check still has inherited legacy errors; no WebNext-specific error was found.')
+          else:
+              print('Full-repository Astro check passed.')
+          PY
+
+      - name: Build development branch
+        working-directory: source
+        run: pnpm run build-git

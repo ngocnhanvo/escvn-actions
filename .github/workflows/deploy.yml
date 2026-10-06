@@ -102,7 +102,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./source/upload/
-          server-dir: /
+          server-dir: /domains/esc.vn/public_html/
           timeout: 600000
           security: "loose"
           dangerous-clean-slate: false

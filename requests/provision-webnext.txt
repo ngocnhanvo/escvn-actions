@@ -1,2 +1,2 @@
-Retry WebNext provisioning while preserving all TablePress editor insertions.
-Backend source commit: 6b44ce44bb56e242ad7f999226e07926a8923ad9
+Retry WebNext provisioning using TablePress editor-tool URL filtering per table.
+Backend source commit: 94848ad3fab5eefc45f0c3c80958613ea38d46df

@@ -1,2 +1,2 @@
-Inspect raw WebNext TablePress rows/options to diagnose missing first data row.
-Workflow diagnostics: 3a4b979820fd47fd3fb6526f509e1bb7f4d508ca
+Compare raw WebNext TablePress fields/items/settings to diagnose missing first data row.
+Workflow diagnostics: 5ad021e7fc318e1a1a9f153d03641fc312e06581

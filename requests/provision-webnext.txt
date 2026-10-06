@@ -1,2 +1,2 @@
-Retry WebNext TablePress provisioning after fixing template-string syntax.
-Backend source commit: 72e2a0c4d99848b6f16ff9482f80d04b9ed31663
+Retry WebNext provisioning with Classic Editor/TablePress tool targeting fix.
+Backend source commit: d0c17de06b4321b2acc643329041621a80bec990

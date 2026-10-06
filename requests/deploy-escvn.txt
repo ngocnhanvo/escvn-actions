@@ -1,3 +1,3 @@
-Deploy WordPress-ordered WebNext TablePress rendering to production.
-Astro master merge commit: 8301d1968efa7f4027d9ebc8ed6e876e2f487113
-WordPress provision run: 37406697744
+Redeploy WebNext with fresh WordPress page and TablePress data.
+Reason: webnext_05 was missing from production because cached CMS data could be stale.
+Workflow fix: f9eab537d2836809b53078c12406f8df1e8e3e47

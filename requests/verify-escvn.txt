@@ -1,2 +1,2 @@
-Verify WebNext TablePress frontend refactor.
-Astro github commit: 570d4917003d804bfde84b54526d8153d617116d
+Retry WebNext TablePress frontend verification after updating content contract test.
+Astro github commit: 3b8194558b07f9a08cad3b26dc659137e5c628b4

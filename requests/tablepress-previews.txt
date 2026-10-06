@@ -1,4 +1,5 @@
-Generate missing production TablePress previews for WebNext after successful deploy.
+Retry missing production TablePress previews for WebNext after resolving shared-page ambiguity.
 Production Astro master: 8301d1968efa7f4027d9ebc8ed6e876e2f487113
+PHP preview tool: e1a772b2e46191eb44c960379ef7a5d02b08c349
 Deploy run: 37407134100
 Shortcodes: webnext_00, webnext_01, webnext_02, webnext_03, webnext_04, webnext_05

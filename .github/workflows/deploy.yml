@@ -93,40 +93,41 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
 
-          const dataPath = 'dist/client/data/page-thiet-ke-website-headless-wordpress-astro.json';
-          const htmlPath = 'dist/client/thiet-ke-website-headless-wordpress-astro/index.html';
-          const expected = Array.from({ length: 6 }, (_, index) => `webnext_0${index}`);
+          const page = JSON.parse(fs.readFileSync(
+            'dist/client/data/page-thiet-ke-website-headless-wordpress-astro.json',
+            'utf8',
+          ));
+          const html = fs.readFileSync(
+            'dist/client/thiet-ke-website-headless-wordpress-astro/index.html',
+            'utf8',
+          );
+          const expectedCounts = {
+            webnext_00: 8,
+            webnext_01: 6,
+            webnext_02: 7,
+            webnext_03: 2,
+            webnext_04: 8,
+            webnext_05: 1,
+          };
 
-          const page = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-          const blocks = Array.isArray(page.contents) ? page.contents : [];
-          console.log('WordPress content:', String(page.content || '').replace(/\s+/g, ' ').trim());
-          console.log('TablePress blocks:', blocks
-            .filter((block) => block?.type === 'shortcode')
-            .map((block) => ({
-              shortcode: block.shortcode,
-              items: Array.isArray(block?.data?.items) ? block.data.items.length : null,
-            })));
+          const blocks = new Map(
+            (Array.isArray(page.contents) ? page.contents : [])
+              .filter((block) => block?.type === 'shortcode' && block?.shortcode)
+              .map((block) => [String(block.shortcode).toLowerCase(), block]),
+          );
 
-          const rawTables = JSON.parse(fs.readFileSync('.cache/tablepress.json', 'utf8'));
-          for (const id of expected) {
-            const table = rawTables.find((item) => String(item?.id || '').toLowerCase() === id);
-            console.log('Raw TablePress', id, table ? {
-              fields: table.fields,
-              items: Array.isArray(table.items) ? table.items.slice(0, 3) : table.items,
-              itemCount: Array.isArray(table.items) ? table.items.length : null,
-              settings: table.settings,
-              meta: table.meta,
-              keys: Object.keys(table),
-            } : null);
+          for (const [id, expectedCount] of Object.entries(expectedCounts)) {
+            const block = blocks.get(id);
+            const count = Array.isArray(block?.data?.items) ? block.data.items.length : -1;
+            if (count !== expectedCount) {
+              throw new Error(`${id}: expected ${expectedCount} item(s), got ${count}.`);
+            }
+            if (!html.includes(`data-tablepress-preview="${id}"`)) {
+              throw new Error(`${id}: frontend preview marker is missing from generated HTML.`);
+            }
           }
 
-          const html = fs.readFileSync(htmlPath, 'utf8');
-          const missing = expected.filter((id) => !html.includes(`data-tablepress-preview="${id}"`));
-          if (missing.length) {
-            console.error('Missing WebNext TablePress frontend sections:', missing.join(', '));
-            process.exit(1);
-          }
-          console.log('Verified WebNext TablePress frontend sections:', expected.join(', '));
+          console.log('Verified WebNext TablePress data and frontend markers.');
           NODE
 
       - name: Zip Build Folder

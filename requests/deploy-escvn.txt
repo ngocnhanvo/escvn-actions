@@ -1,2 +1,2 @@
-Inspect generated WebNext page data after Astro build and redeploy when all TablePress sections are present.
-Workflow diagnostics: 209124d1b7166c0623e5bc76d3f7316f8d6dd95d
+Inspect raw WebNext TablePress rows/options to diagnose missing first data row.
+Workflow diagnostics: 3a4b979820fd47fd3fb6526f509e1bb7f4d508ca

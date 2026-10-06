@@ -111,9 +111,11 @@ jobs:
           for (const id of expected) {
             const table = rawTables.find((item) => String(item?.id || '').toLowerCase() === id);
             console.log('Raw TablePress', id, table ? {
-              options: table.options,
-              dataRows: Array.isArray(table.data) ? table.data.length : null,
-              firstRows: Array.isArray(table.data) ? table.data.slice(0, 3) : null,
+              fields: table.fields,
+              items: Array.isArray(table.items) ? table.items.slice(0, 3) : table.items,
+              itemCount: Array.isArray(table.items) ? table.items.length : null,
+              settings: table.settings,
+              meta: table.meta,
               keys: Object.keys(table),
             } : null);
           }

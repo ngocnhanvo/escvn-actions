@@ -57,13 +57,15 @@ jobs:
           verify_path = root / '.github/workflows/verify.yml'
           deploy_path = root / '.github/workflows/deploy.yml'
           provision_path = root / '.github/workflows/provision-webnext.yml'
+          preview_path = root / '.github/workflows/tablepress-previews.yml'
 
-          for path in (verify_path, deploy_path, provision_path):
+          for path in (verify_path, deploy_path, provision_path, preview_path):
               assert path.is_file(), f'Missing Hub workflow: {path}'
 
           verify = verify_path.read_text(encoding='utf-8')
           deploy = deploy_path.read_text(encoding='utf-8')
           provision = provision_path.read_text(encoding='utf-8')
+          preview = preview_path.read_text(encoding='utf-8')
 
           assert 'repository: ngocnhanvo/escvn-astro' in verify
           assert 'ref: github' in verify
@@ -92,6 +94,13 @@ jobs:
           assert 'WP_ADMIN_URL' in provision
           assert 'WP_ADMIN_USERNAME' in provision
           assert 'WP_ADMIN_PASSWORD' in provision
+
+          assert 'automation/tablepress/previews.mjs' in preview
+          assert 'TABLEPRESS_PREVIEW_MODE' in preview
+          assert 'TABLEPRESS_SHORTCODES' in preview
+          assert 'TABLEPRESS_FORCE' in preview
+          assert 'tablepress-previews' in preview
+          assert Path('private/php/automation/tablepress/previews.mjs').is_file(), 'Missing reusable TablePress preview tool'
 
           astro_workflows = Path('private/astro/.github/workflows')
           assert not astro_workflows.exists() or not list(astro_workflows.glob('*.yml')), \

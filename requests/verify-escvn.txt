@@ -1,4 +1,2 @@
-source_repo=ngocnhanvo/escvn-astro
-source_branch=github
-source_sha=cc12f70312c1e4253b39ae4ea87efdd832bec949
-reason=CI architecture migration verification rerun after hosted-runner recovery
+Verify WebNext TablePress frontend refactor.
+Astro github commit: 570d4917003d804bfde84b54526d8153d617116d

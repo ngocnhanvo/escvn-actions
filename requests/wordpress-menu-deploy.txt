@@ -2,6 +2,6 @@ Deploy ESC WordPress menu runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=c8501636697a8ca6f4ccee5768bdd6a4835355b7
+source_sha=b78f509e38db0e27020637db8a3d99c89a2914c8
 requested_at=2026-10-07
-reason=show-page-titles-in-menu-rows
+reason=add-expand-collapse-controls

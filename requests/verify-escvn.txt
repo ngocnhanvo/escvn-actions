@@ -1,5 +1,5 @@
 Verify ESC Astro data-driven URL routing
 source_branch: github
-source_sha: 9cd148b64ac4fc3266c8ab5eb63f82319412050b
-scope: routing manager parity, redirect matcher, cache, build
+source_sha: ff31d21ce28fdbf6203d34b15dfbe18839f4d6fe
+scope: routing manager parity, redirect matcher, rollout-safe cache, build
 requested_at: 2026-10-07

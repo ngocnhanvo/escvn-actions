@@ -1,2 +1,3 @@
-Compare raw WebNext TablePress fields/items/settings to diagnose missing first data row.
-Workflow diagnostics: 5ad021e7fc318e1a1a9f153d03641fc312e06581
+Deploy corrected WebNext TablePress schemas after successful WordPress reprovision.
+PHP commit: df18bec9541a38248e9fc14edfe6a8bcd6537e15
+Provision run: 37410976680

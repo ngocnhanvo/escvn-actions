@@ -85,6 +85,37 @@ jobs:
           cacheTablePress: "false"
         run: pnpm run build-git
 
+      - name: Validate WebNext TablePress build data
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const dataPath = 'public/data/page-thiet-ke-website-headless-wordpress-astro.json';
+          const htmlPath = 'dist/client/thiet-ke-website-headless-wordpress-astro/index.html';
+          const expected = Array.from({ length: 6 }, (_, index) => `webnext_0${index}`);
+
+          const page = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+          const blocks = Array.isArray(page.contents) ? page.contents : [];
+          console.log('WordPress content:', String(page.content || '').replace(/\s+/g, ' ').trim());
+          console.log('TablePress blocks:', blocks
+            .filter((block) => block?.type === 'shortcode')
+            .map((block) => ({
+              shortcode: block.shortcode,
+              items: Array.isArray(block?.data?.items) ? block.data.items.length : null,
+            })));
+
+          const html = fs.readFileSync(htmlPath, 'utf8');
+          const missing = expected.filter((id) => !html.includes(`data-tablepress-preview="${id}"`));
+          if (missing.length) {
+            console.error('Missing WebNext TablePress frontend sections:', missing.join(', '));
+            process.exit(1);
+          }
+          console.log('Verified WebNext TablePress frontend sections:', expected.join(', '));
+          NODE
+
       - name: Zip Build Folder
         working-directory: source
         shell: bash

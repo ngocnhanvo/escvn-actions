@@ -62,6 +62,8 @@ jobs:
         run: |
           set -euo pipefail
           php -l wp-content/themes/vibe-code-theme/inc/tools/menu.php
+          php -l wp-content/themes/vibe-code-theme/inc/tools/disable.php
+          php tools/menu-admin-entry.test.php
           php -r '
             $path = "wp-content/themes/vibe-code-theme/inc/tools/menu-seed.json";
             $data = json_decode(file_get_contents($path), true);
@@ -139,16 +141,19 @@ jobs:
           cd "$REMOTE_TOOLS"
           put "source/wp-content/themes/vibe-code-theme/inc/tools/menu.php" -o "menu.php"
           put "source/wp-content/themes/vibe-code-theme/inc/tools/menu-seed.json" -o "menu-seed.json"
+          put "source/wp-content/themes/vibe-code-theme/inc/tools/disable.php" -o "disable.php"
 
           get "menu.php" -o /tmp/menu.remote.php
           get "menu-seed.json" -o /tmp/menu-seed.remote.json
+          get "disable.php" -o /tmp/disable.remote.php
 
           bye
           LFTP
 
           cmp source/wp-content/themes/vibe-code-theme/inc/tools/menu.php /tmp/menu.remote.php
           cmp source/wp-content/themes/vibe-code-theme/inc/tools/menu-seed.json /tmp/menu-seed.remote.json
-          rm -f /tmp/menu.remote.php /tmp/menu-seed.remote.json
+          cmp source/wp-content/themes/vibe-code-theme/inc/tools/disable.php /tmp/disable.remote.php
+          rm -f /tmp/menu.remote.php /tmp/menu-seed.remote.json /tmp/disable.remote.php
           echo "ESC WordPress menu runtime deployed and byte-verified."
 
       - name: Smoke test Menu API

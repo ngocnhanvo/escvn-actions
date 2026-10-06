@@ -116,3 +116,10 @@ jobs:
 
           print('Quota-safe Actions Hub architecture contract passed.')
           PY
+
+      - name: Validate automation syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check private/php/automation/webnext/provision.mjs
+          node --check private/php/automation/tablepress/previews.mjs

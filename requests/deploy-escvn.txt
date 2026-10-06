@@ -1,2 +1,2 @@
-Diagnose and redeploy WebNext TablePress build output after fresh CMS fetch.
-Workflow diagnostics: 2039249abc4031805abb698d1834e982196148c0
+Inspect generated WebNext page data after Astro build and redeploy when all TablePress sections are present.
+Workflow diagnostics: 209124d1b7166c0623e5bc76d3f7316f8d6dd95d

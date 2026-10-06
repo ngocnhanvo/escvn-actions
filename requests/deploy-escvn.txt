@@ -1,3 +1,4 @@
-Deploy corrected WebNext TablePress schemas after successful WordPress reprovision.
-PHP commit: df18bec9541a38248e9fc14edfe6a8bcd6537e15
-Provision run: 37410976680
+Deploy ESC Astro production after promoting github to master.
+Astro branch: master
+Astro commit: 8a19ed5f8552924b6827c575056846d976860812
+Reason: user approved production build and FTP deploy.

@@ -1,6 +1,6 @@
 Deploy ESC WordPress menu runtime
-phase=red-regression
+phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=7efb4bf19355f8bc70ef5c2cb5fd7a1f88cfdbf4
+source_sha=4408d9848e39233603c7da8e500d57964bc4b6ec
 requested_at=2026-10-06

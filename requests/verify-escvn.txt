@@ -1,2 +1,5 @@
-Verify WordPress-ordered WebNext TablePress rendering and self-contained section components.
-Astro github commit: 97e5ded06fc9837b29fe98d845aee34eb622eeca
+Verify ESC Astro data-driven URL routing
+source_branch: github
+source_sha: 9cd148b64ac4fc3266c8ab5eb63f82319412050b
+scope: routing manager parity, redirect matcher, cache, build
+requested_at: 2026-10-07

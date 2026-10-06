@@ -2,6 +2,6 @@ Deploy ESC WordPress menu runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=b78f509e38db0e27020637db8a3d99c89a2914c8
+source_sha=03181da03e5a1864fe8fd3f1d795135c1e9369d6
 requested_at=2026-10-07
-reason=add-expand-collapse-controls
+reason=fix-menu-expand-collapse-tree-visibility

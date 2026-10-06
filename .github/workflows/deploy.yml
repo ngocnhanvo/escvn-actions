@@ -93,7 +93,7 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
 
-          const dataPath = 'public/data/page-thiet-ke-website-headless-wordpress-astro.json';
+          const dataPath = 'dist/client/data/page-thiet-ke-website-headless-wordpress-astro.json';
           const htmlPath = 'dist/client/thiet-ke-website-headless-wordpress-astro/index.html';
           const expected = Array.from({ length: 6 }, (_, index) => `webnext_0${index}`);
 

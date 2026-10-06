@@ -1,2 +1,2 @@
-Retry WebNext provisioning using TablePress editor-tool URL filtering per table.
-Backend source commit: 94848ad3fab5eefc45f0c3c80958613ea38d46df
+Refresh WebNext WordPress page after removing the unused editor intro.
+PHP commit: 927c901b49d267f1c8c42281de78b39b6f88434d

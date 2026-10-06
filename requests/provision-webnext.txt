@@ -1,2 +1,2 @@
-Refresh WebNext WordPress page after preserving editor-controlled TablePress order and removing the obsolete intro.
-PHP commit: 9de83772acc0c8a50d5dc52295f040820af07145
+Refresh WebNext TablePress schemas so row 1 is machine keys, row 2 is human labels, and all following rows remain real data.
+PHP commit: df18bec9541a38248e9fc14edfe6a8bcd6537e15

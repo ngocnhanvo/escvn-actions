@@ -2,6 +2,6 @@ Deploy ESC WordPress menu runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=71744e52711ab9aab210446c7acfe49ff8ae9d5a
+source_sha=1c76eb9bf6d9368f74bed5678f1f900ea9b22334
 requested_at=2026-10-06
-reason=expose-mega-column-controls-in-menu-rows
+reason=group-mega-menu-children-by-column

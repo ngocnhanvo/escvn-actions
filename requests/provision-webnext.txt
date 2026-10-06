@@ -1,2 +1,2 @@
-Retry WebNext provisioning with Classic Editor/TablePress tool targeting fix.
-Backend source commit: d0c17de06b4321b2acc643329041621a80bec990
+Retry WebNext provisioning while preserving all TablePress editor insertions.
+Backend source commit: 6b44ce44bb56e242ad7f999226e07926a8923ad9

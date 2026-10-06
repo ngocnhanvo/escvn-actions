@@ -1,0 +1,5 @@
+Deploy ESC WordPress menu runtime
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=27efc6dce5dfc5f9c84b0bb3ea1cd33225c92a43
+requested_at=2026-10-06

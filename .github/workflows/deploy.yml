@@ -80,6 +80,9 @@ jobs:
 
       - name: Build Project
         working-directory: source
+        env:
+          cachePage: "false"
+          cacheTablePress: "false"
         run: pnpm run build-git
 
       - name: Zip Build Folder
@@ -131,6 +134,12 @@ jobs:
               && grep -Fq "ESC WebNext" "$body_file" \
               && grep -Fq "WordPress Headless" "$body_file" \
               && grep -Fq "Astro" "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_00"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_01"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_02"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_03"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_04"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_05"' "$body_file" \
               && grep -Fq "NHẬN TƯ VẤN" "$body_file"; then
               echo "WebNext production smoke test passed (HTTP 200)."
               exit 0

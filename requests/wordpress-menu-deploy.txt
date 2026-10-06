@@ -2,5 +2,6 @@ Deploy ESC WordPress menu runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=4408d9848e39233603c7da8e500d57964bc4b6ec
+source_sha=63573630459495c04337b70d0db6e2f814c05911
 requested_at=2026-10-06
+reason=lazy-load-menu-editor-reference-choices

@@ -1,3 +1,2 @@
-Redeploy WebNext with fresh WordPress page and TablePress data.
-Reason: webnext_05 was missing from production because cached CMS data could be stale.
-Workflow fix: f9eab537d2836809b53078c12406f8df1e8e3e47
+Diagnose and redeploy WebNext TablePress build output after fresh CMS fetch.
+Workflow diagnostics: 2039249abc4031805abb698d1834e982196148c0

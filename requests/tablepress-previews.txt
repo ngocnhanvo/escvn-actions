@@ -1,5 +1,4 @@
-Retry missing production TablePress previews for WebNext after reopening Media Library before Folders assignment.
-Production Astro master: 8301d1968efa7f4027d9ebc8ed6e876e2f487113
-PHP preview tool: 4b24c93b7cc89fffbd240520064cf01b29a0a02e
-Deploy run: 37407134100
-Shortcodes: webnext_00, webnext_01, webnext_02, webnext_03, webnext_04, webnext_05
+Generate only missing WebNext TablePress previews after corrected production data deploy.
+Deploy run: 37411154365
+Shortcodes: webnext_00,webnext_01,webnext_02,webnext_03,webnext_04,webnext_05
+Mode: missing; force: false

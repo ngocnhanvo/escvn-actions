@@ -1,2 +1,2 @@
-Retry WebNext TablePress frontend verification after updating content contract test.
-Astro github commit: 3b8194558b07f9a08cad3b26dc659137e5c628b4
+Verify WordPress-ordered WebNext TablePress rendering and self-contained section components.
+Astro github commit: 97e5ded06fc9837b29fe98d845aee34eb622eeca

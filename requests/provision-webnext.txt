@@ -1,2 +1,2 @@
-Refresh WebNext WordPress page after removing the unused editor intro.
-PHP commit: 927c901b49d267f1c8c42281de78b39b6f88434d
+Refresh WebNext WordPress page after preserving editor-controlled TablePress order and removing the obsolete intro.
+PHP commit: 9de83772acc0c8a50d5dc52295f040820af07145

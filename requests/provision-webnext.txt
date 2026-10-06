@@ -1,1 +1,2 @@
-Provision WebNext TablePress content and reinsert all WebNext shortcodes through the WordPress editor tool.
+Retry WebNext TablePress provisioning after fixing template-string syntax.
+Backend source commit: 72e2a0c4d99848b6f16ff9482f80d04b9ed31663

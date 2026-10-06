@@ -1,0 +1,1 @@
+Provision WebNext TablePress content and reinsert all WebNext shortcodes through the WordPress editor tool.

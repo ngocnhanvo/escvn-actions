@@ -2,8 +2,9 @@ Deploy ESC WordPress URL routing runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=981810df147b97890ad69ee71b04397e5d7e0c8b
+source_sha=52fdd8096ec439cb2da5383a3f43c6b3aebfdfd6
 requested_at=2026-10-07
 reason=deploy-data-driven-url-routing-backend-before-astro-production
 verification=result-marker-v1
 retry=ftp-existing-directory-fix
+retry=rest-fallback-route

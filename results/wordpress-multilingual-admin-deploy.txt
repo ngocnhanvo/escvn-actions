@@ -1,0 +1,9 @@
+workflow=Deploy ESC Multilingual Admin
+status=success
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=9c245258ff0b2547013c317a12a2ebeb5a759766
+run_id=37569167118
+run_attempt=1
+run_url=https://github.com/ngocnhanvo/escvn-actions/actions/runs/37569167118
+completed_at=2026-10-07T03:58:10Z

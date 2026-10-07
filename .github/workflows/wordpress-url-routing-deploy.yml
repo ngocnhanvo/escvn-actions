@@ -166,10 +166,12 @@ jobs:
           set net:reconnect-interval-base 3
           set ssl:verify-certificate no
 
+          set cmd:fail-exit no
           mkdir -p "$REMOTE_WP_ROOT/wp-content/mu-plugins"
           mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info"
           mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories"
           mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/redirects"
+          set cmd:fail-exit yes
 
           put "source/wp-content/mu-plugins/disable-plugins-for-api.php" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/disable-plugins-for-api.php"
           put "source/wp-content/mu-plugins/esc-url-routing-manager.php" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-url-routing-manager.php"

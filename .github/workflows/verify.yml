@@ -109,3 +109,95 @@ jobs:
       - name: Build development branch
         working-directory: source
         run: pnpm run build-git
+
+
+      - name: Verify URL routing cache behavior
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {
+            compileRedirectRules,
+            createRedirectMatcher,
+          } from './scripts/redirect-rules.mjs';
+
+          const redirects = JSON.parse(
+            fs.readFileSync('.cache/redirects.json', 'utf8'),
+          );
+          const cms = JSON.parse(
+            fs.readFileSync('dist/client/data/cms-common.json', 'utf8'),
+          );
+
+          if (!Array.isArray(redirects) || redirects.length === 0) {
+            throw new Error('Routing cache is empty after WordPress REST is live.');
+          }
+
+          const pages = Array.isArray(cms.pages) ? cms.pages : [];
+          const knbPages = pages.filter((page) => (
+            page &&
+            String(page.key || '').trim() === 'ssr-knb' &&
+            String(page.slug || '').trim()
+          ));
+
+          if (knbPages.length === 0) {
+            throw new Error('No published page with key=ssr-knb exists in cms-common.json.');
+          }
+
+          const matcher = createRedirectMatcher(
+            compileRedirectRules(redirects),
+            {
+              pages: pages
+                .filter((page) => page?.slug && page?.key)
+                .map((page) => ({
+                  slug: String(page.slug),
+                  key: String(page.key),
+                })),
+              productCategories: Array.isArray(cms.productCategories)
+                ? cms.productCategories
+                : [],
+            },
+          );
+
+          for (const page of knbPages) {
+            const slug = String(page.slug).replace(/^\/+|\/+$/g, '');
+            const result = matcher('/' + slug, '');
+
+            if (
+              !result ||
+              String(result.type).toLowerCase() !== 'rewrite' ||
+              result.to !== '/ssr/posts/' + slug + '/null'
+            ) {
+              throw new Error(
+                'Knowledge-base root route failed for /' + slug +
+                ': ' + JSON.stringify(result),
+              );
+            }
+
+            console.log(
+              'Knowledge-base root route passed:',
+              '/' + slug,
+              '->',
+              result.to,
+            );
+          }
+
+          const legacy = matcher('/support-esc/bai-viet-thu-nghiem', '');
+          if (
+            !legacy ||
+            Number(legacy.type) !== 301 ||
+            legacy.to !== '/bai-viet-thu-nghiem'
+          ) {
+            throw new Error(
+              'Legacy /support-esc/<slug> redirect failed: ' +
+              JSON.stringify(legacy),
+            );
+          }
+
+          console.log(
+            'Legacy support-esc redirect passed:',
+            '/support-esc/bai-viet-thu-nghiem -> /bai-viet-thu-nghiem',
+          );
+          console.log('Routing cache contains', redirects.length, 'rule(s).');
+          NODE

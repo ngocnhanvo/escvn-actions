@@ -1,6 +1,6 @@
-mode: single
-shortcodes: webnext_05
-force: true
+mode: selected
+shortcodes: webnext_00,webnext_01,webnext_02,webnext_03,webnext_04,webnext_05
+force: false
 page_url:
 source_sha: 07a493d38901e0e910cbcbc80c4b799d4f8085a9
-requested_at: 2026-10-07T15:05:00+07:00
+requested_at: 2026-10-07T15:08:00+07:00

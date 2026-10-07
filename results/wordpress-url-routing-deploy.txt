@@ -1,9 +1,9 @@
 workflow=Deploy ESC WordPress URL Routing Runtime
-status=failure
+status=success
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=981810df147b97890ad69ee71b04397e5d7e0c8b
-run_id=37554413337
+source_sha=52fdd8096ec439cb2da5383a3f43c6b3aebfdfd6
+run_id=37554815712
 run_attempt=1
-run_url=https://github.com/ngocnhanvo/escvn-actions/actions/runs/37554413337
-completed_at=2026-10-07T00:56:46Z
+run_url=https://github.com/ngocnhanvo/escvn-actions/actions/runs/37554815712
+completed_at=2026-10-07T01:00:43Z

@@ -1,0 +1,7 @@
+Deploy ESC multilingual admin grouping
+phase=green-production
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=9c245258ff0b2547013c317a12a2ebeb5a759766
+requested_at=2026-10-07
+reason=sync-blue-sea-multilingual-admin-grouping

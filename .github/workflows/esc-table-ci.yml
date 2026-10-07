@@ -91,6 +91,10 @@ jobs:
           tail -n 20 /tmp/esc-table-php-lint.log
           php -l wp-content/mu-plugins/esc-table-migration.php
           php -l wp-content/mu-plugins/disable-plugins-for-api.php
+          php -l wp-content/themes/vibe-code-theme/inc/tablepress/endpoint.php
+          php -l wp-content/themes/vibe-code-theme/inc/tablepress/html.php
+          php -l wp-content/themes/vibe-code-theme/inc/tablepress/wysiwyg.php
+          node --check automation/tablepress/previews.mjs
 
       - name: Run ESC Table regressions
         working-directory: source

@@ -70,8 +70,10 @@ jobs:
           php -l wp-content/plugins/esc-table/controllers/controller-admin.php
           php -l wp-content/mu-plugins/esc-table-migration.php
           php -l wp-content/mu-plugins/disable-plugins-for-api.php
+          php -l wp-content/themes/vibe-code-theme/inc/tablepress/endpoint.php
           php -l wp-content/themes/vibe-code-theme/inc/tablepress/html.php
           php -l wp-content/themes/vibe-code-theme/inc/tablepress/wysiwyg.php
+          node --check automation/tablepress/previews.mjs
           php wp-content/mu-plugins/tests/esc-table-migration.php
           php wp-content/mu-plugins/tests/esc-table-upstream-compat.php
           php wp-content/mu-plugins/tests/esc-table-branding.php

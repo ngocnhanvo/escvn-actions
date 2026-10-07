@@ -1,0 +1,244 @@
+name: Deploy ESC WordPress URL Routing Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'requests/wordpress-url-routing-deploy.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escvn-actions-wordpress-url-routing-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          test -n "$FTP_SERVER"
+          test -n "$FTP_USERNAME"
+          test -n "$FTP_PASSWORD"
+          test -n "$WP_ADMIN_URL"
+
+      - name: Checkout deployment request
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Resolve requested source revision
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_file="control/requests/wordpress-url-routing-deploy.txt"
+          test -f "$request_file"
+          expected_sha="$(sed -n 's/^source_sha=//p' "$request_file" | tail -n 1 | tr -d '\r')"
+          if ! printf '%s' "$expected_sha" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::Invalid source_sha in deployment request."
+            exit 1
+          fi
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+          echo "Requested escvn-php@master $expected_sha"
+
+      - name: Checkout ESC WordPress production source
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Verify production source revision
+        working-directory: source
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.request.outputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          echo "Deploying escvn-php@master $actual_sha"
+          if [ "$actual_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::escvn-php master moved. Expected $EXPECTED_SHA but found $actual_sha."
+            exit 1
+          fi
+
+      - name: Validate URL routing runtime
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            wp-content/mu-plugins/disable-plugins-for-api.php
+            wp-content/mu-plugins/esc-url-routing-manager.php
+            wp-content/plugins/github-trigger/info/product-categories.php
+            wp-content/plugins/github-trigger/info/redirects.php
+            wp-content/plugins/github-trigger/product-categories/endpoint.php
+            wp-content/plugins/github-trigger/product-categories/hooks.php
+            wp-content/plugins/github-trigger/redirects/endpoint.php
+            wp-content/plugins/github-trigger/vcs-build-trigger.php
+            wp-content/plugins/github-trigger/vcs-hook.php
+          )
+          for file in "${files[@]}"; do
+            test -f "$file"
+            php -l "$file"
+          done
+          grep -Fq "register_post_type_args" wp-content/mu-plugins/esc-url-routing-manager.php
+          grep -Fq "'show_in_rest'] = true" wp-content/mu-plugins/esc-url-routing-manager.php
+          grep -Fq "register_rest_route('astro/v1', '/get-redirect-logs'" wp-content/plugins/github-trigger/redirects/endpoint.php
+          grep -Fq "register_rest_route('astro/v1', '/get-product-categories'" wp-content/plugins/github-trigger/product-categories/endpoint.php
+          grep -Fq "register_rest_route('astro/v1', '/get-product-category-logs'" wp-content/plugins/github-trigger/product-categories/endpoint.php
+
+      - name: Resolve WordPress FTP path
+        id: wp_path
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+
+          raw = os.environ["WP_ADMIN_URL"].strip()
+          parsed = urlparse(raw if "://" in raw else "https://" + raw)
+          if not parsed.hostname:
+              raise SystemExit("Unable to resolve hostname from WP_ADMIN_URL")
+          print(parsed.hostname)
+          PY
+          )"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "remote_wp_root=/domains/$host/public_html" >> "$GITHUB_OUTPUT"
+          echo "Resolved WordPress production host for FTP deployment."
+
+      - name: Install FTP client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y lftp
+
+      - name: Deploy URL routing runtime through FTP
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          REMOTE_WP_ROOT: ${{ steps.wp_path.outputs.remote_wp_root }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          export protocol FTP_SERVER FTP_USERNAME FTP_PASSWORD
+
+          ftp_url="$(python3 - <<'PY'
+          import os
+          from urllib.parse import quote
+
+          protocol = os.environ.get("protocol", "ftp")
+          server = os.environ["FTP_SERVER"]
+          username = quote(os.environ["FTP_USERNAME"], safe="")
+          password = quote(os.environ["FTP_PASSWORD"], safe="")
+          print(f"{protocol}://{username}:{password}@{server}")
+          PY
+          )"
+
+          lftp "$ftp_url" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set net:reconnect-interval-base 3
+          set ssl:verify-certificate no
+
+          mkdir -p "$REMOTE_WP_ROOT/wp-content/mu-plugins"
+          mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info"
+          mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories"
+          mkdir -p "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/redirects"
+
+          put "source/wp-content/mu-plugins/disable-plugins-for-api.php" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/disable-plugins-for-api.php"
+          put "source/wp-content/mu-plugins/esc-url-routing-manager.php" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-url-routing-manager.php"
+          put "source/wp-content/plugins/github-trigger/info/product-categories.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info/product-categories.php"
+          put "source/wp-content/plugins/github-trigger/info/redirects.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info/redirects.php"
+          put "source/wp-content/plugins/github-trigger/product-categories/endpoint.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories/endpoint.php"
+          put "source/wp-content/plugins/github-trigger/product-categories/hooks.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories/hooks.php"
+          put "source/wp-content/plugins/github-trigger/redirects/endpoint.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/redirects/endpoint.php"
+          put "source/wp-content/plugins/github-trigger/vcs-build-trigger.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/vcs-build-trigger.php"
+          put "source/wp-content/plugins/github-trigger/vcs-hook.php" -o "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/vcs-hook.php"
+
+          get "$REMOTE_WP_ROOT/wp-content/mu-plugins/disable-plugins-for-api.php" -o /tmp/disable-plugins-for-api.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-url-routing-manager.php" -o /tmp/esc-url-routing-manager.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info/product-categories.php" -o /tmp/product-categories-info.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/info/redirects.php" -o /tmp/redirects-info.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories/endpoint.php" -o /tmp/product-categories-endpoint.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/product-categories/hooks.php" -o /tmp/product-categories-hooks.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/redirects/endpoint.php" -o /tmp/redirects-endpoint.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/vcs-build-trigger.php" -o /tmp/vcs-build-trigger.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/plugins/github-trigger/vcs-hook.php" -o /tmp/vcs-hook.remote.php
+
+          bye
+          LFTP
+
+          cmp source/wp-content/mu-plugins/disable-plugins-for-api.php /tmp/disable-plugins-for-api.remote.php
+          cmp source/wp-content/mu-plugins/esc-url-routing-manager.php /tmp/esc-url-routing-manager.remote.php
+          cmp source/wp-content/plugins/github-trigger/info/product-categories.php /tmp/product-categories-info.remote.php
+          cmp source/wp-content/plugins/github-trigger/info/redirects.php /tmp/redirects-info.remote.php
+          cmp source/wp-content/plugins/github-trigger/product-categories/endpoint.php /tmp/product-categories-endpoint.remote.php
+          cmp source/wp-content/plugins/github-trigger/product-categories/hooks.php /tmp/product-categories-hooks.remote.php
+          cmp source/wp-content/plugins/github-trigger/redirects/endpoint.php /tmp/redirects-endpoint.remote.php
+          cmp source/wp-content/plugins/github-trigger/vcs-build-trigger.php /tmp/vcs-build-trigger.remote.php
+          cmp source/wp-content/plugins/github-trigger/vcs-hook.php /tmp/vcs-hook.remote.php
+          echo "ESC URL routing runtime deployed and byte-verified."
+
+      - name: Smoke test URL routing APIs
+        shell: bash
+        env:
+          WP_HOST: ${{ steps.wp_path.outputs.host }}
+        run: |
+          set -euo pipefail
+
+          check_json_endpoint() {
+            local path="$1"
+            local label="$2"
+            local body
+            body="$(mktemp)"
+            for attempt in {1..8}; do
+              status="$(curl -L -sS -o "$body" -w '%{http_code}' --connect-timeout 10 --max-time 45 "https://$WP_HOST$path" || true)"
+              if [ "$status" = "200" ] && python3 - "$body" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              json.load(handle)
+          PY
+              then
+                echo "$label smoke test passed (HTTP 200)."
+                rm -f "$body"
+                return 0
+              fi
+              echo "Attempt $attempt/8 for $label failed (HTTP ${status:-curl-error}); retrying..."
+              sleep 5
+            done
+            echo "::error::$label smoke test failed."
+            test -s "$body" && head -c 1200 "$body" || true
+            rm -f "$body"
+            return 1
+          }
+
+          check_json_endpoint "/wp-json/wp/v2/chuyen-huong-link?per_page=1&_fields=id" "Routing CPT REST"
+          check_json_endpoint "/wp-json/astro/v1/get-redirect-logs" "Redirect logs API"
+          check_json_endpoint "/wp-json/astro/v1/get-product-categories" "Product categories API"

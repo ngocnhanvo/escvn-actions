@@ -201,3 +201,36 @@ jobs:
           );
           console.log('Routing cache contains', redirects.length, 'rule(s).');
           NODE
+
+      - name: Smoke test built SSR routing runtime
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HOST=127.0.0.1 PORT=4321 node dist/server/entry.mjs > /tmp/esc-ssr.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; cat /tmp/esc-ssr.log || true' EXIT
+
+          for attempt in {1..30}; do
+            status="$(curl -sS -o /tmp/support-esc.html -w '%{http_code}' \
+              --connect-timeout 2 --max-time 10 \
+              http://127.0.0.1:4321/support-esc || true)"
+
+            if [ "$status" = "200" ]; then
+              if grep -Fq "TRANG KHÔNG TỒN TẠI" /tmp/support-esc.html; then
+                echo "::error::HTTP 200 returned the 404 page content."
+                exit 1
+              fi
+
+              echo "Built SSR /support-esc smoke test passed (HTTP 200)."
+              exit 0
+            fi
+
+            echo "Attempt $attempt/30: /support-esc returned HTTP ${status:-curl-error}"
+            sleep 1
+          done
+
+          echo "::error::Built SSR /support-esc smoke test failed."
+          cat /tmp/esc-ssr.log || true
+          exit 1

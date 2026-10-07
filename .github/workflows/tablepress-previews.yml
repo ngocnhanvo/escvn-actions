@@ -57,6 +57,13 @@ jobs:
           test -n "$WP_ADMIN_USERNAME"
           test -n "$WP_ADMIN_PASSWORD"
 
+      - name: Checkout preview request
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+        with:
+          path: hub
+          persist-credentials: false
+
       - name: Checkout private ESC PHP source
         uses: actions/checkout@v4
         with:
@@ -65,6 +72,72 @@ jobs:
           token: ${{ secrets.SOURCE_REPO_PAT }}
           path: source
           persist-credentials: false
+
+      - name: Resolve preview request
+        id: preview_request
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || '' }}
+          INPUT_SHORTCODES: ${{ github.event_name == 'workflow_dispatch' && inputs.shortcodes || '' }}
+          INPUT_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
+          INPUT_PAGE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.page_url || '' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+            mode="$INPUT_MODE"
+            shortcodes="$INPUT_SHORTCODES"
+            force="$INPUT_FORCE"
+            page_url="$INPUT_PAGE_URL"
+          else
+            request_file='hub/requests/tablepress-previews.txt'
+            test -f "$request_file"
+
+            value() {
+              local key="$1"
+              sed -nE "s/^[[:space:]]*${key}[[:space:]]*:[[:space:]]*(.*)$/\1/Ip" "$request_file" | tail -n 1
+            }
+
+            mode="$(value mode)"
+            shortcodes="$(value shortcodes)"
+            force="$(value force)"
+            page_url="$(value page_url)"
+          fi
+
+          mode="${mode:-missing}"
+          force="${force:-false}"
+
+          case "$mode" in
+            missing|single|selected) ;;
+            *) echo "::error::Unsupported preview mode: $mode"; exit 1 ;;
+          esac
+          case "${force,,}" in
+            true|false|1|0|yes|no|on|off) ;;
+            *) echo "::error::Unsupported force value: $force"; exit 1 ;;
+          esac
+          if [ "$mode" = 'single' ] && [[ "$shortcodes" == *,* ]]; then
+            echo '::error::single mode accepts exactly one shortcode.'
+            exit 1
+          fi
+          if [ "$mode" != 'missing' ] && [ -z "$shortcodes" ]; then
+            echo "::error::$mode mode requires shortcodes."
+            exit 1
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "shortcodes=$shortcodes"
+            echo "force=$force"
+            echo "page_url=$page_url"
+          } >> "$GITHUB_OUTPUT"
+
+          printf 'Preview request: mode=%s force=%s shortcodes=%s page_url=%s\n' \
+            "$mode" "$force" "${shortcodes:-<auto>}" "${page_url:-<all>}"
+
+      - name: Check preview automation syntax
+        working-directory: source
+        run: node --check automation/tablepress/previews.mjs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -84,10 +157,10 @@ jobs:
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
           TABLEPRESS_PUBLIC_ORIGIN: https://esc.vn
-          TABLEPRESS_PREVIEW_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'missing' }}
-          TABLEPRESS_SHORTCODES: ${{ github.event_name == 'workflow_dispatch' && inputs.shortcodes || 'webnext_00,webnext_01,webnext_02,webnext_03,webnext_04,webnext_05' }}
-          TABLEPRESS_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
-          TABLEPRESS_PAGE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.page_url || '' }}
+          TABLEPRESS_PREVIEW_MODE: ${{ steps.preview_request.outputs.mode }}
+          TABLEPRESS_SHORTCODES: ${{ steps.preview_request.outputs.shortcodes }}
+          TABLEPRESS_FORCE: ${{ steps.preview_request.outputs.force }}
+          TABLEPRESS_PAGE_URL: ${{ steps.preview_request.outputs.page_url }}
         run: node automation/tablepress/previews.mjs
 
       - name: Upload preview diagnostics

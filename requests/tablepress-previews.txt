@@ -2,5 +2,5 @@ mode: single
 shortcodes: webnext_05
 force: true
 page_url:
-source_sha: 5a036b4d24a78c724164dd56dd59ad6d241771c8
-requested_at: 2026-10-07T15:02:00+07:00
+source_sha: 07a493d38901e0e910cbcbc80c4b799d4f8085a9
+requested_at: 2026-10-07T15:05:00+07:00

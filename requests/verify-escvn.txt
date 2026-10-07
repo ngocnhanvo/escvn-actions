@@ -4,3 +4,4 @@ source_sha: ff31d21ce28fdbf6203d34b15dfbe18839f4d6fe
 scope: routing manager parity, redirect matcher, rollout-safe cache, build
 requested_at: 2026-10-07
 reason=rebuild-routing-cache-after-cpt-rest-live
+reason=verify-support-esc-runtime-matcher

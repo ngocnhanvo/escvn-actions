@@ -138,6 +138,37 @@ jobs:
           console.log('Verified WebNext TablePress data and frontend markers.');
           NODE
 
+      - name: Validate WebNext Spotlight Build Output
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const page = JSON.parse(fs.readFileSync('dist/client/data/page-default.json', 'utf8'));
+          const html = fs.readFileSync('dist/client/index.html', 'utf8');
+          const shortcodes = [...String(page.content || '').matchAll(/\\[table\\s+id=([\\w-]+)\\s*\\/\\]/g)]
+            .map((m) => m[1]);
+          const idx = shortcodes.indexOf('home_01');
+          const items = (page.contents || []).filter((part) => part?.shortcode === 'home_06');
+          const rows = Array.isArray(items[0]?.data?.items) ? items[0].data.items.length : 0;
+
+          console.log('Home page:', { id: page.id, key: page.key, shortcodes, home06_rows: rows });
+          if (idx < 0 || shortcodes[idx + 1] !== 'home_06') {
+            throw new Error('Missing home_06 immediately after home_01 in the newly built homepage JSON.');
+          }
+          if (items.length !== 1 || rows !== 11) {
+            throw new Error('WordPress home_06 TablePress data missing/incomplete from new Astro build.');
+          }
+          if (!html.includes('data-tablepress-preview="home_06"') ||
+              !html.includes('id="esc-webnext-home-heading"') ||
+              !html.includes('/thiet-ke-website-headless-wordpress-astro/#webnext-audit')) {
+            throw new Error('New Astro homepage HTML is missing WebNext spotlight or CTA.');
+          }
+          console.log('WebNext homepage build contract passed.');
+          NODE
+
       - name: Zip Build Folder
         working-directory: source
         shell: bash

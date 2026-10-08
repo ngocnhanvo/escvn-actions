@@ -1,2 +1,2 @@
-source_sha=00a21b172cdc037cffa67240b68f0a1f891250ce
-reason=Verify persisted home_06 after resolving WordPress Classic Editor save navigation race
+source_sha=dd0c5a775b888ff308d6bf19a605493dc5ec3ba7
+reason=Move existing picker-created home_06 outside home_01 preview wrapper, preserve all old HTML, verify on reload

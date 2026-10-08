@@ -1,0 +1,1 @@
+reason=live audit example esc.vn to verify Lighthouse PDF and gzip; no email will be sent

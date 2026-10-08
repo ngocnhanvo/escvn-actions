@@ -1,6 +1,6 @@
-mode: selected
-shortcodes: webnext_04,webnext_05
+mode: single
+shortcodes: webnext_06
 force: false
-page_url:
-source_sha: 07a493d38901e0e910cbcbc80c4b799d4f8085a9
-requested_at: 2026-10-07T15:14:00+07:00
+page_url: https://esc.vn/thiet-ke-website-headless-wordpress-astro/
+source_sha: 301de8a59108ffc90bebff9ef415f1f7ef5c7435
+requested_at: 2026-10-08T09:00:00+07:00

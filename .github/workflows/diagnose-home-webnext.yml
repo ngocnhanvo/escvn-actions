@@ -1,0 +1,79 @@
+name: Diagnose ESC Homepage WebNext Data
+
+on:
+  push:
+    branches: [main]
+    paths: ['requests/diagnose-home-webnext.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Inspect public WordPress and deployed Astro contracts
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.parse, ssl, re
+          wp = os.environ.get('WP_ADMIN_URL','')
+          cms_origin = urllib.parse.urlsplit(wp if '://' in wp else 'https://' + wp)
+          backend = f'{cms_origin.scheme}://{cms_origin.netloc}'
+          for line in os.environ.get('ENV_FILE','').splitlines():
+              match=re.match(r'^\s*(?:export\s+)?WC_URL\s*=\s*["\']?([^"\'\s#]+)',line)
+              if match:
+                  backend=match.group(1).rstrip('/')
+          print('WordPress host:',urllib.parse.urlsplit(backend).hostname)
+          def read(url):
+              try:
+                  req=urllib.request.Request(url,headers={'User-Agent':'ESC-Homepage-Diagnostic/1.0','Cache-Control':'no-cache'})
+                  with urllib.request.urlopen(req,timeout=22) as resp:
+                      data=resp.read()
+                      return resp.status,data,dict(resp.headers)
+              except Exception as e:
+                  print('FETCH ERROR',urllib.parse.urlsplit(url).path, str(e)[:160])
+                  return 0,b'',{}
+          def tableids(s):
+              return re.findall(r'\[table\s+id=([\w-]+)\s*\/\]',s,re.I)
+          for page_id in ['248']:
+              status,raw,_=read(backend+'/wp-json/wp/v2/pages/'+page_id)
+              print('WordPress page',page_id,'HTTP',status,'bytes',len(raw))
+              if status==200:
+                  doc=json.loads(raw);txt=str((doc.get('content') or {}).get('rendered',''))
+                  ids=tableids(txt)
+                  print('page status',doc.get('status'),'key',str((doc.get('acf') or {}).get('key')),'action',str((doc.get('acf') or {}).get('action')),'shortcode order',ids,'home06_count',ids.count('home_06'))
+          status,raw,_=read(backend+'/wp-json/tablepress/v1/table/home_06')
+          print('ESC Table home_06 HTTP',status,'bytes',len(raw))
+          if status==200:
+              doc=json.loads(raw);print('ESC Table id',doc.get('id'),'items',len(doc.get('items') or []),'fields',len(doc.get('fields') or []))
+          allids=[]
+          for page in range(1,10):
+              status,raw,headers=read(backend+'/wp-json/tablepress/v1/tables/prefix/all?per_page=50&page='+str(page))
+              if status!=200:break
+              arr=json.loads(raw)
+              if not isinstance(arr,list):break
+              allids.extend(str(row.get('id')) for row in arr if isinstance(row,dict))
+              if page>=int(headers.get('X-WP-TotalPages') or 1):break
+          print('ESC Table collection total',len(allids),'has_home06',('home_06' in allids))
+          for url in ['https://esc.vn/data/page-default.json','https://esc.vn/']:
+              status,raw,_=read(url)
+              print('Deployed',urllib.parse.urlsplit(url).path,'HTTP',status,'bytes',len(raw))
+              if status==200 and url.endswith('.json'):
+                  try:
+                      doc=json.loads(raw);txt=str(doc.get('content') or '')
+                      print('cached page key',doc.get('key'),'id',doc.get('id'),'shortcodes',tableids(txt))
+                      snippets=[(x.get('shortcode'),len((x.get('data') or {}).get('items') or [])) for x in (doc.get('contents') or []) if isinstance(x,dict)]
+                      print('cached contents',snippets[:30])
+                  except Exception as e: print('JSON diagnosis failed:',str(e)[:180])
+              if status==200 and url.endswith('/'):
+                  txt=raw.decode('utf-8','replace')
+                  for needle in ['data-tablepress-preview="home_06"','id="esc-webnext-home-heading"','Nâng cấp website lên thế hệ mới','/thiet-ke-website-headless-wordpress-astro/#webnext-audit']:
+                      print('homepage has',needle,needle in txt)
+          PY

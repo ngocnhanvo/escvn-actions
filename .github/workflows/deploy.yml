@@ -148,7 +148,7 @@ jobs:
 
           const page = JSON.parse(fs.readFileSync('dist/client/data/page-default.json', 'utf8'));
           const html = fs.readFileSync('dist/client/index.html', 'utf8');
-          const shortcodes = [...String(page.content || '').matchAll(/\\[table\\s+id=([\\w-]+)\\s*\\/\\]/g)]
+          const shortcodes = [...String(page.content || '').matchAll(/\[table\s+id=([\w-]+)\s*\/\]/g)]
             .map((m) => m[1]);
           const idx = shortcodes.indexOf('home_01');
           const items = (page.contents || []).filter((part) => part?.shortcode === 'home_06');

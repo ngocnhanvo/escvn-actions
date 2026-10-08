@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           php -l wp-content/mu-plugins/esc-webnext-audit.php
+          php -l wp-content/mu-plugins/esc-webnext-categories.php
           php -l wp-content/mu-plugins/esc-webnext-report.php
           php -l wp-content/mu-plugins/esc-webnext-history.php
           php -l wp-content/mu-plugins/esc-webnext-history-bridge.php
@@ -94,6 +95,10 @@ jobs:
           get "$REMOTE_FOLDER/esc-webnext-report.php.pending" -o "/tmp/esc-webnext-report.pending.php"
           mv "$REMOTE_FOLDER/esc-webnext-report.php.pending" "$REMOTE_FOLDER/esc-webnext-report.php"
           get "$REMOTE_FOLDER/esc-webnext-report.php" -o "/tmp/esc-webnext-report.remote.php"
+          put "source/wp-content/mu-plugins/esc-webnext-categories.php" -o "$REMOTE_FOLDER/esc-webnext-categories.php.pending"
+          get "$REMOTE_FOLDER/esc-webnext-categories.php.pending" -o "/tmp/esc-webnext-categories.pending.php"
+          mv "$REMOTE_FOLDER/esc-webnext-categories.php.pending" "$REMOTE_FOLDER/esc-webnext-categories.php"
+          get "$REMOTE_FOLDER/esc-webnext-categories.php" -o "/tmp/esc-webnext-categories.remote.php"
           put "source/wp-content/mu-plugins/esc-webnext-audit.php" -o "$REMOTE_FOLDER/esc-webnext-audit.php.pending"
           get "$REMOTE_FOLDER/esc-webnext-audit.php.pending" -o "/tmp/esc-webnext-audit.pending.php"
           mv "$REMOTE_FOLDER/esc-webnext-audit.php.pending" "$REMOTE_FOLDER/esc-webnext-audit.php"
@@ -110,6 +115,8 @@ jobs:
           LFTP
           cmp source/wp-content/mu-plugins/esc-webnext-report.php /tmp/esc-webnext-report.pending.php
           cmp source/wp-content/mu-plugins/esc-webnext-report.php /tmp/esc-webnext-report.remote.php
+          cmp source/wp-content/mu-plugins/esc-webnext-categories.php /tmp/esc-webnext-categories.pending.php
+          cmp source/wp-content/mu-plugins/esc-webnext-categories.php /tmp/esc-webnext-categories.remote.php
           cmp source/wp-content/mu-plugins/esc-webnext-audit.php /tmp/esc-webnext-audit.pending.php
           cmp source/wp-content/mu-plugins/esc-webnext-audit.php /tmp/esc-webnext-audit.remote.php
           cmp source/wp-content/mu-plugins/esc-webnext-history.php /tmp/esc-webnext-history.pending.php

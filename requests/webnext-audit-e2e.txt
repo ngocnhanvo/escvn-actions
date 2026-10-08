@@ -1,1 +1,2 @@
-reason=live audit example esc.vn to verify Lighthouse PDF and gzip; no email will be sent
+reason=verify live Vietnamese Unicode WebNext PDF and embedded Lighthouse mobile screenshot for https://esc.vn/ without sending email
+source_sha=d1e8cdcc7b55b13b99aeb8151539f2254572bdf5

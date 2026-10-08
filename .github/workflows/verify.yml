@@ -89,6 +89,9 @@ jobs:
               'src/astro/pages/WebNextPage.astro',
               'src/data/webnext.ts',
               'src/pages/[...slug].astro',
+              'src/astro/tablepress/Webnext_06.astro',
+              'src/pages/api/contact/index.ts',
+              'src/pages/api/web-audit/index.ts',
           )
           errors = [
               line for line in clean.splitlines()

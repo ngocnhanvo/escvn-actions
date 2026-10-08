@@ -1,2 +1,2 @@
-source_sha=301de8a59108ffc90bebff9ef415f1f7ef5c7435
-reason=deploy fixed-window rate limits and run PDF/URL smoke tests
+source_sha=d1e8cdcc7b55b13b99aeb8151539f2254572bdf5
+reason=deploy Unicode Vietnamese WebNext PDF with Lighthouse mobile screenshot and UTF-8 consultation email

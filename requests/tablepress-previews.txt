@@ -1,6 +1,6 @@
 mode: single
-shortcodes: webnext_06
+shortcodes: home_06
 force: false
-page_url: https://esc.vn/thiet-ke-website-headless-wordpress-astro/
-source_sha: 301de8a59108ffc90bebff9ef415f1f7ef5c7435
-requested_at: 2026-10-08T09:00:00+07:00
+page_url: https://esc.vn/
+source_sha: f7e2677d55296d2675427daa8eb1838a818a80de
+reason: Capture production ESC WebNext home_06 spotlight preview after verified FTP deploy

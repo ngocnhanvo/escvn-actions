@@ -1,3 +1,2 @@
-source_sha=5b7e260f6326aaff5819a5531d39ecf4e763b07e
-reason=deploy WebNext audit REST API
-retry=allow-existing-directory
+source_sha=301de8a59108ffc90bebff9ef415f1f7ef5c7435
+reason=deploy fixed-window rate limits and run PDF/URL smoke tests

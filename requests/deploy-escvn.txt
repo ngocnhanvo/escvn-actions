@@ -5,3 +5,4 @@ Original dev CI: 37723609293 success
 WordPress home_06 provision: 37724636261 success
 Read-only diagnostic: 37726113265 (WordPress direct and collection include home_06; deployed page-default.json omits it)
 Reason: regenerate homepage and STOP before FTP if build output still omits home_06; run smoke tests after upload.
+Preflight matcher corrected in escvn-actions commit a2832fd02e7061ea7a5c526cc23cd30238bb47b9; rerun with corrected guard.

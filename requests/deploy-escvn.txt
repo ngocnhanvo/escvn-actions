@@ -1,6 +1,7 @@
-Deploy ESC Astro WebNext Lighthouse-style audit result colors after successful development verification.
+Deploy WebNext five Lighthouse groups and experimental Agentic Browsing ratio to ESC production.
 Astro branch: master
-Astro commit: 72d5143ef4d0d00f748e5da3e1e087f8c6da0a92
-Astro development verification: GitHub Actions run 37730945822 (success)
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/97 (merged)
-Reason: color-code Lighthouse performance, CWV (CrUX) and Observatory grade with text statuses; preserve existing backend and reports.
+Astro commit: f71ebc7f2d064394d611b97c2696bdc0e932a31b
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/98 (merged)
+Development verify: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37733437154 (success)
+PHP backend and report/history deployment: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37733433793 (success)
+Reason: five Lighthouse gauges, agentic pass ratio, retain CrUX, Observatory and homepage section.

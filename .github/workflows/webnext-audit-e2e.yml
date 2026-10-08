@@ -88,7 +88,9 @@ jobs:
           import json
           pdf=open('/tmp/webnext-audit.pdf','rb').read()
           assert pdf.startswith(b'%PDF-'), pdf[:50]
+          assert b'/Subtype /Type0' in pdf and b'/ToUnicode' in pdf, 'Missing Unicode PDF font'
+          assert b'/Subtype /Image' in pdf, 'Missing Lighthouse screenshot in PDF'
           with gzip.open('/tmp/webnext-audit.json.gz','rb') as f: data=json.load(f)
           assert 'audits' in data and 'categories' in data
-          print('PDF and Lighthouse JSON gzip both verified.')
+          print('Unicode PDF with screenshot and Lighthouse JSON gzip verified.')
           PY

@@ -49,6 +49,8 @@ jobs:
                   doc=json.loads(raw);txt=str((doc.get('content') or {}).get('rendered',''))
                   ids=tableids(txt)
                   print('page status',doc.get('status'),'key',str((doc.get('acf') or {}).get('key')),'action',str((doc.get('acf') or {}).get('action')),'shortcode order',ids,'home06_count',ids.count('home_06'))
+                  loc=txt.find('[table id=home_06 /]')
+                  print('Home shortcode surrounding published HTML:',repr(txt[max(0,loc-500):loc+220]) if loc>=0 else 'Not found')
           matched_in_collection = []
           for n in range(1,15):
               status,raw,headers=read(backend+'/wp-json/wp/v2/pages?status=publish&per_page=50&page='+str(n))

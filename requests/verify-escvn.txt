@@ -1,2 +1,2 @@
-reason=verify Home_06 WebNext spotlight Astro component and regressions on github before WordPress provisioning
-source_sha=173d10a8f39cc52979a5101e96d65adcba9278c7
+reason=verify WebNext Lighthouse CrUX Observatory status colors and thresholds on Astro github branch
+source_sha=280c2e4f48d25459062aec67232781a03c0fcff2

@@ -1,5 +1,6 @@
-Deploy ESC Astro WebNext Audit production after successful verification.
+Deploy ESC Astro homepage WebNext spotlight after verified WordPress home_06 shortcode provisioning.
 Astro branch: master
-Astro commit: 08540273d7f9794a0c9e42d7a244011c0187a6a9
-Astro development verified: actions run 37714724502
-Reason: integrate WebNext_06 widget plus Hero/consultation and Lighthouse reports.
+Astro commit: f7e2677d55296d2675427daa8eb1838a818a80de
+Astro development verified: actions run 37723609293
+WordPress provision verified: actions run 37724636261
+Reason: render home_06 after home_01, retain existing homepage sections; validate production home and WebNext.

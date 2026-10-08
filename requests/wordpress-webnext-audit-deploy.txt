@@ -1,2 +1,2 @@
-source_sha=932f088ea9da9b1629a48188ab11d542ad2b83ea
-reason=Deploy five Lighthouse category extraction, agentic ratio, Unicode PDF and 90-day history fields
+source_sha=ecf236b1e7108bdd12ad18ae11b754f4036b979d
+reason=Expose Lighthouse final measured URL and token-guarded JPEG screenshot from existing private report payload

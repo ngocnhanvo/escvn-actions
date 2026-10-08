@@ -1,7 +1,7 @@
-Deploy WebNext five Lighthouse groups and experimental Agentic Browsing ratio to ESC production.
+Deploy WebNext Lighthouse screenshot + real measured final URL + HTTP->HTTPS redirect warning to ESC production.
 Astro branch: master
-Astro commit: f71ebc7f2d064394d611b97c2696bdc0e932a31b
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/98 (merged)
-Development verify: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37733437154 (success)
-PHP backend and report/history deployment: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37733433793 (success)
-Reason: five Lighthouse gauges, agentic pass ratio, retain CrUX, Observatory and homepage section.
+Astro commit: 6203b64bef7e141db4073592b94c6aaca2d23e0c
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/99 (merged)
+Development verify: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37736983411 (success)
+PHP backend: https://github.com/ngocnhanvo/escvn-actions/actions/runs/37736981908 (success)
+Reason: enable token-protected Lighthouse Mobile screenshot zoom, submitted-vs-final URL comparison, preserve Homepage.

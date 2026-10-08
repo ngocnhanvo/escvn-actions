@@ -1,2 +1,2 @@
-reason=Verify five Lighthouse category gauges and agentic fraction on ESC WebNext
-source_sha=a0098fb3ef3c21cc50ecdbbd57a52f7eeb461cd5
+reason=Verify measured Lighthouse final URL, Mobile screenshot, redirect warning and image zoom on WebNext Astro github
+source_sha=209b71f63c88ae25bfb280e8185d35f901fcd817

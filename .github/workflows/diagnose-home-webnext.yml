@@ -49,6 +49,20 @@ jobs:
                   doc=json.loads(raw);txt=str((doc.get('content') or {}).get('rendered',''))
                   ids=tableids(txt)
                   print('page status',doc.get('status'),'key',str((doc.get('acf') or {}).get('key')),'action',str((doc.get('acf') or {}).get('action')),'shortcode order',ids,'home06_count',ids.count('home_06'))
+          matched_in_collection = []
+          for n in range(1,15):
+              status,raw,headers=read(backend+'/wp-json/wp/v2/pages?status=publish&per_page=50&page='+str(n))
+              if status!=200:break
+              batch=json.loads(raw)
+              if not isinstance(batch,list):break
+              print('Pages collection batch',n,'count',len(batch),'cache',headers.get('Age'),headers.get('CF-Cache-Status'),headers.get('X-Cache'))
+              for item in batch:
+                  if str(item.get('id'))=='248':
+                      ids=tableids(str((item.get('content') or {}).get('rendered','')))
+                      matched_in_collection.append(ids)
+                      print('HOME 248 IN COLLECTION',n,'shortcodes',ids,'has_home06','home_06' in ids,'modified',item.get('modified'))
+              if n>=int(headers.get('X-WP-TotalPages') or 1):break
+          print('Page 248 collection matches',len(matched_in_collection))
           status,raw,_=read(backend+'/wp-json/tablepress/v1/table/home_06')
           print('ESC Table home_06 HTTP',status,'bytes',len(raw))
           if status==200:

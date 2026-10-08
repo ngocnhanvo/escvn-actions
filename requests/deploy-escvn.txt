@@ -1,4 +1,5 @@
-Deploy ESC Astro production after promoting github to master.
+Deploy ESC Astro WebNext Audit production after successful verification.
 Astro branch: master
-Astro commit: 8a19ed5f8552924b6827c575056846d976860812
-Reason: user approved production build and FTP deploy.
+Astro commit: 08540273d7f9794a0c9e42d7a244011c0187a6a9
+Astro development verified: actions run 37714724502
+Reason: integrate WebNext_06 widget plus Hero/consultation and Lighthouse reports.

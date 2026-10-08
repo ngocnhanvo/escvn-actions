@@ -78,6 +78,30 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-escvn-dot-cache-
 
+      - name: Diagnose fresh homepage API before build
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import 'dotenv/config';
+          const origin = String(process.env.WC_URL || '').replace(/\\/$/,'');
+          if (!origin) throw new Error('WC_URL missing from build environment');
+          console.log('Build WordPress API host:',new URL(origin).hostname);
+          for (let n=1; n<=12; n++){
+            const res=await fetch(origin+'/wp-json/wp/v2/pages?status=publish&per_page=50&page='+n, {headers:{'Cache-Control':'no-cache'}});
+            if(!res.ok) throw new Error('WP pages API HTTP '+res.status);
+            const entries=await res.json();
+            const matched=entries.find(item=>item.id===248);
+            if(matched){
+              const ids=[...String(matched.content?.rendered||'').matchAll(/\[table\s+id=([\w-]+)\s*\/\]/g)].map(m=>m[1]);
+              console.log('Prebuild WordPress page 248 shortcodes:',ids);
+              break;
+            }
+            if(n>=Number(res.headers.get('X-WP-TotalPages')||1)) { console.log('Page 248 missing from API');break; }
+          }
+          NODE
+
       - name: Build Project
         working-directory: source
         env:
@@ -154,6 +178,21 @@ jobs:
           const items = (page.contents || []).filter((part) => part?.shortcode === 'home_06');
           const rows = Array.isArray(items[0]?.data?.items) ? items[0].data.items.length : 0;
 
+          const shortcodeIds = (text) => [...String(text || '').matchAll(/\[table\s+id=([\w-]+)\s*\/\]/g)].map(m=>m[1]);
+          if (fs.existsSync('.cache/pages.json')) {
+            const raw=JSON.parse(fs.readFileSync('.cache/pages.json','utf8'));
+            const row=raw.find(x=>x?.id===248);
+            console.log('Build raw WordPress page 248 shortcodes:', shortcodeIds(row?.content?.rendered));
+          }
+          if (fs.existsSync('.cache/data.json')) {
+            const data=JSON.parse(fs.readFileSync('.cache/data.json','utf8'));
+            const row=data.pages?.find(x=>x?.id===248 && x.slug==='');
+            console.log('Build processed home shortcodes:', shortcodeIds(row?.content));
+          }
+          if (fs.existsSync('.cache/tablepress.json')) {
+            const tables=JSON.parse(fs.readFileSync('.cache/tablepress.json','utf8'));
+            console.log('Build raw TablePress has home_06:', Array.isArray(tables) && tables.some(t=>String(t?.id)==='home_06'));
+          }
           console.log('Home page:', { id: page.id, key: page.key, shortcodes, home06_rows: rows });
           if (idx < 0 || shortcodes[idx + 1] !== 'home_06') {
             throw new Error('Missing home_06 immediately after home_01 in the newly built homepage JSON.');

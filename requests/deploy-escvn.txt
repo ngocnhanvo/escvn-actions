@@ -1,6 +1,7 @@
-Deploy ESC Astro homepage WebNext spotlight after verified WordPress home_06 shortcode provisioning.
+Deploy ESC Astro WebNext homepage spotlight with built-output preflight after investigating missing production home_06.
 Astro branch: master
 Astro commit: f7e2677d55296d2675427daa8eb1838a818a80de
-Astro development verified: actions run 37723609293
-WordPress provision verified: actions run 37724636261
-Reason: render home_06 after home_01, retain existing homepage sections; validate production home and WebNext.
+Original dev CI: 37723609293 success
+WordPress home_06 provision: 37724636261 success
+Read-only diagnostic: 37726113265 (WordPress direct and collection include home_06; deployed page-default.json omits it)
+Reason: regenerate homepage and STOP before FTP if build output still omits home_06; run smoke tests after upload.

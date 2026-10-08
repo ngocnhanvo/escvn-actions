@@ -1,9 +1,7 @@
-Deploy ESC Astro WebNext homepage spotlight with built-output preflight after investigating missing production home_06.
+Deploy ESC Astro homepage WebNext spotlight after fixing nesting within home_01 preview.
 Astro branch: master
 Astro commit: f7e2677d55296d2675427daa8eb1838a818a80de
-Original dev CI: 37723609293 success
-WordPress home_06 provision: 37724636261 success
-Read-only diagnostic: 37726113265 (WordPress direct and collection include home_06; deployed page-default.json omits it)
-Reason: regenerate homepage and STOP before FTP if build output still omits home_06; run smoke tests after upload.
-Preflight matcher corrected in escvn-actions commit a2832fd02e7061ea7a5c526cc23cd30238bb47b9; rerun with corrected guard.
-Diagnostic before guarded build: inspect WordPress Page collection source, .cache/pages.json, .cache/data.json, TablePress cache and dist.
+Astro development verified: actions run 37723609293
+WordPress repair verified: actions run 37726846435 (moved home_06 outside preview wrapper)
+Preflight: verify published WordPress page, raw + processed cache, home_06 data, built HTML before FTP
+Reason: restore home_06 to build output, then upload FTP and smoke-test production homepage.

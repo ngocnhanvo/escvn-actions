@@ -128,6 +128,13 @@ jobs:
             }
           }
 
+          const sourceContent = String(page.content || '').toLowerCase();
+          const widgetPosition = sourceContent.indexOf('[table id=webnext_06 /]');
+          const firstLegacySection = sourceContent.indexOf('[table id=webnext_01 /]');
+          if (widgetPosition < 0 || firstLegacySection < 0 || widgetPosition > firstLegacySection) {
+            throw new Error('WebNext widget must be the first ESC Table shortcode after Hero.');
+          }
+
           console.log('Verified WebNext TablePress data and frontend markers.');
           NODE
 

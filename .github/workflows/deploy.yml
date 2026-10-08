@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           node --input-type=module <<'NODE'
           import 'dotenv/config';
-          const origin = String(process.env.WC_URL || '').replace(/\\/$/,'');
+          const origin = String(process.env.WC_URL || '').replace(new RegExp('/+$'), '');
           if (!origin) throw new Error('WC_URL missing from build environment');
           console.log('Build WordPress API host:',new URL(origin).hostname);
           for (let n=1; n<=12; n++){

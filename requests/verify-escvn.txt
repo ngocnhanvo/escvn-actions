@@ -1,10 +1,2 @@
-Verify ESC Astro data-driven URL routing
-source_branch: github
-source_sha: ff31d21ce28fdbf6203d34b15dfbe18839f4d6fe
-scope: routing manager parity, redirect matcher, rollout-safe cache, build
-requested_at: 2026-10-07
-reason=rebuild-routing-cache-after-cpt-rest-live
-reason=verify-support-esc-runtime-matcher
-reason=test-empty-redirect-cache-recovery
-reason=smoke-built-support-esc-runtime
-reason=verify-awaited-runtime-routing-patch
+reason=verify WebNext Audit Astro github before provisioning
+requested_at=2026-10-08-01:45

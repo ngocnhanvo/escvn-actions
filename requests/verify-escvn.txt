@@ -1,2 +1,2 @@
-reason=verify WebNext Audit Astro github before provisioning
-requested_at=2026-10-08-01:45
+reason=verify Astro with malformed numeric TablePress guard and WebNext Audit component
+source_sha=4d8313f3b609f6572505128ede25d1a40fe73d61

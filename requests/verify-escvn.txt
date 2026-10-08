@@ -1,2 +1,2 @@
-reason=verify WebNext Audit with numeric ID normalization at source
-source_sha=ef3be7a1a318735abb966c4188346288069c96e6
+reason=verify Home_06 WebNext spotlight Astro component and regressions on github before WordPress provisioning
+source_sha=173d10a8f39cc52979a5101e96d65adcba9278c7

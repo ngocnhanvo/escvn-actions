@@ -1,2 +1,2 @@
-source_sha=d1e8cdcc7b55b13b99aeb8151539f2254572bdf5
-reason=deploy Unicode Vietnamese WebNext PDF with Lighthouse mobile screenshot and UTF-8 consultation email
+source_sha=bb86d2aa208e9b0d89bb77a2d5c280063ad0f6fa
+reason=Deploy ESC WebNext audit history admin module and REST/cron bridge to WordPress production FTP

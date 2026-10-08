@@ -1,0 +1,122 @@
+name: Deploy ESC WebNext Audit PHP
+
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-webnext-audit-deploy.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: esc-webnext-audit-php
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+      - name: Parse source revision
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(sed -n 's/^source_sha=//p' control/requests/wordpress-webnext-audit-deploy.txt | tail -n 1 | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Checkout PHP source
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Verify source revision and PHP syntax
+        working-directory: source
+        env:
+          SOURCE_SHA: ${{ steps.request.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          php -l wp-content/mu-plugins/esc-webnext-audit.php
+          node --check automation/webnext/provision.mjs
+      - name: Resolve WordPress FTP root
+        id: destination
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        shell: bash
+        run: |
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          url = os.environ['WP_ADMIN_URL']
+          host = urlparse(url if '://' in url else 'https://' + url).hostname
+          if not host:
+              raise SystemExit('Invalid WP_ADMIN_URL')
+          print(host)
+          PY
+          )"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "folder=/domains/$host/public_html/wp-content/mu-plugins" >> "$GITHUB_OUTPUT"
+      - name: Deploy MU plugin over FTP and verify bytes
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          REMOTE_FOLDER: ${{ steps.destination.outputs.folder }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y lftp >/dev/null
+          protocol="${FTP_PROTOCOL:-ftp}"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$protocol://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ssl:verify-certificate no
+          mkdir -p "$REMOTE_FOLDER"
+          put "source/wp-content/mu-plugins/esc-webnext-audit.php" -o "$REMOTE_FOLDER/esc-webnext-audit.php.pending"
+          get "$REMOTE_FOLDER/esc-webnext-audit.php.pending" -o "/tmp/esc-webnext-audit.pending.php"
+          mv "$REMOTE_FOLDER/esc-webnext-audit.php.pending" "$REMOTE_FOLDER/esc-webnext-audit.php"
+          get "$REMOTE_FOLDER/esc-webnext-audit.php" -o "/tmp/esc-webnext-audit.remote.php"
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-webnext-audit.php /tmp/esc-webnext-audit.pending.php
+          cmp source/wp-content/mu-plugins/esc-webnext-audit.php /tmp/esc-webnext-audit.remote.php
+      - name: Smoke test REST route registration
+        shell: bash
+        env:
+          WP_HOST: ${{ steps.destination.outputs.host }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            status="$(curl -sS -L -o /tmp/webnext-rest.json -w '%{http_code}' \
+              --connect-timeout 8 --max-time 20 \
+              "https://$WP_HOST/wp-json/esc-webnext/v1/audit/00000000000000000000000000000000?token=0000000000000000000000000000000000000000000000000000000000000000" || true)"
+            if [[ "$status" == "404" ]] && python3 - <<'PY'
+          import json
+          try:
+              with open('/tmp/webnext-rest.json',encoding='utf8') as stream:
+                  payload=json.load(stream)
+              assert payload.get('code') == 'audit_not_found', payload
+          except Exception:
+              raise SystemExit(1)
+          PY
+            then
+              echo "ESC WebNext Audit PHP REST route is active."
+              exit 0
+            fi
+            echo "Attempt $attempt HTTP $status; retrying..."
+            sleep 5
+          done
+          echo "::error::ESC WebNext Audit REST route did not pass smoke test."
+          exit 1

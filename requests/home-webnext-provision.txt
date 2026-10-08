@@ -1,2 +1,2 @@
-source_sha=06dbb1f369076468ec00bc16b96c35d84d3b150f
-reason=Insert home_06 without letting TinyMCE rewrite existing homepage HTML
+source_sha=a90cdf81f3244d23c5254bf0df4b7b9e6d8fdee0
+reason=Finish home_06 insertion by unwrapping picker-generated preview HTML while preserving original page content

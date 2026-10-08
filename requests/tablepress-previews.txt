@@ -2,5 +2,5 @@ mode: single
 shortcodes: home_06
 force: false
 page_url: https://esc.vn/
-source_sha: f7e2677d55296d2675427daa8eb1838a818a80de
-reason: Capture production ESC WebNext home_06 spotlight preview after verified FTP deploy
+source_sha: 51c4494827bd3194a8b67fc0b9816cb73b2ce148
+reason: Retry WebNext home_06 preview after mapping WordPress ACF home page to public root

@@ -1,2 +1,2 @@
-reason=verify WebNext Lighthouse CrUX Observatory status colors and thresholds on Astro github branch
-source_sha=280c2e4f48d25459062aec67232781a03c0fcff2
+reason=Verify five Lighthouse category gauges and agentic fraction on ESC WebNext
+source_sha=a0098fb3ef3c21cc50ecdbbd57a52f7eeb461cd5

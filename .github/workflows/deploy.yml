@@ -108,6 +108,7 @@ jobs:
             webnext_03: 2,
             webnext_04: 8,
             webnext_05: 1,
+            webnext_06: 2,
           };
 
           const blocks = new Map(
@@ -185,6 +186,7 @@ jobs:
               && grep -Fq 'data-tablepress-preview="webnext_03"' "$body_file" \
               && grep -Fq 'data-tablepress-preview="webnext_04"' "$body_file" \
               && grep -Fq 'data-tablepress-preview="webnext_05"' "$body_file" \
+              && grep -Fq 'data-tablepress-preview="webnext_06"' "$body_file" \
               && grep -Fq "NHẬN TƯ VẤN" "$body_file"; then
               echo "WebNext production smoke test passed (HTTP 200)."
               exit 0

@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           php -l wp-content/mu-plugins/esc-webnext-audit.php
+          php tests/webnext-audit-smoke.php
           node --check automation/webnext/provision.mjs
       - name: Resolve WordPress FTP root
         id: destination

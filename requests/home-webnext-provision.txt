@@ -1,2 +1,2 @@
-source_sha=8f2bc699ada1fd27e3ab4eaed95dc415377ebb3d
-reason=Retry safe home_06 WordPress insertion after fixing whitespace-only editor insertion guard
+source_sha=3a9aa3b21865df8cc36f2ac2f4ade34013f6b2ae
+reason=Diagnose ESC Table editor HTML transformation before publishing home_06 shortcode

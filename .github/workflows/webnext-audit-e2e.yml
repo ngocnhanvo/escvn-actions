@@ -1,0 +1,94 @@
+name: Smoke Test WebNext Audit End-to-End
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/webnext-audit-e2e.txt']
+
+concurrency:
+  group: esc-webnext-audit-e2e
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Run live Lighthouse smoke without sending consultation mail
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          WP_HOST="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          url=os.environ['WP_ADMIN_URL']
+          print(urlparse(url if '://' in url else 'https://'+url).hostname)
+          PY
+          )"
+          root="https://$WP_HOST/wp-json/esc-webnext/v1"
+          status="$(curl -sS -o /tmp/audit-start.json -w '%{http_code}' \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "$root/audit" \
+            -H 'Content-Type: application/json' \
+            --data '{"url":"https://esc.vn/"}')"
+          if [[ "$status" != "202" ]]; then
+            echo "::error::Audit start returned HTTP $status (check PAGEINSIGHT_KEY and rate limits)."
+            python3 - <<'PY'
+          import json
+          obj=json.load(open('/tmp/audit-start.json'))
+          print({k:v for k,v in obj.items() if k in ['code','message','error']})
+          PY
+            exit 1
+          fi
+          read id token < <(python3 - <<'PY'
+          import json
+          j=json.load(open('/tmp/audit-start.json'))
+          assert len(j['id'])==32 and len(j['token'])==64
+          print(j['id'],j['token'])
+          PY
+          )
+          echo "Started ESC WebNext Audit $id (token redacted)."
+          state=""
+          for i in $(seq 1 70); do
+            sleep 5
+            curl -fsS --connect-timeout 10 --max-time 20 \
+              "$root/audit/$id?token=$token" > /tmp/audit-status.json
+            state="$(python3 - <<'PY'
+          import json
+          print(json.load(open('/tmp/audit-status.json'))['status'])
+          PY
+          )"
+            echo "Attempt $i: $state"
+            [[ "$state" =~ ^(completed|partial|failed)$ ]] && break
+          done
+          if [[ "$state" != "completed" ]]; then
+            echo "::error::Lighthouse Mobile did not complete. State=$state"
+            python3 - <<'PY'
+          import json
+          j=json.load(open('/tmp/audit-status.json'))
+          print({'status':j.get('status'),'message':j.get('message'),'result':j.get('result')})
+          PY
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          j=json.load(open('/tmp/audit-status.json'))
+          r=j['result']
+          assert isinstance(r.get('performance'),int), r
+          assert 'security' in r and 'crux' in r
+          print('Lighthouse Mobile:',r['performance'],'HTTP security:',r['security'])
+          PY
+          curl -fsS --connect-timeout 10 --max-time 25 "$root/report/$id?token=$token&type=pdf" -o /tmp/webnext-audit.pdf
+          curl -fsS --connect-timeout 10 --max-time 25 "$root/report/$id?token=$token&type=json" -o /tmp/webnext-audit.json.gz
+          python3 - <<'PY'
+          import gzip
+          import json
+          pdf=open('/tmp/webnext-audit.pdf','rb').read()
+          assert pdf.startswith(b'%PDF-'), pdf[:50]
+          with gzip.open('/tmp/webnext-audit.json.gz','rb') as f: data=json.load(f)
+          assert 'audits' in data and 'categories' in data
+          print('PDF and Lighthouse JSON gzip both verified.')
+          PY

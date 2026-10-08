@@ -1,2 +1,2 @@
-reason=add WebNext Audit ESC Table 06 through editor while preserving existing table data
-source_sha=a01a3c8d775ebf922270d10d2746719bc8f26710
+reason=retry only webnext_06; leave existing tables intact
+source_sha=dd33e86e51ed5e7e0822d96546f865919fee329f

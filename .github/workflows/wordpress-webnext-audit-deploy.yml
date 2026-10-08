@@ -83,7 +83,9 @@ jobs:
           set net:max-retries 2
           set net:timeout 20
           set ssl:verify-certificate no
+          set cmd:fail-exit no
           mkdir -p "$REMOTE_FOLDER"
+          set cmd:fail-exit yes
           put "source/wp-content/mu-plugins/esc-webnext-audit.php" -o "$REMOTE_FOLDER/esc-webnext-audit.php.pending"
           get "$REMOTE_FOLDER/esc-webnext-audit.php.pending" -o "/tmp/esc-webnext-audit.pending.php"
           mv "$REMOTE_FOLDER/esc-webnext-audit.php.pending" "$REMOTE_FOLDER/esc-webnext-audit.php"

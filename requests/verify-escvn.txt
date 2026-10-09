@@ -2,3 +2,4 @@ reason=Verify ESC Astro github independent sitemap extraction and regression tes
 source_branch=github
 feature=sitemap_robots_manual_command
 build_without_sitemap_generation=true
+sitemap_test_fix=dbaf762310e2166b26e95672bde8d25bc25c0d8b

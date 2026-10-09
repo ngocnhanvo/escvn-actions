@@ -58,14 +58,16 @@ jobs:
           deploy_path = root / '.github/workflows/deploy.yml'
           provision_path = root / '.github/workflows/provision-webnext.yml'
           preview_path = root / '.github/workflows/tablepress-previews.yml'
+          smoke_path = root / '.github/workflows/production-smoke.yml'
 
-          for path in (verify_path, deploy_path, provision_path, preview_path):
+          for path in (verify_path, deploy_path, provision_path, preview_path, smoke_path):
               assert path.is_file(), f'Missing Hub workflow: {path}'
 
           verify = verify_path.read_text(encoding='utf-8')
           deploy = deploy_path.read_text(encoding='utf-8')
           provision = provision_path.read_text(encoding='utf-8')
           preview = preview_path.read_text(encoding='utf-8')
+          smoke = smoke_path.read_text(encoding='utf-8')
 
           assert 'repository: ngocnhanvo/escvn-astro' in verify
           assert 'ref: github' in verify
@@ -84,7 +86,19 @@ jobs:
           assert 'FTP_SERVER' in deploy
           assert 'FTP_USERNAME' in deploy
           assert 'FTP_PASSWORD' in deploy
-          assert 'Smoke Test WebNext Production' in deploy
+          # Build/deploy must be free of post-deploy HTTP retries.
+          assert 'Smoke Test WebNext Production' not in deploy
+          assert 'Smoke Test WebNext Spotlight on Homepage' not in deploy
+          assert 'Trigger Remote Unzip' in deploy
+          # The independent workflow runs only after the deployment completed successfully.
+          assert 'workflow_run:' in smoke
+          assert 'Deploy ESC Astro Production' in smoke
+          assert 'github.event.workflow_run.conclusion' in smoke
+          assert "== 'success'" in smoke
+          assert 'Smoke Test WebNext Production' in smoke
+          assert 'Smoke Test WebNext Spotlight on Homepage' in smoke
+          assert 'data-tablepress-preview=\\\"webnext_06\\\"' in smoke
+          assert 'data-tablepress-preview=\\\"home_06\\\"' in smoke
           assert 'requests/deploy-escvn.txt' in deploy
           assert 'push:\n    branches:\n      - master' not in deploy
 

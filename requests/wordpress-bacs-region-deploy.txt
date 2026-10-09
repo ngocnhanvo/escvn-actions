@@ -1,0 +1,6 @@
+reason=Deploy WooCommerce BACS region dropdown on admin.esc.vn, escrow-free byte verification
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=5997c36ce5d0da5c2ca3af42a35c0e87cf603c75
+target=admin.esc.vn
+files=esc-bacs-regions.php,esc-bacs-regions-admin.js,checkout_endpoint.php

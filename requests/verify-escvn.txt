@@ -1,6 +1,8 @@
-reason=Verify ESC CoCart header badge session reconciliation without FTP
+reason=Verify idle cart badge sync and deduplicated Astro user account info fetch
 astro_branch=github
-astro_sha=bf9e8b659b044d6cfb4df50444bc0508981274ba
-test=src/lib/utils/cartSnapshot.test.ts
-behavior=read-only server cart snapshot; keep valid carts on network errors
+astro_sha=c239dae064a0dbb27e96b7636ca386d25f0b3543
+regressions=cartSnapshot;HeaderCart;HeaderUserAccount
+run_unit_tests=true
+run_astro_check=true
+run_build=true
 deploy=false

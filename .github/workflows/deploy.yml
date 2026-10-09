@@ -78,30 +78,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-escvn-dot-cache-
 
-      - name: Diagnose fresh homepage API before build
-        working-directory: source
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import 'dotenv/config';
-          const origin = String(process.env.WC_URL || '').replace(new RegExp('/+$'), '');
-          if (!origin) throw new Error('WC_URL missing from build environment');
-          console.log('Build WordPress API host:',new URL(origin).hostname);
-          for (let n=1; n<=12; n++){
-            const res=await fetch(origin+'/wp-json/wp/v2/pages?status=publish&per_page=50&page='+n, {headers:{'Cache-Control':'no-cache'}});
-            if(!res.ok) throw new Error('WP pages API HTTP '+res.status);
-            const entries=await res.json();
-            const matched=entries.find(item=>item.id===248);
-            if(matched){
-              const ids=[...String(matched.content?.rendered||'').matchAll(/\[table\s+id=([\w-]+)\s*\/\]/g)].map(m=>m[1]);
-              console.log('Prebuild WordPress page 248 shortcodes:',ids);
-              break;
-            }
-            if(n>=Number(res.headers.get('X-WP-TotalPages')||1)) { console.log('Page 248 missing from API');break; }
-          }
-          NODE
-
       - name: Build Project
         working-directory: source
         env:

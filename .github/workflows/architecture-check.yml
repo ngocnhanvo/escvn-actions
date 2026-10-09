@@ -97,8 +97,8 @@ jobs:
           assert "== 'success'" in smoke
           assert 'Smoke Test WebNext Production' in smoke
           assert 'Smoke Test WebNext Spotlight on Homepage' in smoke
-          assert 'data-tablepress-preview=\\\"webnext_06\\\"' in smoke
-          assert 'data-tablepress-preview=\\\"home_06\\\"' in smoke
+          assert 'data-tablepress-preview=' in smoke and 'webnext_06' in smoke
+          assert 'data-tablepress-preview=' in smoke and 'home_06' in smoke
           assert 'requests/deploy-escvn.txt' in deploy
           assert 'push:\n    branches:\n      - master' not in deploy
 

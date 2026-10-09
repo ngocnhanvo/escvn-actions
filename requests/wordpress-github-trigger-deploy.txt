@@ -2,6 +2,6 @@ Deploy ESC WordPress GitHub trigger runtime
 phase=green-production
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=2096193f82dee6a9b8a7ca48054e2c98197a7656
-requested_at=2026-10-07
-reason=port-shared-build-state-and-duplicate-build-lock-from-blue-sea
+source_sha=da7ef04d51001b890fd54916ab6c6440268f8ba4
+requested_at=2026-10-09
+reason=port-force-build-exception-from-blue-sea-without-bypassing-shared-build-lock

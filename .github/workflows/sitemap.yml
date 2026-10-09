@@ -2,6 +2,7 @@ name: ESC Sitemap / Robots (independent)
 
 on:
   workflow_dispatch:
+
     inputs:
       source_ref:
         description: 'Astro source branch (production publishing requires master)'
@@ -16,6 +17,10 @@ on:
         required: true
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths:
+      - 'requests/sitemap-escvn.txt'
 
 permissions:
   contents: read
@@ -47,7 +52,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ngocnhanvo/escvn-astro
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ inputs.source_ref || 'github' }}
           token: ${{ secrets.SOURCE_REPO_PAT }}
           path: source
           persist-credentials: false

@@ -1,0 +1,3 @@
+reason=Verify standalone sitemap and robots generation from ESC Astro github cached WordPress data
+source_ref=github
+publish=false

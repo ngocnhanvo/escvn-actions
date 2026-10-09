@@ -9,6 +9,7 @@ on:
   push:
     branches: [main]
     paths:
+      - '.github/workflows/production-smoke.yml'
       - 'requests/production-smoke-escvn.txt'
 
 permissions:

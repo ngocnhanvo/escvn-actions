@@ -123,3 +123,24 @@ jobs:
           set -euo pipefail
           node --check private/php/automation/webnext/provision.mjs
           node --check private/php/automation/tablepress/previews.mjs
+
+      - name: Validate ESC regional bank transfer module
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l private/php/wp-content/mu-plugins/esc-bacs-regions.php
+          php -l private/php/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php
+          node --check private/php/wp-content/mu-plugins/esc-bacs-regions-admin.js
+          python - <<'PY'
+          from pathlib import Path
+          module = Path('private/php/wp-content/mu-plugins/esc-bacs-regions.php').read_text()
+          checkout = Path('private/php/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php').read_text()
+          done = Path('private/astro/src/astro/pages/CheckoutDonePage.astro').read_text()
+          assert 'esc_bacs_account_for_city' in module
+          assert 'woocommerce_bacs_accounts' in module
+          assert checkout.index('esc_bacs_account_for_city') < checkout.index('wc_create_order()')
+          assert '_esc_bacs_payment_account' in checkout
+          assert 'esc_bacs_payment_account' in done
+          assert 'payment_gateways/bacs' not in done
+          print('Regional BACS to order snapshot and VietQR contract passed.')
+          PY

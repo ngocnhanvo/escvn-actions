@@ -1,0 +1,122 @@
+name: ESC Sitemap / Robots (independent)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Astro source branch (production publishing requires master)'
+        required: true
+        type: choice
+        default: github
+        options:
+          - github
+          - master
+      publish:
+        description: 'Publish ONLY sitemap.xml and robots.txt to esc.vn FTP'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escvn-actions-sitemap
+  cancel-in-progress: false
+
+jobs:
+  sitemap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Guard production ref
+        shell: bash
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          PUBLISH: ${{ inputs.publish }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          if [ "$PUBLISH" = "true" ] && [ "$SOURCE_REF" != "master" ]; then
+            echo 'Publishing sitemap from github development branch is blocked.' >&2
+            exit 1
+          fi
+
+      - name: Checkout Astro source (no build)
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Restore WordPress data cache from last ESC production build
+        id: wp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: source/.cache
+          key: ${{ runner.os }}-escvn-dot-cache-sitemap-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-escvn-dot-cache-
+
+      - name: Validate cache and generate sitemap / robots
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .cache/data.json || { echo 'Missing .cache/data.json; run the normal site build first.' >&2; exit 1; }
+          node scripts/generate-sitemap-robots.mjs
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import urlparse
+          import xml.etree.ElementTree as ET
+          cache=json.loads(Path('.cache/data.json').read_text())
+          source=urlparse(str(cache.get('data_info',{}).get('domain',{}).get('vi','')).replace('https://','https://'))
+          assert source.hostname in {'esc.vn', 'www.esc.vn'}, f'Unexpected sitemap domain: {source.hostname}'
+          xml=ET.parse('public/sitemap.xml')
+          urls=[(x.text or '') for x in xml.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]
+          assert len(urls) > 5, 'Sitemap unexpectedly small'
+          assert len(urls) == len(set(urls)), 'Duplicate sitemap entries'
+          assert all(urlparse(u).hostname in {'esc.vn','www.esc.vn'} for u in urls), 'Foreign domain in sitemap'
+          assert 'Sitemap:' in Path('public/robots.txt').read_text(), 'Robots sitemap reference missing'
+          print(f'Validated {len(urls)} sitemap URLs, robots.txt and site host.')
+          PY
+
+      - name: Store independent sitemap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: escvn-sitemap-robots
+          path: |
+            source/public/sitemap.xml
+            source/public/robots.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload sitemap and robots only to production FTP
+        if: ${{ inputs.publish }}
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          ftp_host="${FTP_SERVER#ftp://}"
+          ftp_host="${ftp_host#ftps://}"
+          ftp_host="${ftp_host%/}"
+          for file in sitemap.xml robots.txt; do
+            curl --fail --show-error --silent --retry 2 --connect-timeout 20 \
+              --user "$FTP_USERNAME:$FTP_PASSWORD" \
+              --ftp-create-dirs --upload-file "source/public/$file" \
+              "ftp://$ftp_host/domains/esc.vn/public_html/$file"
+            echo "Uploaded $file only"
+          done

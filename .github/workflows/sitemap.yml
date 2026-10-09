@@ -84,7 +84,8 @@ jobs:
           from urllib.parse import urlparse
           import xml.etree.ElementTree as ET
           cache=json.loads(Path('.cache/data.json').read_text())
-          source=urlparse(str(cache.get('data_info',{}).get('domain',{}).get('vi','')).replace('https://','https://'))
+          raw_domain=str(cache.get('data_info',{}).get('domain',{}).get('vi','')).strip()
+          source=urlparse(raw_domain if '://' in raw_domain else 'https://' + raw_domain)
           assert source.hostname in {'esc.vn', 'www.esc.vn'}, f'Unexpected sitemap domain: {source.hostname}'
           xml=ET.parse('public/sitemap.xml')
           urls=[(x.text or '') for x in xml.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]

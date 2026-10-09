@@ -1,2 +1,6 @@
-reason=Verify measured Lighthouse final URL, Mobile screenshot, redirect warning and image zoom on WebNext Astro github
-source_sha=209b71f63c88ae25bfb280e8185d35f901fcd817
+reason=Verify regional BACS account modal field and VietQR order snapshot
+astro_branch=github
+astro_sha=6c8bb73de52dd16fd4ab644267cfcff46e5e4a76
+php_branch=master
+php_sha=5997c36ce5d0da5c2ca3af42a35c0e87cf603c75
+deploy=false

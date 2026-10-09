@@ -1,0 +1,158 @@
+name: Deploy ESC WooCommerce BACS Regions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-bacs-region-deploy.txt']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escvn-actions-wordpress-bacs-region-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT" && test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD" && test -n "$WP_ADMIN_URL"
+
+      - name: Checkout actions deployment request
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Checkout ESC backend master
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Validate source revision and PHP/JS
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(sed -n 's/^source_sha=//p' ../control/requests/wordpress-bacs-region-deploy.txt | tail -n 1 | tr -d '\r')"
+          actual="$(git rev-parse HEAD)"
+          echo "escvn-php@master $actual"
+          test "$expected" = "$actual"
+          php -l wp-content/mu-plugins/esc-bacs-regions.php
+          php -l wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php
+          node --check wp-content/mu-plugins/esc-bacs-regions-admin.js
+          grep -Fq "esc_bacs_account_for_city" wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php
+          grep -Fq "esc-bacs-region-select" wp-content/mu-plugins/esc-bacs-regions-admin.js
+
+      - name: Resolve ESC admin FTP root
+        id: wp_path
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          raw=os.environ['WP_ADMIN_URL'].strip()
+          parsed=urlparse(raw if '://' in raw else 'https://'+raw)
+          if parsed.hostname != 'admin.esc.vn':
+              raise SystemExit('Unexpected WordPress target. Refusing deployment.')
+          print(parsed.hostname)
+          PY
+          )"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "root=/domains/$host/public_html" >> "$GITHUB_OUTPUT"
+
+      - name: Install FTP client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y lftp
+
+      - name: Download current checkout PHP and detect unexpected production edits
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          REMOTE_WP_ROOT: ${{ steps.wp_path.outputs.root }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$protocol://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ssl:verify-certificate no
+          get "$REMOTE_WP_ROOT/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php" -o /tmp/esc-bacs-checkout-previous.php
+          bye
+          LFTP
+          previous="$(git hash-object /tmp/esc-bacs-checkout-previous.php)"
+          case "$previous" in
+            4f5ea189ac6dfe9b0456bf6f8b83169a89c87bbc|ac79903d9b56ef1dd7cd9262b80a1692df14b5de)
+              echo 'Production checkout PHP matches known baseline or requested code.' ;;
+            *)
+              echo "::error::Unexpected changes to production checkout ($previous). Refusing to overwrite."
+              exit 1 ;;
+          esac
+
+      - name: Upload BACS UI, region mapping and checkout validation
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          REMOTE_WP_ROOT: ${{ steps.wp_path.outputs.root }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$protocol://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ssl:verify-certificate no
+          put "source/wp-content/mu-plugins/esc-bacs-regions.php" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-bacs-regions.php"
+          put "source/wp-content/mu-plugins/esc-bacs-regions-admin.js" -o "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-bacs-regions-admin.js"
+          put "source/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php" -o "$REMOTE_WP_ROOT/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php"
+          get "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-bacs-regions.php" -o /tmp/esc-bacs-regions.remote.php
+          get "$REMOTE_WP_ROOT/wp-content/mu-plugins/esc-bacs-regions-admin.js" -o /tmp/esc-bacs-regions-admin.remote.js
+          get "$REMOTE_WP_ROOT/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php" -o /tmp/esc-bacs-checkout.remote.php
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-bacs-regions.php /tmp/esc-bacs-regions.remote.php
+          cmp source/wp-content/mu-plugins/esc-bacs-regions-admin.js /tmp/esc-bacs-regions-admin.remote.js
+          cmp source/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php /tmp/esc-bacs-checkout.remote.php
+          echo 'All three ESC BACS files deployed and byte-verified.'
+
+      - name: Production smoke test admin script delivery
+        shell: bash
+        env:
+          WP_HOST: ${{ steps.wp_path.outputs.host }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          code="$(curl --silent --show-error -L -o "$tmp" -w '%{http_code}' --connect-timeout 10 --max-time 30 "https://$WP_HOST/wp-content/mu-plugins/esc-bacs-regions-admin.js?esc_cache_bust=$GITHUB_RUN_ID")"
+          test "$code" = 200
+          grep -Fq 'esc-bacs-region-select' "$tmp"
+          echo 'Production ESC BACS region selector script delivered (HTTP 200).'

@@ -1,0 +1,1 @@
+Read-only QA for safe Visual Builder header navigation; Astro github=863f2653cd372ec989da85386d09a749d4ef4afd; PHP master=a51f844db0e182ab0e137f8027d83608f9e492f7. Ensure WordPress parent validates postMessage and HTML form switches with new tickets; include keyboard/middle-click and full compile. No FTP in QA.

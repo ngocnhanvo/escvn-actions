@@ -1,4 +1,4 @@
-name: ESC Sitemap / Robots (independent)
+name: ESC Sitemap / Robots / LLMs (independent)
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
           - github
           - master
       publish:
-        description: 'Publish ONLY sitemap.xml and robots.txt to esc.vn FTP'
+        description: 'Publish ONLY sitemap.xml, robots.txt and llms.txt to esc.vn FTP'
         required: true
         type: boolean
         default: false
@@ -71,12 +71,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-escvn-dot-cache-
 
-      - name: Validate cache and generate sitemap / robots
+      - name: Validate cache and generate sitemap / robots / llms
         working-directory: source
         shell: bash
+        env:
+          ESC_ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
           set -euo pipefail
           test -s .cache/data.json || { echo 'Missing .cache/data.json; run the normal site build first.' >&2; exit 1; }
+          if [ -n "$ESC_ENV_FILE" ]; then
+            printf '%s\n' "$ESC_ENV_FILE" > .env
+            set -a
+            source .env
+            set +a
+          fi
           node scripts/generate-sitemap-robots.mjs
           python - <<'PY'
           import json
@@ -93,6 +101,7 @@ jobs:
           assert len(urls) == len(set(urls)), 'Duplicate sitemap entries'
           assert all(urlparse(u).hostname in {'esc.vn','www.esc.vn'} for u in urls), 'Foreign domain in sitemap'
           assert 'Sitemap:' in Path('public/robots.txt').read_text(), 'Robots sitemap reference missing'
+          assert Path('public/llms.txt').is_file(), 'Missing llms.txt'
           print(f'Validated {len(urls)} sitemap URLs, robots.txt and site host.')
           PY
 
@@ -103,10 +112,11 @@ jobs:
           path: |
             source/public/sitemap.xml
             source/public/robots.txt
+            source/public/llms.txt
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload sitemap and robots only to production FTP
+      - name: Upload approved SEO text files only to production FTP
         if: ${{ inputs.publish }}
         shell: bash
         env:
@@ -119,7 +129,7 @@ jobs:
           ftp_host="${FTP_SERVER#ftp://}"
           ftp_host="${ftp_host#ftps://}"
           ftp_host="${ftp_host%/}"
-          for file in sitemap.xml robots.txt; do
+          for file in sitemap.xml robots.txt llms.txt; do
             curl --fail --show-error --silent --retry 2 --connect-timeout 20 \
               --user "$FTP_USERNAME:$FTP_PASSWORD" \
               --ftp-create-dirs --upload-file "source/public/$file" \

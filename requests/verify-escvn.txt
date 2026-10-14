@@ -1,6 +1,6 @@
-reason=Recheck ESC Builder SEO Tracking/Files after fixing Astro module import and ESC llms defaults
+reason=Fix custom marketing tag TypeScript narrowing and run full ESC Astro development CI
 astro_branch=github
-astro_sha=eba37e116415bcbd872863099dbfc554bcacf26d
+astro_sha=d7276635883f8248fb7b10b49c4314e326f40e34
 php_branch=master
 php_sha=6f0ba69ae799094f3cde669a20f84def75669889
 regressions=builder;table;marketing;seo-files;multilingual

@@ -1,8 +1,9 @@
-reason=Verify complete Blue Sea feature port including Builder, ESC Table, SEO Files, SEO Tracking, CSP, multilingual and signed unzip PHP syntax
+reason=Verify ESC Blue Sea sync and fix missing GoogleConversions import on github
 astro_branch=github
-astro_sha=697a1300eb0951d735215735bf00a3f331bf4b73
+astro_sha=eba37e116415bcbd872863099dbfc554bcacf26d
 php_branch=master
 php_sha=3dca85e3fbafbd0956b3b8377ec1fd3e60c4e7b2
+regressions=builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true
 run_build=true

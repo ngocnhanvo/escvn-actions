@@ -1,7 +1,9 @@
-reason=Verify ESC Visual Builder, SEO Files and SEO Tracking integrations after Blue Sea parity port
+reason=Verify complete Blue Sea feature port including Builder, ESC Table, SEO Files, SEO Tracking, CSP, multilingual and signed unzip PHP syntax
 astro_branch=github
-astro_sha=6f51e549b1564db42a1b3252497ebb2a511f4392
-regressions=builderSectionDrafts;marketingPixels;seo-files
+astro_sha=697a1300eb0951d735215735bf00a3f331bf4b73
+php_branch=master
+php_sha=3dca85e3fbafbd0956b3b8377ec1fd3e60c4e7b2
 run_unit_tests=true
 run_astro_check=true
 run_build=true
+run_php_lint=true

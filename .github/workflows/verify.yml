@@ -37,6 +37,36 @@ jobs:
           path: source
           persist-credentials: false
 
+      - name: Checkout ESC WordPress backend for isolated PHP lint
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: backend
+          persist-credentials: false
+
+      - name: Verify ESC PHP syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -v | head -n 1
+          for path in \
+            backend/wp-content/mu-plugins/esc-seo-files.php \
+            backend/wp-content/mu-plugins/esc-marketing-settings.php \
+            backend/wp-content/mu-plugins/esc-multilingual-delete-sync.php \
+            backend/wp-content/mu-plugins/esc-multilingual-admin.php \
+            backend/wp-content/plugins/esc-visual-builder/esc-visual-builder.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/item-manager.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/section-order.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/item-section-ui.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/page-image.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/image-editor.php \
+            backend/wp-content/plugins/esc-table/views/view-edit.php \
+            backend/unzip-v2.php; do
+            php -l "$path"
+          done
+
       - name: Show source revision
         working-directory: source
         run: echo "Verifying escvn-astro@github $(git rev-parse HEAD)"
@@ -74,7 +104,7 @@ jobs:
           echo "ASTRO_CHECK_STATUS=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
           exit 0
 
-      - name: Guard WebNext-specific Astro errors
+      - name: Guard WebNext, Builder and SEO-specific Astro errors
         working-directory: source
         shell: bash
         run: |
@@ -92,6 +122,14 @@ jobs:
               'src/astro/tablepress/Webnext_06.astro',
               'src/pages/api/contact/index.ts',
               'src/pages/api/web-audit/index.ts',
+              'src/pages/esc-builder/preview/[pageId].astro',
+              'src/lib/wordpress/builderSectionDrafts.ts',
+              'src/lib/googleServices.ts',
+              'src/lib/marketingTags.ts',
+              'src/lib/marketingPixels.ts',
+              'src/astro/components/Layout/GoogleServices.astro',
+              'src/astro/components/Layout/MarketingExtraTags.astro',
+              'src/astro/components/Layout/MarketingPixels.astro',
           )
           errors = [
               line for line in clean.splitlines()

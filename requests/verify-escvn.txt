@@ -1,8 +1,8 @@
-reason=Verify ESC Blue Sea sync and fix missing GoogleConversions import on github
+reason=Recheck ESC Builder SEO Tracking/Files after fixing Astro module import and ESC llms defaults
 astro_branch=github
 astro_sha=eba37e116415bcbd872863099dbfc554bcacf26d
 php_branch=master
-php_sha=3dca85e3fbafbd0956b3b8377ec1fd3e60c4e7b2
+php_sha=6f0ba69ae799094f3cde669a20f84def75669889
 regressions=builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true

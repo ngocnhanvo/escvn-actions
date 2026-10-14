@@ -1,8 +1,7 @@
-reason=Verify final CoCart idle callback and auth header DOM identity fix
+reason=Verify ESC Visual Builder, SEO Files and SEO Tracking integrations after Blue Sea parity port
 astro_branch=github
-astro_sha=b7b1877e9a9b2cd35d5c6f533b67f13e877dcec1
-regressions=cartSnapshot;HeaderCart;HeaderUserAccount
+astro_sha=6f51e549b1564db42a1b3252497ebb2a511f4392
+regressions=builderSectionDrafts;marketingPixels;seo-files
 run_unit_tests=true
 run_astro_check=true
 run_build=true
-deploy=false

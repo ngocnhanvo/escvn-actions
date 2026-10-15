@@ -1,9 +1,7 @@
-ESC CV Studio visual editing UX production deploy (4 requested enhancements)
+ESC CV Studio true in-place text editing (no iframe flicker) production deploy
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: f974e3bef8c68169deae66edc082b5f2bf66c1d0
-PHP repo: ngocnhanvo/escvn-php
-PHP source SHA: 03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
-Development verification: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38759665927 (PASS)
-Changes: password eye, remove duplicate domain/template labels, inline click-to-edit CV with contextual inspector, image upload, group controls and local draft.
-Followup: execute CV public browser QA after successful FTP deploy.
+Astro SHA: 22ff02a07ac620d3c405cdcde5732a7c501b2a14
+Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38811478756 (PASS)
+Scope: browser-only CV editor; user text edited at caret without srcdoc replacement; image and local draft preserved
+Required follow-up: ESC CV Studio Public Flow QA verifying typed content, iframe document identity, and drafts

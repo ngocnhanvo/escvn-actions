@@ -1,11 +1,11 @@
-Deploy ESC CV Studio WordPress-managed landing page /tao-cv-truc-tuyen using shared ESC Header/Footer.
+Deploy QA-verified ESC CV Studio M01/M26 live Builder and preview popup.
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: bde35516901b7c4409c9186f9144f616ad976fd2
-WordPress Page: 55454 action CVStudioPage key cv-studio
-WordPress tables: cvstudio_00,cvstudio_01,cvstudio_02 inserted via Classic Editor tool with verified preview
-Backend PHP SHA: 365d4891c128c430466b2d8ffd80c2f3a4160a1f
-Astro QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740727951 (success)
-WordPress provision: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740183814 (success)
-Scope: CV Studio only. Do not modify Blue Sea or existing ESC CV template ZIP records.
-Retry reason: FTP control socket ECONNRESET on 50.2 MiB archive in failed run 38743418398. Stable source unchanged; new lftp resume and round-trip byte verification gate. Previous build artifact unavailable after failed run.
+Astro SHA: 75aafa73ed86a4a70165f29709bfef08d6c29035
+Source commit: 75aafa73ed86a4a70165f29709bfef08d6c29035
+PHP repo: ngocnhanvo/escvn-php
+PHP source SHA: 03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
+QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38752283157 (PASS)
+Changes: WordPress active template image popup, select template -> dedicated schema-driven user CV Builder, live iframe render, local draft.
+Removal: obsolete three-field editor and fake image+text preview.
+Safety: no Member authentication or CV publishing; demo only. Existing WordPress Page 55454 and ESC Tables stay unchanged.

@@ -1,0 +1,4 @@
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=d25b59baa43137f0b1fd838abb59e59c8d3a9c00
+reason=Verify and deploy first ESC CV Manager admin-only template registry; keep Astro and existing WordPress plugins unchanged

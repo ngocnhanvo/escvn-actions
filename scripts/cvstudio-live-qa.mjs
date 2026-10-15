@@ -203,7 +203,7 @@ try {
     const walker=doc.createTreeWalker(doc.body,NodeFilter.SHOW_COMMENT);
     let count=0;
     while(walker.nextNode()){
-      if(/^esc-cv:row:start:experiences\\.\\d+$/.test(walker.currentNode.data))count++;
+      if(/^esc-cv:row:start:experiences\.\d+$/.test(walker.currentNode.data))count++;
     }
     return count;
   });

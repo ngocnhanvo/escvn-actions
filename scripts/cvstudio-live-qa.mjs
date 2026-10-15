@@ -191,8 +191,44 @@ try {
     assert(await page.locator('[data-cv-live-frame]').getAttribute('srcdoc')===m01Srcdoc,
       'Editing an empty field reloaded CV iframe and caused flicker');
   }
+  // Repeatable editor: operations are driven by #each markers (not custom
+  // M01/M26 markup) and must keep the same iframe document and srcdoc.
+  const repeatFrame=page.frameLocator('[data-cv-live-frame]');
+  const repeatIframe=page.locator('[data-cv-live-frame]');
+  const experience=repeatFrame.locator('[data-cv-inline^="experiences."]').first();
+  await experience.waitFor({state:'visible',timeout:15000});
+  const originalRepeatDoc=await repeatIframe.getAttribute('srcdoc');
+  const countRows=async()=>page.evaluate(()=>{
+    const doc=document.querySelector('[data-cv-live-frame]').contentDocument;
+    const walker=doc.createTreeWalker(doc.body,NodeFilter.SHOW_COMMENT);
+    let count=0;
+    while(walker.nextNode()){
+      if(/^esc-cv:row:start:experiences\\.\\d+$/.test(walker.currentNode.data))count++;
+    }
+    return count;
+  });
+  const beforeRows=await countRows();
+  assert(beforeRows>0,'M01 experiences must have repeatable row markers');
+  await experience.hover();
+  const toolbar=repeatFrame.locator('[data-cv-repeat-toolbar]');
+  await toolbar.locator('[data-cv-action="add"]').waitFor({state:'visible',timeout:10000});
+  await toolbar.locator('[data-cv-action="add"]').click();
+  assert(await countRows()===beforeRows+1,'Add must append one CV experience row');
+  assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
+    'Adding a CV item must patch one region, not reload the iframe');
+  await experience.hover();
+  await toolbar.locator('[data-cv-action="duplicate"]').click();
+  assert(await countRows()===beforeRows+2,'Duplicate must insert a copy of the item');
+  await experience.hover();
+  await toolbar.locator('[data-cv-action="down"]').click();
+  assert(await countRows()===beforeRows+2,'Move must preserve row count');
+  await experience.hover();
+  await toolbar.locator('[data-cv-action="delete"]').click();
+  assert(await countRows()===beforeRows+1,'Delete must remove only selected item');
+  assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
+    'Repeatable editing must not flicker/reload the CV document');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio: one-click text and empty placeholders, no-flicker typing, photo/experience editing and local draft: PASS');
+  console.log('ESC CV Studio: one-click editing, repeatable add/duplicate/move/delete without iframe reload, photo and draft: PASS');
 
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);

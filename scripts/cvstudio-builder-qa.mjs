@@ -52,8 +52,12 @@ try{
   await page.locator('#esc-vb-text-editor').waitFor({state:'visible',timeout:15000});
   const row=page.locator('#esc-vb-edit-row');
   await row.waitFor({state:'attached',timeout:15000});
-  const field=page.locator('#esc-vb-edit-field');
-  await field.waitFor({state:'attached',timeout:15000});
+  const field=page.locator('#esc-vb-edit-title');
+  await field.waitFor({state:'visible',timeout:15000});
+  if(!await field.isEnabled())throw Error('Builder textarea is disabled after selecting CV Studio Hero');
+  const current=(await field.inputValue()).trim();
+  if(!current.includes('Không chỉ là CV'))throw Error('Builder textarea does not contain the clicked WP-owned headline');
+  // QA must not save or change source content.
   console.log('ESC CV Studio Visual Builder: Hero cell editable, 3 sections rendered, WordPress source: PASS');
   // No save button is clicked: testing does not alter WordPress.
 }catch(e){

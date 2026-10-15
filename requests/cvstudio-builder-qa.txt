@@ -6,3 +6,4 @@ wordpress_provision_run=38740183814
 production_deploy_run=38744865982
 mode=read_only_click_and_inspect_builder
 qa_retry_reason=Corrected preview textarea selector from esc-vb-edit-field to actual esc-vb-edit-title; prior run 38745341989 rendered all 3 sections and opened text editor.
+qa_retry_reason_2=Wait for asynchronous editable-text API before checking the field, and log WordPress Builder error details on timeout.

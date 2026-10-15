@@ -1,7 +1,7 @@
-ESC CV Studio one-click editable caret and empty text placeholder production E2E QA (stable-element recheck)
+ESC CV Studio repeatable template engine post-deploy E2E
 Frontend: ngocnhanvo/escvn-astro@master
-SHA: c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
-Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38813687491
-FTP deploy: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38814249651
-Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38814484756
-Test assertions: first click focuses text caret; M01 empty placeholder has >=100px click target and 'Nhấp để sửa'; one-click typing works without iframe reload; all prior wizard and draft checks remain passing.
+SHA: ae1c1432f41df7fc983d94eb1ff9798467bd794d
+Dev QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38816568629
+FTP deploy: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38817133587
+Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38817352520
+Assertions: M01/M26 member demo workflow, stable inline text; M01 {{#each experiences}} Add Duplicate Move Delete actions, no iframe.srcdoc mutation, local browser drafts.

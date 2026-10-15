@@ -37,6 +37,15 @@ jobs:
           with open('/tmp/esc-home06.json',encoding='utf-8') as fh: result=json.load(fh)
           assert result.get('success') is True, 'ESC Table REST did not return success'
           assert result.get('id') == 'home_06', 'Wrong ESC Table'
+          print('WordPress diagnostic:', json.dumps({
+              'table_id': result.get('id'),
+              'meta_api_populated': bool((result.get('meta') or {}).get('api')),
+              'row_count': len(result.get('items',[])),
+              'column_names': [field.get('key') for field in result.get('fields',[])],
+              'key_count': len(set(str(x.get('key')) for x in result.get('items',[]))),
+              'value_types': sorted(set(type(x.get('value')).__name__ for x in result.get('items',[]))),
+              'order_types': sorted(set(type(x.get('order')).__name__ for x in result.get('items',[]))),
+          },ensure_ascii=False))
           fields=[field['key'] for field in result.get('fields',[])]
           assert fields[:2] == ['key','value'] and fields[2:] in ([],['order']), f'Unexpected schema: {fields}'
           items=result.get('items',[])

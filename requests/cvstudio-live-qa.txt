@@ -1,7 +1,7 @@
-ESC CV Studio no-flicker in-place text editor production QA
+ESC CV Studio one-click editable caret and empty text placeholder production E2E QA
 Frontend: ngocnhanvo/escvn-astro@master
-SHA: 22ff02a07ac620d3c405cdcde5732a7c501b2a14
-Dev QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38811478756
-FTP: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38812184192
-Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38812445375
-Assertions: edit text at caret; no iframe.srcdoc mutation across per-character typing; persistent iframe document; plaintext input; image selection; experiences; local draft survives reload.
+SHA: c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
+Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38813687491
+FTP deploy: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38814249651
+Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38814484756
+Test assertions: first click focuses text caret; M01 empty placeholder has >=100px click target and 'Nhấp để sửa'; one-click typing works without iframe reload; all prior wizard and draft checks remain passing.

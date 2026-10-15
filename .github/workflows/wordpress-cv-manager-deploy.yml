@@ -76,10 +76,11 @@ jobs:
           php -l source/wp-content/mu-plugins/esc-cv-manager-loader.php
           php source/wp-content/plugins/esc-cv-manager/tests/package-regression.php
           php source/wp-content/plugins/esc-cv-manager/tests/public-regression.php
+          php source/wp-content/plugins/esc-cv-manager/tests/builder-regression.php
           node --check source/automation/cvstudio/provision.mjs
           node --check source/wp-content/plugins/esc-cv-manager/assets/admin-preview.js
           node source/wp-content/plugins/esc-cv-manager/tests/preview-regression.cjs
-          grep -Fq "0.1.3" source/wp-content/plugins/esc-cv-manager/esc-cv-manager.php
+          grep -Fq "0.1.4" source/wp-content/plugins/esc-cv-manager/esc-cv-manager.php
           grep -Fq "admin_post_esc_cv_edit" source/wp-content/plugins/esc-cv-manager/includes/class-esc-cv-admin.php
           grep -Fq "ESC_CV_Registry::add_package(\$package, 'create')" source/wp-content/plugins/esc-cv-manager/includes/class-esc-cv-admin.php
           grep -Fq "ESC_CV_Registry::add_package(\$package, 'update')" source/wp-content/plugins/esc-cv-manager/includes/class-esc-cv-admin.php

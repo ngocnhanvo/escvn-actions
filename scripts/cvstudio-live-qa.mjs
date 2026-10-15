@@ -97,9 +97,9 @@ try {
   const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
   await nameTarget.waitFor({state:'visible',timeout:15000});
   await nameTarget.click();
-  const selected=page.locator('[data-cv-focused] label');
-  assert((await selected.textContent())?.includes('Họ và tên'),'Click CV name must select contextual field');
-  await selected.locator('input').fill('NGUYỄN VĂN QA');
+  const focusedLabel=page.locator('[data-cv-focused] label');
+  assert((await focusedLabel.textContent())?.includes('Họ và tên'),'Click CV name must select contextual field');
+  await focusedLabel.locator('input').fill('NGUYỄN VĂN QA');
   await page.waitForFunction(()=>{
     const f=document.querySelector('[data-cv-live-frame]');
     return f?.getAttribute('srcdoc')?.includes('NGUYỄN VĂN QA');

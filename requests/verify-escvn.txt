@@ -1,8 +1,8 @@
-reason=Reverify Home_06 key/value after Astro private locals type fix
+reason=ESC CV Studio WordPress-managed landing, member demo UI, public template gallery and Visual Builder table rules
 astro_branch=github
-astro_sha=4bfa32d8d855d9310aa59fad5ee8bd40c32851eb
+astro_sha=bde35516901b7c4409c9186f9144f616ad976fd2
 php_branch=master
-php_sha=ddb21a4d24ab2a20beec66d5186b8dd3ad00838c
+php_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
 regressions=builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true

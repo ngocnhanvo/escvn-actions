@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
-reason=ESC CV Studio WordPress-managed landing, member demo UI, public template gallery and Visual Builder table rules
+source_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
+reason=Expose only active verified CV template HTML CSS sample and bundled images to sandboxed user Builder; keep ZIP private and draft data client-side

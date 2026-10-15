@@ -173,8 +173,25 @@ jobs:
           if (idx < 0 || shortcodes[idx + 1] !== 'home_06') {
             throw new Error('Missing home_06 immediately after home_01 in the newly built homepage JSON.');
           }
-          if (items.length !== 1 || rows !== 11) {
-            throw new Error('WordPress home_06 TablePress data missing/incomplete from new Astro build.');
+          const records = Array.isArray(items[0]?.data?.items) ? items[0].data.items : [];
+          const requiredKeys = [
+            'badge','title','description','feature_1','feature_2','feature_3',
+            'primary_text','primary_url','secondary_text','secondary_url','disclaimer',
+            'report_aria_label','report_eyebrow','report_title','report_subtitle',
+            'report_metric_1_title','report_metric_1_description',
+            'report_metric_2_title','report_metric_2_description',
+            'report_metric_3_title','report_metric_3_description','report_download_text'
+          ];
+          const config = new Map();
+          for (const item of records) {
+            if (!item || typeof item.key !== 'string' || config.has(item.key)) {
+              throw new Error('home_06 contains missing or duplicate keys.');
+            }
+            config.set(item.key, typeof item.value === 'string' ? item.value.trim() : '');
+          }
+          const missing = requiredKeys.filter(key => !config.get(key));
+          if (items.length !== 1 || missing.length || rows < requiredKeys.length) {
+            throw new Error('WordPress home_06 ESC Table missing required content keys: ' + missing.join(','));
           }
           if (!html.includes('data-tablepress-preview="home_06"') ||
               !html.includes('id="esc-webnext-home-heading"') ||

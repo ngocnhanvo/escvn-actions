@@ -1,8 +1,8 @@
-reason=Rebuild after WordPress CV Studio Page 55454 provisioning; require all 3 CV ESC Tables and shared ESC layout in compiled HTML
+reason=Verify CV template preview dialog, skip old 3-field editor, dynamically render M01/M26 user Builder from activated WP zip (nested fields and safe sandbox)
 astro_branch=github
-astro_sha=bde35516901b7c4409c9186f9144f616ad976fd2
+astro_sha=df888de7e3a93355202e59393a0e4e0006cabc74
 php_branch=master
-php_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
+php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true

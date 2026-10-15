@@ -1,0 +1,73 @@
+import { chromium } from 'playwright';
+const url='https://esc.vn/tao-cv-truc-tuyen/';
+const api='https://admin.esc.vn/wp-json/esc-cv/v1/templates';
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1366,height:860}});
+const errors=[];
+page.on('pageerror',error=>errors.push(error.message));
+const assert=(ok,msg)=>{if(!ok)throw Error(msg)};
+const seen=async(q)=>await page.locator(q).first().isVisible();
+try {
+  const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  assert(response?.status()===200,'CV Studio returns HTTP '+response?.status());
+  await page.locator('#main-header').waitFor({state:'visible',timeout:15000});
+  await page.locator('[data-tablepress-preview="cvstudio_00"] h1').waitFor({state:'visible',timeout:15000});
+  for(const id of ['cvstudio_00','cvstudio_01','cvstudio_02'])
+    assert(await page.locator('[data-tablepress-preview="'+id+'"]').count()>=1,'Section missing: '+id);
+  const gallery=page.locator('[data-cv-gallery]');
+  await gallery.waitFor({state:'attached'});
+  const apiRes=await page.request.get(api,{timeout:30000});
+  assert(apiRes.ok(),'CV Manager public REST returned '+apiRes.status());
+  const data=await apiRes.json();
+  assert(Array.isArray(data.templates),'CV Manager REST payload shape invalid');
+  console.log('Active CV templates:',data.templates.map(t=>t.id+'@'+t.version).join(', ') || '(none)');
+  if(!data.templates.length)throw Error('No active templates in ESC CV Manager; activate at least one before end-to-end QA');
+  await gallery.locator('article').first().waitFor({state:'visible',timeout:30000});
+  // The browser gallery, not only the privileged runner's server-side REST,
+  // must be capable of accessing the cross-origin API and loading imagery.
+  const first=gallery.locator('article').first();
+  assert((await first.locator('img').getAttribute('src'))?.startsWith('https://admin.esc.vn/'),'Gallery image is not the public WordPress image');
+  const demoUser=page.locator('[data-cv-dialog]');
+  await page.locator('[data-cv-start]').first().click();
+  await demoUser.waitFor({state:'visible'});
+  const login=demoUser.locator('[data-cv-login-form]');
+  await login.locator('input[name=email]').fill('demo@esc.vn');
+  await login.locator('input[name=password]').fill('wrong-password');
+  await login.locator('button[type=submit]').click();
+  assert(await seen('[data-cv-login-error]'),'Invalid demo login must show an error');
+  assert(!(await seen('[data-cv-step="domain"]')),'Invalid login bypassed the domain step gate');
+  await login.locator('input[name=password]').fill('Demo@123');
+  await login.locator('button[type=submit]').click();
+  const domainStep=demoUser.locator('[data-cv-step="domain"]');
+  await domainStep.waitFor({state:'visible',timeout:8000});
+  const radios=domainStep.locator('input[name=cv-domain]');
+  assert(await radios.count()>=1,'Missing WordPress-configured demo domain');
+  const selected=await radios.first().inputValue();
+  await radios.first().check();
+  await domainStep.locator('[data-cv-domain-next]').click();
+  const templateStep=demoUser.locator('[data-cv-step="templates"]');
+  await templateStep.waitFor({state:'visible',timeout:15000});
+  await templateStep.locator('[data-cv-dialog-templates] article').first().waitFor({state:'visible',timeout:15000});
+  await templateStep.locator('article button').first().click();
+  const next=templateStep.locator('[data-cv-template-next]');
+  assert(await next.isEnabled(),'Selected template did not unlock Continue');
+  await next.click();
+  const editor=demoUser.locator('[data-cv-step="editor"]');
+  await editor.waitFor({state:'visible',timeout:10000});
+  await editor.locator('input[name=name]').fill('Nguyễn Văn Demo');
+  await editor.locator('input[name=role]').fill('UX Designer');
+  await editor.locator('input[name=email]').fill('demo@esc.vn');
+  await editor.locator('button[type=submit]').click();
+  const preview=demoUser.locator('[data-cv-step="preview"]');
+  await preview.waitFor({state:'visible',timeout:10000});
+  assert((await preview.locator('[data-cv-preview-name]').textContent())?.includes('Nguyễn Văn Demo'),'Preview name mismatch');
+  assert((await preview.locator('[data-cv-preview-domain]').textContent())===selected,'Preview domain mismatch');
+  await preview.locator('[data-cv-finish]').click();
+  await demoUser.locator('[data-cv-step="finish"]').waitFor({state:'visible',timeout:10000});
+  assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
+  console.log('ESC CV Studio public flow: shared header, WP gallery, login gate, domain, template, editor, preview: PASS');
+}catch(e){
+  console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);
+  await page.screenshot({path:'cvstudio-public-qa-failure.png',fullPage:true}).catch(()=>{});
+  throw e;
+}finally{await browser.close();}

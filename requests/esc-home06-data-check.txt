@@ -1,0 +1,5 @@
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=4f8f6c16db3f2257e160e37d5a3596ad5832c69e
+check=home_06
+reason=Verify live WordPress contains migrated key/value content before Astro deployment

@@ -123,6 +123,10 @@ jobs:
           clean = re.sub(r'\x1b\[[0-9;]*m', '', text)
           guarded_paths = (
               'src/astro/pages/WebNextPage.astro',
+              'src/astro/pages/CVStudioPage.astro',
+              'src/astro/tablepress/Cvstudio_00.astro',
+              'src/astro/tablepress/Cvstudio_01.astro',
+              'src/astro/tablepress/Cvstudio_02.astro',
               'src/data/webnext.ts',
               'src/pages/[...slug].astro',
               'src/astro/tablepress/Webnext_06.astro',
@@ -159,6 +163,46 @@ jobs:
         working-directory: source
         run: pnpm run build-git
 
+
+      - name: Verify ESC CV Studio WordPress source and compiled page
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const jsonPath = 'dist/client/data/page-tao-cv-truc-tuyen.json';
+          const htmlPath = 'dist/client/tao-cv-truc-tuyen/index.html';
+          if (!fs.existsSync(jsonPath) || !fs.existsSync(htmlPath)) {
+            throw new Error('CV Studio WordPress Page and built static route are missing.');
+          }
+          const page = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+          const html = fs.readFileSync(htmlPath, 'utf8');
+          if (page.key !== 'cv-studio' || page.action !== 'CVStudioPage') {
+            throw new Error('CV Studio WordPress action/key must be source-owned and match Astro.');
+          }
+          const ids=['cvstudio_00','cvstudio_01','cvstudio_02'];
+          const counts=[8,14,38];
+          const found=(page.contents||[]).filter(row=>ids.includes(row?.shortcode));
+          for (let i=0;i<ids.length;i++){
+            const item=found.find(row=>row.shortcode===ids[i]);
+            const n=Array.isArray(item?.data?.items)?item.data.items.length:0;
+            if(n!==counts[i]) throw new Error(ids[i]+' rows mismatch: '+n);
+            if(!html.includes('data-tablepress-preview="'+ids[i]+'"')) {
+              throw new Error(ids[i]+' Astro component missing from generated HTML');
+            }
+          }
+          const original=String(page.content||'');
+          const positions=ids.map(id=>original.indexOf('[table id='+id+' /]'));
+          if(positions.some(x=>x<0)||positions.some((x,i)=>i>0&&x<=positions[i-1])) {
+            throw new Error('CV Studio Page shortcodes missing or out of order');
+          }
+          if(!html.includes('Không chỉ là CV.')||!html.includes('data-cv-studio')||
+            !html.includes('data-cv-dialog')||!html.includes('id="main-header"')) {
+            throw new Error('CV Studio copy or ESC shared header/wizard missing');
+          }
+          console.log('ESC CV Studio production HTML, WP-owned copy, all ESC Tables: PASS');
+          NODE
 
       - name: Verify URL routing cache behavior
         working-directory: source

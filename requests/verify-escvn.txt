@@ -1,6 +1,6 @@
-reason=ESC CV one-click direct editing and visible wide placeholders on empty text bindings
+reason=Retest ESC CV one-click editing with corrected empty-text placeholder unit regression
 astro_branch=github
-astro_sha=2d2faa5b5eda3db7c794e1250e12857dfab531aa
+astro_sha=c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
 php_branch=master
 php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual

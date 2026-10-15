@@ -1,6 +1,6 @@
-reason=Verify CV template preview dialog, skip old 3-field editor, dynamically render M01/M26 user Builder from activated WP zip (nested fields and safe sandbox)
+reason=Final QA CV Studio dedicated Builder route, M01 and M26 binding renderer, avatar upload, preview popup and no legacy fixed-field editor
 astro_branch=github
-astro_sha=df888de7e3a93355202e59393a0e4e0006cabc74
+astro_sha=75aafa73ed86a4a70165f29709bfef08d6c29035
 php_branch=master
 php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual

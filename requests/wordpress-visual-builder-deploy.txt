@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=4f8f6c16db3f2257e160e37d5a3596ad5832c69e
-reason=Deploy schema-driven ESC Table key/value editor and one-time home_06 copy migration on admin.esc.vn
+source_sha=e99f71dbba703e5dbf08fe5421139968d034b57e
+reason=Deploy true WordPress ESC Table home_06 key-value-order support and non-destructive copy migration

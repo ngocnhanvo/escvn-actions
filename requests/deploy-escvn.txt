@@ -1,11 +1,9 @@
-Deploy QA-verified ESC CV Studio M01/M26 live Builder and preview popup.
+ESC CV Studio visual editing UX production deploy (4 requested enhancements)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 75aafa73ed86a4a70165f29709bfef08d6c29035
-Source commit: 75aafa73ed86a4a70165f29709bfef08d6c29035
+Astro SHA: f974e3bef8c68169deae66edc082b5f2bf66c1d0
 PHP repo: ngocnhanvo/escvn-php
 PHP source SHA: 03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
-QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38752283157 (PASS)
-Changes: WordPress active template image popup, select template -> dedicated schema-driven user CV Builder, live iframe render, local draft.
-Removal: obsolete three-field editor and fake image+text preview.
-Safety: no Member authentication or CV publishing; demo only. Existing WordPress Page 55454 and ESC Tables stay unchanged.
+Development verification: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38759665927 (PASS)
+Changes: password eye, remove duplicate domain/template labels, inline click-to-edit CV with contextual inspector, image upload, group controls and local draft.
+Followup: execute CV public browser QA after successful FTP deploy.

@@ -1,0 +1,123 @@
+name: Deploy ESC CoCart Contact City
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-cocart-city-deploy.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-cocart-contact-city-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Validate ESC source SHA and WordPress target
+        id: preflight
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          for var in SOURCE_REPO_PAT FTP_SERVER FTP_USERNAME FTP_PASSWORD WP_ADMIN_URL; do
+            test -n "${!var}"
+          done
+          expected="$(sed -n 's/^source_sha=//p' control/requests/wordpress-cocart-city-deploy.txt | tail -1 | tr -d '\r')"
+          [[ "$expected" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::Invalid source SHA'; exit 1; }
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          raw=os.environ['WP_ADMIN_URL'].strip()
+          u=urlsplit(raw if '://' in raw else 'https://'+raw)
+          if u.hostname != 'admin.esc.vn': raise SystemExit('Refusing non-ESC WordPress target')
+          print(u.hostname)
+          PY
+          )"
+          echo "expected=$expected" >> "$GITHUB_OUTPUT"
+          echo "root=/domains/$host/public_html" >> "$GITHUB_OUTPUT"
+      - name: Checkout ESC PHP master only
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Verify source, legacy Contact city, and syntax
+        env:
+          EXPECTED: ${{ steps.preflight.outputs.expected }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED"
+          php -l source/wp-content/plugins/esc-cocart-integration/esc-cocart-integration.php
+          python3 - <<'PY'
+          from pathlib import Path
+          plugin=Path('source/wp-content/plugins/esc-cocart-integration/esc-cocart-integration.php').read_text()
+          checkout=Path('source/wp-content/themes/vibe-code-theme/inc/checkout/checkout_endpoint.php').read_text()
+          assert "'city'       => ''," in plugin, 'ESC Contact API city must be empty'
+          assert "'city'       => $order->get_billing_city()" not in plugin, 'Do not send billing city to ESC Contact'
+          assert "'province'   => $order->get_billing_state()" in plugin, 'Do not change province mapping'
+          assert '$order->set_billing_city(' in checkout, 'WooCommerce checkout billing city must be kept'
+          assert 'esc_bacs_account_for_city(' in checkout, 'Bank routing by region must stay intact'
+          assert "'registercontactorg'" in plugin and "'registercontactind'" in plugin
+          print('Contact city legacy contract and WooCommerce/BACS preservation: PASS')
+          PY
+      - name: Install FTP client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+      - name: Backup, upload and byte-check ESC CoCart integration only
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          ROOT: ${{ steps.preflight.outputs.root }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          case "$protocol" in ftp|ftps|sftp) ;; *) echo '::error::Unsupported FTP protocol'; exit 1;; esac
+          remote="$ROOT/wp-content/plugins/esc-cocart-integration/esc-cocart-integration.php"
+          local="source/wp-content/plugins/esc-cocart-integration/esc-cocart-integration.php"
+          endpoint="$protocol://$FTP_SERVER"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          get "$remote" -o /tmp/esc-cocart-before.php
+          bye
+          LFTP
+          test -s /tmp/esc-cocart-before.php
+          if ! lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          put "$local" -o "$remote"
+          get "$remote" -o /tmp/esc-cocart-after.php
+          bye
+          LFTP
+          then
+            echo '::error::Upload/verification transport failed, attempting rollback'
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; put /tmp/esc-cocart-before.php -o \"$remote\"; bye" || true
+            exit 1
+          fi
+          if ! cmp "$local" /tmp/esc-cocart-after.php; then
+            echo '::error::Remote bytes mismatch, attempting rollback'
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; put /tmp/esc-cocart-before.php -o \"$remote\"; bye" || true
+            exit 1
+          fi
+          echo 'ESC CoCart Contact API city field is now blank on FTP (source bytes verified).'

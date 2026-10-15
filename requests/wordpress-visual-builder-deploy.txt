@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=569526552ffb2f976e8d1176b95d22c07c7c00c5
-reason=Fix hidden home_06 text panel by explicit value-only Builder permission; keep ESC Table key/order and all page contents unchanged
+source_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
+reason=ESC CV Studio WordPress-managed landing, member demo UI, public template gallery and Visual Builder table rules

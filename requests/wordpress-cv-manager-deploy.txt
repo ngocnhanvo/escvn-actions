@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=c3c821051d9859690f5731e299c440b5771d2930
-reason=Add full-size template preview, multi-column admin gallery and server-side 12-per-page pagination; retain existing M01 and every saved ZIP revision
+source_sha=e35905ad77c1d67f431764ad1fab5d3f715c865a
+reason=Fix thumbnail image overflow and provide in-page image dialog for each template/revision; preserve existing M01 and template pagination

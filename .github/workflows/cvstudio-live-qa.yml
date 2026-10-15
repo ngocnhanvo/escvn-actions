@@ -1,0 +1,39 @@
+name: ESC CV Studio Public Flow QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-live-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-cvstudio-public-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+      - name: Check CV Studio browser test syntax
+        run: node --check control/scripts/cvstudio-live-qa.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Test real CV Studio page, template API and demo wizard
+        working-directory: control
+        run: node scripts/cvstudio-live-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-public-qa-failure
+          path: control/cvstudio-public-qa-failure.png
+          if-no-files-found: ignore
+          retention-days: 3

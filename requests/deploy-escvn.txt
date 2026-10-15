@@ -1,7 +1,7 @@
-ESC CV Studio one-click text editing and clear wide empty placeholders production deploy
+ESC CV Studio universal repeatable editor production release
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
-Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38813687491 (PASS)
-Changes: initialize contenteditable before the first pointer interaction; render clearly labeled empty bindings with 116px click target; no iframe flicker; preserve local drafts and image upload
-Followup: run ESC CV Studio Public Flow QA asserting M01 placeholder and single-click caret on live website.
+Astro SHA: ae1c1432f41df7fc983d94eb1ff9798467bd794d
+Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38816568629 (PASS)
+Changes: discover all {{#each}} repeatable groups from uploaded template HTML; add/delete/duplicate/up/down item toolbar within iframe; preserve visual template CSS; update only affected group in DOM without iframe reset; nested and arbitrary group keys; stable draft IDs; zero-row recovery.
+Followup: run ESC CV Studio Public Flow QA covering M01 live repeat controls after successful FTP.

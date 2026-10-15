@@ -1,7 +1,7 @@
-ESC CV Studio true in-place text editing (no iframe flicker) production deploy
+ESC CV Studio one-click text editing and clear wide empty placeholders production deploy
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 22ff02a07ac620d3c405cdcde5732a7c501b2a14
-Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38811478756 (PASS)
-Scope: browser-only CV editor; user text edited at caret without srcdoc replacement; image and local draft preserved
-Required follow-up: ESC CV Studio Public Flow QA verifying typed content, iframe document identity, and drafts
+Astro SHA: c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
+Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38813687491 (PASS)
+Changes: initialize contenteditable before the first pointer interaction; render clearly labeled empty bindings with 116px click target; no iframe flicker; preserve local drafts and image upload
+Followup: run ESC CV Studio Public Flow QA asserting M01 placeholder and single-click caret on live website.

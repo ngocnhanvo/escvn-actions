@@ -1,5 +1,8 @@
 page=https://esc.vn/tao-cv-truc-tuyen/
+builder=https://esc.vn/tao-cv-truc-tuyen/builder/
 template_registry=https://admin.esc.vn/wp-json/esc-cv/v1/templates
-production_deploy=38744865982
-builder_qa_success=38746229642
-scope=read_only_browser_demo_no_publishing
+source_sha=75aafa73ed86a4a70165f29709bfef08d6c29035
+php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
+deploy_run=38754980270
+checks=real_WP_preview_popup,demo_login_domain,direct_template_builder,render_fields,local_draft_restore
+mode=browser_demo_no_real_member_or_hosting_publishing

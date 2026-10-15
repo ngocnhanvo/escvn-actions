@@ -38,7 +38,7 @@ jobs:
           assert result.get('success') is True, 'ESC Table REST did not return success'
           assert result.get('id') == 'home_06', 'Wrong ESC Table'
           fields=[field['key'] for field in result.get('fields',[])]
-          assert fields == ['key','value'], f'Unexpected schema: {fields}'
+          assert fields[:2] == ['key','value'] and fields[2:] in ([],['order']), f'Unexpected schema: {fields}'
           items=result.get('items',[])
           assert isinstance(items,list) and len(items)>=18, 'Missing home_06 configuration entries'
           config={}

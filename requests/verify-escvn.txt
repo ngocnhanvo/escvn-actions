@@ -1,6 +1,6 @@
-reason=Final QA CV Studio dedicated Builder route, M01 and M26 binding renderer, avatar upload, preview popup and no legacy fixed-field editor
+reason=ESC CV Studio 4 UX improvements; eye password, simplified wizard, visual click-to-edit CV, contextual fields
 astro_branch=github
-astro_sha=75aafa73ed86a4a70165f29709bfef08d6c29035
+astro_sha=f974e3bef8c68169deae66edc082b5f2bf66c1d0
 php_branch=master
 php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual

@@ -178,11 +178,15 @@ try {
     assert(metrics.label.includes('Nhấp để sửa'),'Empty field should show an editable placeholder');
     assert(metrics.editable==='plaintext-only','Empty field must be editable before first click');
     const m01Srcdoc=await page.locator('[data-cv-live-frame]').getAttribute('srcdoc');
+    const clickedEmpty=await empty.elementHandle();
+    assert(clickedEmpty,'Empty CV binding handle unavailable');
     await empty.click();
-    assert(await empty.evaluate(node=>node.ownerDocument.activeElement===node),
+    assert(await clickedEmpty.evaluate(node=>node.ownerDocument.activeElement===node),
       'Empty CV field first click must focus the typing caret');
-    await empty.pressSequentially('Nội dung kiểm thử',{delay:12});
-    assert((await empty.textContent())?.includes('Nội dung kiểm thử'),
+    // The element stops matching :empty as soon as typing starts. Keep the
+    // original DOM handle instead of re-querying a different empty field.
+    await page.keyboard.type('Nội dung kiểm thử',{delay:12});
+    assert((await clickedEmpty.evaluate(node=>node.textContent||'')).includes('Nội dung kiểm thử'),
       'Empty CV placeholder did not accept typing on first click');
     assert(await page.locator('[data-cv-live-frame]').getAttribute('srcdoc')===m01Srcdoc,
       'Editing an empty field reloaded CV iframe and caused flicker');

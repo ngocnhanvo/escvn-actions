@@ -124,6 +124,9 @@ jobs:
           guarded_paths = (
               'src/astro/pages/WebNextPage.astro',
               'src/astro/pages/CVStudioPage.astro',
+              'src/pages/tao-cv-truc-tuyen/builder.astro',
+              'src/lib/cvstudio/renderer.ts',
+              'src/lib/cvstudio/renderer.test.ts',
               'src/astro/tablepress/Cvstudio_00.astro',
               'src/astro/tablepress/Cvstudio_01.astro',
               'src/astro/tablepress/Cvstudio_02.astro',
@@ -200,6 +203,19 @@ jobs:
           if(!html.includes('Không chỉ là CV.')||!html.includes('data-cv-studio')||
             !html.includes('data-cv-dialog')||!html.includes('id="main-header"')) {
             throw new Error('CV Studio copy or ESC shared header/wizard missing');
+          }
+          const builderPath='dist/client/tao-cv-truc-tuyen/builder/index.html';
+          if (!fs.existsSync(builderPath))throw new Error('Dedicated user CV Builder route was not generated');
+          const builder=fs.readFileSync(builderPath,'utf8');
+          if (!builder.includes('data-cv-builder') ||
+              !builder.includes('data-cv-builder-fields') ||
+              !builder.includes('data-cv-live-frame')) {
+            throw new Error('CV Builder does not provide editable schema fields with live template iframe');
+          }
+          if(html.includes('data-cv-step="editor"') ||
+             html.includes('data-cv-step="preview"') ||
+             !html.includes('data-cv-sample-preview')) {
+            throw new Error('CV landing must remove old 3-field editor and include full-template preview modal');
           }
           console.log('ESC CV Studio production HTML, WP-owned copy, all ESC Tables: PASS');
           NODE

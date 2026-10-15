@@ -27,6 +27,15 @@ try {
   // must be capable of accessing the cross-origin API and loading imagery.
   const first=gallery.locator('article').first();
   assert((await first.locator('img').getAttribute('src'))?.startsWith('https://admin.esc.vn/'),'Gallery image is not the public WordPress image');
+  // Full-template preview works without starting the wizard.
+  await first.locator('button').first().click();
+  const popup=page.locator('[data-cv-sample-preview]');
+  await popup.waitFor({state:'visible',timeout:10000});
+  await popup.locator('[data-cv-sample-image]').waitFor({state:'visible'});
+  assert((await popup.locator('img').getAttribute('src'))?.startsWith('https://admin.esc.vn/'),
+    'Template preview must use public WordPress image');
+  await popup.locator('[data-cv-sample-close]').click();
+  assert(!(await popup.isVisible()),'Template preview modal did not close');
   const demoUser=page.locator('[data-cv-dialog]');
   await page.locator('[data-cv-start]').first().click();
   await demoUser.waitFor({state:'visible'});
@@ -48,24 +57,44 @@ try {
   const templateStep=demoUser.locator('[data-cv-step="templates"]');
   await templateStep.waitFor({state:'visible',timeout:15000});
   await templateStep.locator('[data-cv-dialog-templates] article').first().waitFor({state:'visible',timeout:15000});
-  await templateStep.locator('article button').first().click();
-  const next=templateStep.locator('[data-cv-template-next]');
-  assert(await next.isEnabled(),'Selected template did not unlock Continue');
-  await next.click();
-  const editor=demoUser.locator('[data-cv-step="editor"]');
-  await editor.waitFor({state:'visible',timeout:10000});
-  await editor.locator('input[name=name]').fill('Nguyễn Văn Demo');
-  await editor.locator('input[name=role]').fill('UX Designer');
-  await editor.locator('input[name=email]').fill('demo@esc.vn');
-  await editor.locator('button[type=submit]').click();
-  const preview=demoUser.locator('[data-cv-step="preview"]');
-  await preview.waitFor({state:'visible',timeout:10000});
-  assert((await preview.locator('[data-cv-preview-name]').textContent())?.includes('Nguyễn Văn Demo'),'Preview name mismatch');
-  assert((await preview.locator('[data-cv-preview-domain]').textContent())===selected,'Preview domain mismatch');
-  await preview.locator('[data-cv-finish]').click();
-  await demoUser.locator('[data-cv-step="finish"]').waitFor({state:'visible',timeout:10000});
+  // The old fixed 3-field CV form has been removed.
+  assert(await page.locator('[data-cv-step="editor"]').count()===0,'Obsolete 3-field editor still exists');
+  const chosenTemplate=data.templates.find(t=>t.id==='M26')||data.templates[0];
+  const target=templateStep.locator('article').filter({hasText:chosenTemplate.id}).first();
+  // Preview does not advance the wizard.
+  await target.locator('button').first().click();
+  await popup.waitFor({state:'visible',timeout:10000});
+  await popup.locator('[data-cv-sample-close]').click();
+  await target.locator('button').last().click();
+  await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
+  const workspace=page.locator('[data-cv-builder-workspace]');
+  await workspace.waitFor({state:'visible',timeout:30000});
+  assert((await page.locator('[data-cv-domain]').textContent())===selected,
+    'Selected domain must be carried to the Builder');
+  assert((await page.locator('[data-cv-template-name]').textContent())?.includes(chosenTemplate.id),
+    'Builder must load the clicked active template');
+  const frame=page.locator('[data-cv-live-frame]');
+  await frame.waitFor({state:'visible'});
+  const srcdoc=await frame.getAttribute('srcdoc');
+  assert(srcdoc?.includes('Content-Security-Policy'),'Preview must be sandboxed');
+  const firstInput=page.locator('[data-cv-builder-fields] label').filter({hasText:'Họ và tên'}).locator('input').first();
+  await firstInput.fill('NGUYỄN VĂN QA');
+  await page.waitForFunction(()=>{
+    const f=document.querySelector('[data-cv-live-frame]');
+    return f?.getAttribute('srcdoc')?.includes('NGUYỄN VĂN QA');
+  },null,{timeout:15000});
+  assert(await page.locator('[data-cv-builder-fields] details').count()>0,
+    'Template-defined array fields must be editable');
+  await page.locator('[data-cv-draft-save]').click();
+  assert((await page.locator('[data-cv-status]').textContent())?.includes('trình duyệt'),
+    'Save must clearly state browser-local draft status');
+  await page.reload({waitUntil:'domcontentloaded',timeout:60000});
+  await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
+  assert((await page.locator('[data-cv-builder-fields] label').filter({hasText:'Họ và tên'}).locator('input').inputValue())==='NGUYỄN VĂN QA',
+    'Draft should survive a reload in the same test browser');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio public flow: shared header, WP gallery, login gate, domain, template, editor, preview: PASS');
+  console.log('ESC CV Studio: WordPress template preview, Member demo, domain, direct Builder, live bound CV and local draft: PASS');
+
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);
   await page.screenshot({path:'cvstudio-public-qa-failure.png',fullPage:true}).catch(()=>{});

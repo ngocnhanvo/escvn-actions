@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=d12e8c1c7c8c51ce24aa3f7124edcf96d1fd7e05
-reason=Separate adding new shared CV templates with immediate activation and editing existing templates via dedicated ID-scoped button with version pending; do not modify stored templates
+reason=Retry ESC CV Manager v0.1.2 after correcting CI shell variable quoting; source and template database unchanged

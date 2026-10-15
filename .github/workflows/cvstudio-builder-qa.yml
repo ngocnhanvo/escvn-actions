@@ -1,0 +1,53 @@
+name: ESC CV Studio Visual Builder QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-builder-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-cvstudio-builder-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+      - name: Check target and preflight
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$WP_ADMIN_URL" && test -n "$WP_ADMIN_USERNAME" && test -n "$WP_ADMIN_PASSWORD"
+          node --check control/scripts/cvstudio-builder-qa.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify ESC CV Studio Builder preview and editable cell
+        working-directory: control
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/cvstudio-builder-qa.mjs
+      - name: Upload failed builder snapshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-cvstudio-builder-qa
+          path: |
+            control/cvstudio-builder-parent.png
+            control/cvstudio-builder-frame.png
+          if-no-files-found: ignore
+          retention-days: 3

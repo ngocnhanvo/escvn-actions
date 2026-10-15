@@ -58,7 +58,7 @@ try {
   const domainStep=demoUser.locator('[data-cv-step="domain"]');
   await domainStep.waitFor({state:'visible',timeout:8000});
   assert(await domainStep.locator('h3').count()===0,'Domain step repeated title');
-  assert(await domainStep.locator('svg').count()===1,'Domain step icon must remain visible');
+  assert(await domainStep.locator(':scope > svg').count()===1,'Domain step icon must remain visible');
   assert((await demoUser.locator('#cvstudio-dialog-title').textContent())?.trim()==='Chọn tên miền cho CV',
     'Domain title belongs to dialog header only');
   const radios=domainStep.locator('input[name=cv-domain]');

@@ -1,4 +1,4 @@
-ESC CV Studio one-click editable caret and empty text placeholder production E2E QA
+ESC CV Studio one-click editable caret and empty text placeholder production E2E QA (stable-element recheck)
 Frontend: ngocnhanvo/escvn-astro@master
 SHA: c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
 Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38813687491

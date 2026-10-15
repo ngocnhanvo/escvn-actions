@@ -1,7 +1,10 @@
-ESC CV Studio universal repeatable editor production release
+ESC CV Studio compact contextual item hover toolbar production deployment
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: ae1c1432f41df7fc983d94eb1ff9798467bd794d
-Development QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38816568629 (PASS)
-Changes: discover all {{#each}} repeatable groups from uploaded template HTML; add/delete/duplicate/up/down item toolbar within iframe; preserve visual template CSS; update only affected group in DOM without iframe reset; nested and arbitrary group keys; stable draft IDs; zero-row recovery.
-Followup: run ESC CV Studio Public Flow QA covering M01 live repeat controls after successful FTP.
+Astro SHA: 2542a4186eb771607695655aea1f25e9d4f74c29
+Development branch commit: 96bf855ff2101dbbdf5501860d2327e5be3d4035
+Development verify request commit: e3a4f383b757b1517c70e306489031d8cda91f89
+Release date: 2026-10-16
+Changes: remove oversized persistent Add highlights/empty-group buttons; show overlay Up/Down/Delete/Add/Duplicate tools at the top of the hovered item, add empty child group from parent's toolbar, retain zero-item recovery, keyboard focus access, and generic arbitrary template contract without CV iframe reflow/flicker.
+Deploy workflow: build master using pnpm, check WebNext homepage output, upload resumable byte-verified archive to /domains/esc.vn/public_html, trigger remote unzip.
+Followup: production smoke and CV Studio live QA after successful deploy.

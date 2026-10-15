@@ -41,7 +41,15 @@ try {
   await demoUser.waitFor({state:'visible'});
   const login=demoUser.locator('[data-cv-login-form]');
   await login.locator('input[name=email]').fill('demo@esc.vn');
-  await login.locator('input[name=password]').fill('wrong-password');
+  const password=login.locator('input[name=password]');
+  const toggle=login.locator('[data-cv-password-toggle]');
+  assert(await password.getAttribute('type')==='password','Password must initially be concealed');
+  await toggle.click();
+  assert(await password.getAttribute('type')==='text','Password eye must show plaintext');
+  assert(await toggle.getAttribute('aria-pressed')==='true','Password toggle pressed state missing');
+  await toggle.click();
+  assert(await password.getAttribute('type')==='password','Password eye must conceal again');
+  await password.fill('wrong-password');
   await login.locator('button[type=submit]').click();
   assert(await seen('[data-cv-login-error]'),'Invalid demo login must show an error');
   assert(!(await seen('[data-cv-step="domain"]')),'Invalid login bypassed the domain step gate');
@@ -49,6 +57,10 @@ try {
   await login.locator('button[type=submit]').click();
   const domainStep=demoUser.locator('[data-cv-step="domain"]');
   await domainStep.waitFor({state:'visible',timeout:8000});
+  assert(await domainStep.locator('h3').count()===0,'Domain step repeated title');
+  assert(await domainStep.locator('svg').count()===1,'Domain step icon must remain visible');
+  assert((await demoUser.locator('#cvstudio-dialog-title').textContent())?.trim()==='Chọn tên miền cho CV',
+    'Domain title belongs to dialog header only');
   const radios=domainStep.locator('input[name=cv-domain]');
   assert(await radios.count()>=1,'Missing WordPress-configured demo domain');
   const selected=await radios.first().inputValue();
@@ -56,6 +68,8 @@ try {
   await domainStep.locator('[data-cv-domain-next]').click();
   const templateStep=demoUser.locator('[data-cv-step="templates"]');
   await templateStep.waitFor({state:'visible',timeout:15000});
+  assert(await templateStep.locator('h3').count()===0,'Template step repeated title');
+  assert(await templateStep.locator('svg').count()===0,'Template step icon must be removed');
   await templateStep.locator('[data-cv-dialog-templates] article').first().waitFor({state:'visible',timeout:15000});
   // The old fixed 3-field CV form has been removed.
   assert(await page.locator('[data-cv-step="editor"]').count()===0,'Obsolete 3-field editor still exists');
@@ -77,23 +91,45 @@ try {
   await frame.waitFor({state:'visible'});
   const srcdoc=await frame.getAttribute('srcdoc');
   assert(srcdoc?.includes('Content-Security-Policy'),'Preview must be sandboxed');
-  const firstInput=page.locator('[data-cv-builder-fields] label').filter({hasText:'Họ và tên'}).locator('input').first();
-  await firstInput.fill('NGUYỄN VĂN QA');
+  const advanced=page.locator('[data-cv-advanced]');
+  assert(!(await advanced.getAttribute('open')),'Long editor form must initially be collapsed');
+  const cvFrame=page.frameLocator('[data-cv-live-frame]');
+  const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
+  await nameTarget.waitFor({state:'visible',timeout:15000});
+  await nameTarget.click();
+  const selected=page.locator('[data-cv-focused] label');
+  assert((await selected.textContent())?.includes('Họ và tên'),'Click CV name must select contextual field');
+  await selected.locator('input').fill('NGUYỄN VĂN QA');
   await page.waitForFunction(()=>{
     const f=document.querySelector('[data-cv-live-frame]');
     return f?.getAttribute('srcdoc')?.includes('NGUYỄN VĂN QA');
   },null,{timeout:15000});
   assert(await page.locator('[data-cv-builder-fields] details').count()>0,
     'Template-defined array fields must be editable');
+  await cvFrame.locator('[data-cv-inline="profile.avatarUrl"]').first().click();
+  assert((await page.locator('[data-cv-focused] label').textContent())?.includes('Ảnh chân dung'),
+    'Click portrait must open its contextual file picker');
+  assert(await page.locator('[data-cv-focused] input[type=file]').count()===1,
+    'Portrait field must accept an image upload');
+  const other=cvFrame.locator('[data-cv-inline^="experiences."]').first();
+  assert(await other.count()>0,'Experience entries must be addressable on the CV');
+  await other.click();
+  assert(await page.locator('[data-cv-focused] input,[data-cv-focused] textarea').count()>0,
+    'Click experience must focus a template-defined editor');
+  await advanced.locator('summary').first().click();
+  assert(await advanced.getAttribute('open')!==null,'Adding and removing groups must remain available');
   await page.locator('[data-cv-draft-save]').click();
   assert((await page.locator('[data-cv-status]').textContent())?.includes('trình duyệt'),
     'Save must clearly state browser-local draft status');
   await page.reload({waitUntil:'domcontentloaded',timeout:60000});
   await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
-  assert((await page.locator('[data-cv-builder-fields] label').filter({hasText:'Họ và tên'}).locator('input').inputValue())==='NGUYỄN VĂN QA',
+  const restored=page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline="profile.fullName"]').first();
+  await restored.waitFor({state:'visible',timeout:15000});
+  await restored.click();
+  assert((await page.locator('[data-cv-focused] input').inputValue())==='NGUYỄN VĂN QA',
     'Draft should survive a reload in the same test browser');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio: WordPress template preview, Member demo, domain, direct Builder, live bound CV and local draft: PASS');
+  console.log('ESC CV Studio: password eye, clean wizard, visual CV click-to-edit, photo/experience inspector and local draft: PASS');
 
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);

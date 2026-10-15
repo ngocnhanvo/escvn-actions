@@ -75,6 +75,9 @@ jobs:
           find source/wp-content/plugins/esc-cv-manager -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l source/wp-content/mu-plugins/esc-cv-manager-loader.php
           php source/wp-content/plugins/esc-cv-manager/tests/package-regression.php
+          node --check source/wp-content/plugins/esc-cv-manager/assets/admin-preview.js
+          node source/wp-content/plugins/esc-cv-manager/tests/preview-regression.cjs
+          grep -Fq "0.1.1" source/wp-content/plugins/esc-cv-manager/esc-cv-manager.php
           grep -Fq "add_menu_page('ESC CV Manager'" source/wp-content/plugins/esc-cv-manager/includes/class-esc-cv-admin.php
           grep -Fq "ESC_CV_Registry::ensure_schema" source/wp-content/plugins/esc-cv-manager/includes/class-esc-cv-admin.php
       - name: Install lftp

@@ -1,0 +1,7 @@
+test_target=admin.esc.vn
+page_id=55454
+expected_tables=cvstudio_00,cvstudio_01,cvstudio_02
+astro_sha=bde35516901b7c4409c9186f9144f616ad976fd2
+wordpress_provision_run=38740183814
+production_deploy_run=38744865982
+mode=read_only_click_and_inspect_builder

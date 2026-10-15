@@ -1,4 +1,4 @@
-reason=ESC CV Studio WordPress-managed landing, member demo UI, public template gallery and Visual Builder table rules
+reason=Rebuild after WordPress CV Studio Page 55454 provisioning; require all 3 CV ESC Tables and shared ESC layout in compiled HTML
 astro_branch=github
 astro_sha=bde35516901b7c4409c9186f9144f616ad976fd2
 php_branch=master

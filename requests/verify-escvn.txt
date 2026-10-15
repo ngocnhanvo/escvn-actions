@@ -1,11 +1,8 @@
-reason=ESC CV Studio compact per-item hover toolbar and removal of oversized permanent Add controls (2026-10-16)
+reason=CV Studio ellipsis/right-click contextual menu: no text overlay, native text copy-paste and mobile touch controls (2026-10-16)
 astro_branch=github
-astro_sha=96bf855ff2101dbbdf5501860d2327e5be3d4035
-production_branch=master
-production_sha=2542a4186eb771607695655aea1f25e9d4f74c29
+astro_toolbar_sha=79f7cf06e7ddbf8c2504062527220a1fd1c24645
 php_branch=master
-php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
-regressions=builder;cv-toolbar;repeatable;table;marketing;seo-files;multilingual
+regressions=cv-toolbar;cvstudio-repeatable;builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true
 run_build=true

@@ -54,7 +54,23 @@ try{
   await row.waitFor({state:'attached',timeout:15000});
   const field=page.locator('#esc-vb-edit-title');
   await field.waitFor({state:'visible',timeout:15000});
-  if(!await field.isEnabled())throw Error('Builder textarea is disabled after selecting CV Studio Hero');
+  // The panel becomes visible BEFORE its POST editable-text request finishes.
+  // Wait for a populated, enabled editor instead of checking the initial disabled state.
+  try {
+    await page.waitForFunction(() => {
+      const el=document.querySelector('#esc-vb-edit-title');
+      return el && !el.disabled && el.value.includes('Không chỉ là CV');
+    },null,{timeout:25000,polling:300});
+  } catch (error) {
+    const diagnostic=await page.evaluate(()=>({
+      caption:document.querySelector('#esc-vb-edit-caption')?.textContent||'',
+      feedback:document.querySelector('#esc-vb-edit-feedback')?.textContent||'',
+      value:document.querySelector('#esc-vb-edit-title')?.value||'',
+      row:document.querySelector('#esc-vb-edit-row')?.value||'',
+      disabled:document.querySelector('#esc-vb-edit-title')?.disabled,
+    }));
+    throw Error('Builder editable-text did not become ready: '+JSON.stringify(diagnostic),{cause:error});
+  }
   const current=(await field.inputValue()).trim();
   if(!current.includes('Không chỉ là CV'))throw Error('Builder textarea does not contain the clicked WP-owned headline');
   // QA must not save or change source content.

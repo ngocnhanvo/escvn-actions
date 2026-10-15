@@ -8,3 +8,4 @@ Backend PHP SHA: 365d4891c128c430466b2d8ffd80c2f3a4160a1f
 Astro QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740727951 (success)
 WordPress provision: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740183814 (success)
 Scope: CV Studio only. Do not modify Blue Sea or existing ESC CV template ZIP records.
+Retry reason: FTP control socket ECONNRESET on 50.2 MiB archive in failed run 38743418398. Stable source unchanged; new lftp resume and round-trip byte verification gate. Previous build artifact unavailable after failed run.

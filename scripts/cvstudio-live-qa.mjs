@@ -102,9 +102,15 @@ try {
     const f=document.querySelector('[data-cv-live-frame]');
     f.contentDocument.documentElement.setAttribute('data-qa-persistent-document','yes');
   });
-  await nameTarget.click();
+  // Editing is active before the first click: a single pointer action must
+  // place the native caret without an extra click or any iframe reload.
   assert(await nameTarget.getAttribute('contenteditable')==='plaintext-only',
-    'Click CV text should enable direct plaintext editing');
+    'CV text must be editable before clicking');
+  await nameTarget.click();
+  assert(await nameTarget.evaluate(node=>node.ownerDocument.activeElement===node),
+    'First click must focus CV text and position its caret');
+  assert(await nameTarget.getAttribute('contenteditable')==='plaintext-only',
+    'Click CV text should keep direct plaintext editing enabled');
   assert(await page.locator('[data-cv-focused] input').count()===0,
     'Text editing must not require a contextual input');
   await nameTarget.fill('');
@@ -150,8 +156,39 @@ try {
   await restored.waitFor({state:'visible',timeout:15000});
   assert((await restored.textContent())?.trim()==='NGUYỄN VĂN QA',
     'Inline text draft should survive a reload in the same test browser');
+  // M01 regression: the GitHub/other empty bound fields must be large enough
+  // to hit, visibly labeled and editable with precisely one click.
+  const m01=data.templates.find(t=>t.id==='M01');
+  if(m01){
+    await page.evaluate(selection=>{
+      sessionStorage.setItem('esc-cvstudio:demo:selection',JSON.stringify({
+        id:selection.id,version:selection.version,domain:selection.domain,at:Date.now()
+      }));
+    },{id:m01.id,version:m01.version,domain:selected});
+    await page.goto('https://esc.vn/tao-cv-truc-tuyen/builder/',{waitUntil:'domcontentloaded',timeout:60000});
+    await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
+    const empty=page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline].cv-inline-target:empty').first();
+    await empty.waitFor({state:'visible',timeout:15000});
+    const metrics=await empty.evaluate(node=>({
+      width:node.getBoundingClientRect().width,
+      label:getComputedStyle(node,'::before').content,
+      editable:node.getAttribute('contenteditable')
+    }));
+    assert(metrics.width>=100,'Empty CV field click target too narrow: '+metrics.width);
+    assert(metrics.label.includes('Nhấp để sửa'),'Empty field should show an editable placeholder');
+    assert(metrics.editable==='plaintext-only','Empty field must be editable before first click');
+    const m01Srcdoc=await page.locator('[data-cv-live-frame]').getAttribute('srcdoc');
+    await empty.click();
+    assert(await empty.evaluate(node=>node.ownerDocument.activeElement===node),
+      'Empty CV field first click must focus the typing caret');
+    await empty.pressSequentially('Nội dung kiểm thử',{delay:12});
+    assert((await empty.textContent())?.includes('Nội dung kiểm thử'),
+      'Empty CV placeholder did not accept typing on first click');
+    assert(await page.locator('[data-cv-live-frame]').getAttribute('srcdoc')===m01Srcdoc,
+      'Editing an empty field reloaded CV iframe and caused flicker');
+  }
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio: password eye, clean wizard, in-place plaintext typing without iframe flicker, portrait upload and local draft: PASS');
+  console.log('ESC CV Studio: one-click text and empty placeholders, no-flicker typing, photo/experience editing and local draft: PASS');
 
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);

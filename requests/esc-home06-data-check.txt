@@ -2,4 +2,4 @@ source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=e99f71dbba703e5dbf08fe5421139968d034b57e
 check=home_06
-reason=Verify real WordPress key-value-order home_06 and migrated editable report copy after FTP #3
+reason=Diagnose why home_06 editable-text panel stays hidden despite valid row value markers

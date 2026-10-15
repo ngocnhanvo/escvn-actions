@@ -1,7 +1,10 @@
-Deploy ESC homepage home_06 canonical ESC Table key/value/order content, remove all hardcoded display text, enable direct Visual Builder editing.
-Astro branch: master
-Astro commit: 4bfa32d8d855d9310aa59fad5ee8bd40c32851eb
-Development verify: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38667437457 (success)
-PHP backend FTP: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38668356893 (success)
-Live WordPress home_06 data: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38668507703 (success)
-Reason: Redeploy home_06 after replacing legacy 11-row pre-upload gate with canonical WordPress-owned 22-key verification.
+Deploy ESC CV Studio WordPress-managed landing page /tao-cv-truc-tuyen using shared ESC Header/Footer.
+Source repo: ngocnhanvo/escvn-astro
+Source branch: master
+Astro SHA: bde35516901b7c4409c9186f9144f616ad976fd2
+WordPress Page: 55454 action CVStudioPage key cv-studio
+WordPress tables: cvstudio_00,cvstudio_01,cvstudio_02 inserted via Classic Editor tool with verified preview
+Backend PHP SHA: 365d4891c128c430466b2d8ffd80c2f3a4160a1f
+Astro QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740727951 (success)
+WordPress provision: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38740183814 (success)
+Scope: CV Studio only. Do not modify Blue Sea or existing ESC CV template ZIP records.

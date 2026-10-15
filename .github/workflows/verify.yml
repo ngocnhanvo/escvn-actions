@@ -57,6 +57,11 @@ jobs:
             backend/wp-content/mu-plugins/esc-multilingual-delete-sync.php \
             backend/wp-content/mu-plugins/esc-multilingual-admin.php \
             backend/wp-content/plugins/esc-visual-builder/esc-visual-builder.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/key-value-seed.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/site-config.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/text-editor.php \
+            backend/wp-content/plugins/esc-visual-builder/includes/text-editor-ui.php \
+            backend/wp-content/plugins/esc-visual-builder/tests/key-value-content.php \
             backend/wp-content/plugins/esc-visual-builder/includes/item-manager.php \
             backend/wp-content/plugins/esc-visual-builder/includes/section-order.php \
             backend/wp-content/plugins/esc-visual-builder/includes/item-section-ui.php \
@@ -66,6 +71,7 @@ jobs:
             backend/unzip-v2.php; do
             php -l "$path"
           done
+          php backend/wp-content/plugins/esc-visual-builder/tests/key-value-content.php
 
       - name: Show source revision
         working-directory: source
@@ -120,6 +126,8 @@ jobs:
               'src/data/webnext.ts',
               'src/pages/[...slug].astro',
               'src/astro/tablepress/Webnext_06.astro',
+              'src/astro/tablepress/Home_06.astro',
+              'src/data/homeWebnext.test.ts',
               'src/pages/api/contact/index.ts',
               'src/pages/api/web-audit/index.ts',
               'src/pages/esc-builder/preview/[pageId].astro',

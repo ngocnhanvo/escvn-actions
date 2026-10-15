@@ -65,6 +65,7 @@ jobs:
           grep -Fq "add_pages_page('ESC Visual Builder'" source/wp-content/plugins/esc-visual-builder/esc-visual-builder.php
           php -l source/wp-content/mu-plugins/esc-visual-builder-loader.php
           find source/wp-content/plugins/esc-visual-builder -name '*.php' -print0 | xargs -0 -n1 php -l
+          php source/wp-content/plugins/esc-visual-builder/tests/key-value-content.php
       - name: Install lftp
         run: |
           sudo apt-get update -y -qq
@@ -114,11 +115,13 @@ jobs:
           put "source/wp-content/mu-plugins/esc-visual-builder-loader.php" -o "$mu"
           get "$live/esc-visual-builder.php" -o /tmp/esc-vb-live.php
           get "$live/includes/item-section-ui.php" -o /tmp/esc-vb-ui-live.php
+          get "$live/includes/key-value-seed.php" -o /tmp/esc-vb-seed-live.php
           get "$mu" -o /tmp/esc-vb-loader-live.php
           bye
           LFTP
           cmp source/wp-content/plugins/esc-visual-builder/esc-visual-builder.php /tmp/esc-vb-live.php
           cmp source/wp-content/plugins/esc-visual-builder/includes/item-section-ui.php /tmp/esc-vb-ui-live.php
+          cmp source/wp-content/plugins/esc-visual-builder/includes/key-value-seed.php /tmp/esc-vb-seed-live.php
           cmp source/wp-content/mu-plugins/esc-visual-builder-loader.php /tmp/esc-vb-loader-live.php
           echo 'ESC Visual Builder PHP and MU loader deployed and byte-verified.'
           echo "Source revision: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"

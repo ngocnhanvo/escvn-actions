@@ -209,26 +209,40 @@ try {
   });
   const beforeRows=await countRows();
   assert(beforeRows>0,'M01 experiences must have repeatable row markers');
-  await experience.hover();
   const toolbar=repeatFrame.locator('[data-cv-repeat-toolbar]');
-  await toolbar.locator('[data-cv-action="add"]').waitFor({state:'visible',timeout:10000});
-  await toolbar.locator('[data-cv-action="add"]').click();
+  const trigger=toolbar.locator('.esc-cv-repeat-trigger');
+  const menu=repeatFrame.locator('[data-cv-repeat-menu]');
+  await experience.hover();
+  await trigger.waitFor({state:'visible',timeout:10000});
+  assert(await toolbar.locator('button').count()===1,
+    'Hover must only reveal the compact ellipsis, not a full toolbar over CV text');
+  assert(!(await menu.isVisible()),'Context menu must remain hidden until explicitly opened');
+  // Editable text must keep the browser's native right-click menu.
+  const keepsNativeContext=await experience.evaluate(node=>{
+    const event=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:100,clientY:100});
+    node.dispatchEvent(event);
+    return !event.defaultPrevented;
+  });
+  assert(keepsNativeContext,'Right click on editable CV text must preserve copy/paste');
+  const action=async(kind)=>{
+    await experience.hover();
+    await trigger.click();
+    await menu.locator('[data-cv-action="'+kind+'"]').first().click();
+  };
+  await action('add');
   assert(await countRows()===beforeRows+1,'Add must append one CV experience row');
   assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
     'Adding a CV item must patch one region, not reload the iframe');
-  await experience.hover();
-  await toolbar.locator('[data-cv-action="duplicate"]').click();
+  await action('duplicate');
   assert(await countRows()===beforeRows+2,'Duplicate must insert a copy of the item');
-  await experience.hover();
-  await toolbar.locator('[data-cv-action="down"]').click();
+  await action('down');
   assert(await countRows()===beforeRows+2,'Move must preserve row count');
-  await experience.hover();
-  await toolbar.locator('[data-cv-action="delete"]').click();
+  await action('delete');
   assert(await countRows()===beforeRows+1,'Delete must remove only selected item');
   assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
     'Repeatable editing must not flicker/reload the CV document');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio: one-click editing, repeatable add/duplicate/move/delete without iframe reload, photo and draft: PASS');
+  console.log('ESC CV Studio: one-click editing, ellipsis/context actions add/duplicate/move/delete without iframe reload, photo and draft: PASS');
 
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);

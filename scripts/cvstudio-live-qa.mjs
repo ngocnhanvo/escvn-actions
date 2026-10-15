@@ -107,7 +107,8 @@ try {
     'Click CV text should enable direct plaintext editing');
   assert(await page.locator('[data-cv-focused] input').count()===0,
     'Text editing must not require a contextual input');
-  await nameTarget.fill('NGUYỄN VĂN QA');
+  await nameTarget.fill('');
+  await nameTarget.pressSequentially('NGUYỄN VĂN QA',{delay:12});
   assert((await nameTarget.textContent())?.trim()==='NGUYỄN VĂN QA','Text did not update at the caret');
   assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
     'Typing must not replace iframe.srcdoc or cause visible flicker');

@@ -5,3 +5,5 @@ Dev QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38816568629
 FTP deploy: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38817133587
 Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38817352520
 Assertions: M01/M26 member demo workflow, stable inline text; M01 {{#each experiences}} Add Duplicate Move Delete actions, no iframe.srcdoc mutation, local browser drafts.
+
+Recheck: fixed exact marker regex in browser-side assertion (2026-10-15).

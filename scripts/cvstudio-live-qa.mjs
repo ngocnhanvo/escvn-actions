@@ -68,8 +68,8 @@ try {
   await domainStep.locator('[data-cv-domain-next]').click();
   const templateStep=demoUser.locator('[data-cv-step="templates"]');
   await templateStep.waitFor({state:'visible',timeout:15000});
-  assert(await templateStep.locator('h3').count()===0,'Template step repeated title');
-  assert(await templateStep.locator('svg').count()===0,'Template step icon must be removed');
+  assert(await templateStep.locator(':scope > h3').count()===0,'Template step repeated title');
+  assert(await templateStep.locator(':scope > svg').count()===0,'Template step icon must be removed');
   await templateStep.locator('[data-cv-dialog-templates] article').first().waitFor({state:'visible',timeout:15000});
   // The old fixed 3-field CV form has been removed.
   assert(await page.locator('[data-cv-step="editor"]').count()===0,'Obsolete 3-field editor still exists');

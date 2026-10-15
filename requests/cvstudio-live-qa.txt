@@ -1,8 +1,7 @@
-ESC CV Studio production four-point UX regression QA
-Date: 2026-10-15
-Astro branch: master
-Astro SHA: f974e3bef8c68169deae66edc082b5f2bf66c1d0
-Deploy run: 38760452325 (success)
-Assertions: eye show/hide, domain heading only at top, template selection no duplicate icon/title, click CV text/image/group -> contextual form, local draft, no JS exceptions.
-
-Re-run reason: correct selector for popup heading; card titles are legitimate inner h3 elements.
+ESC CV Studio no-flicker in-place text editor production QA
+Frontend: ngocnhanvo/escvn-astro@master
+SHA: 22ff02a07ac620d3c405cdcde5732a7c501b2a14
+Dev QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38811478756
+FTP: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38812184192
+Smoke: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38812445375
+Assertions: edit text at caret; no iframe.srcdoc mutation across per-character typing; persistent iframe document; plaintext input; image selection; experiences; local draft survives reload.

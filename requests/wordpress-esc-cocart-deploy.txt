@@ -1,0 +1,4 @@
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=c59c75dc28a5b6035b46a5e10822ced24f59b222
+reason=Only outbound ESC Contact API payload city becomes an empty string; do not alter Astro, Woo checkout, CoCart cart city or regional BACS

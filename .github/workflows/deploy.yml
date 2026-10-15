@@ -214,17 +214,58 @@ jobs:
           cd ..
           rm -rf dist deploy
 
-      - name: Sync files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./source/upload/
-          server-dir: /domains/esc.vn/public_html/
-          timeout: 600000
-          security: "loose"
-          dangerous-clean-slate: false
+      - name: Install reliable FTP client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+
+      - name: Upload ESC production ZIP with resume and byte verification
+        working-directory: source
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          case "$protocol" in ftp|ftps|sftp) ;; *) echo '::error::Invalid FTP_PROTOCOL'; exit 1;; esac
+          endpoint="$protocol://$FTP_SERVER"
+          remote_dir="/domains/esc.vn/public_html"
+          local_zip="$PWD/upload/escvn.zip"
+          test -s "$local_zip"
+          sha="$(sha256sum "$local_zip" | cut -d' ' -f1)"
+          # The content hash makes retries resumable without ever mixing two builds.
+          stage=".escvn-stage-${sha:0:32}.zip"
+          echo "Transferring archive with resumable FTP (SHA256: ${sha:0:16}...)."
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 12
+          set net:timeout 45
+          set net:reconnect-interval-base 5
+          set ssl:verify-certificate no
+          cd "$remote_dir"
+          put -c "$local_zip" -o "$stage"
+          get -c "$stage" -o /tmp/escvn-deploy-roundtrip.zip
+          bye
+          LFTP
+          cmp "$local_zip" /tmp/escvn-deploy-roundtrip.zip
+          echo "FTP round-trip byte verification succeeded."
+          # Only after full byte verification may the archive used by unzip.php change.
+          # Web files are untouched until the separate unzip step.
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 5
+          set net:timeout 45
+          set ssl:verify-certificate no
+          cd "$remote_dir"
+          rm -f escvn.zip
+          mv "$stage" escvn.zip
+          bye
+          LFTP
+          echo "ESC release ZIP staged and activated for remote extraction."
+
 
       - name: Trigger Remote Unzip
         working-directory: source

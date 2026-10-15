@@ -1,6 +1,6 @@
-reason=CV Studio JobOKO-style inline text entry: no iframe reload per keystroke, paste plaintext, avatar data retained
+reason=ESC CV one-click direct editing and visible wide placeholders on empty text bindings
 astro_branch=github
-astro_sha=22ff02a07ac620d3c405cdcde5732a7c501b2a14
+astro_sha=2d2faa5b5eda3db7c794e1250e12857dfab531aa
 php_branch=master
 php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual

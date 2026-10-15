@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=d12e8c1c7c8c51ce24aa3f7124edcf96d1fd7e05
-reason=Retry ESC CV Manager v0.1.2 after correcting CI shell variable quoting; source and template database unchanged
+source_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
+reason=ESC CV Studio WordPress-managed landing, member demo UI, public template gallery and Visual Builder table rules

@@ -4,4 +4,4 @@ Astro commit: 4bfa32d8d855d9310aa59fad5ee8bd40c32851eb
 Development verify: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38667437457 (success)
 PHP backend FTP: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38668356893 (success)
 Live WordPress home_06 data: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38668507703 (success)
-Reason: Publish WordPress-owned home_06 WebNext contents and preserve existing homepage presentation.
+Reason: Redeploy home_06 after replacing legacy 11-row pre-upload gate with canonical WordPress-owned 22-key verification.

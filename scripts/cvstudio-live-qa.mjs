@@ -96,14 +96,31 @@ try {
   const cvFrame=page.frameLocator('[data-cv-live-frame]');
   const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
   await nameTarget.waitFor({state:'visible',timeout:15000});
-  await nameTarget.click();
-  const focusedLabel=page.locator('[data-cv-focused] label');
-  assert((await focusedLabel.textContent())?.includes('Họ và tên'),'Click CV name must select contextual field');
-  await focusedLabel.locator('input').fill('NGUYỄN VĂN QA');
-  await page.waitForFunction(()=>{
+  // Edit at the caret inside the live template, not in a separate form.
+  const originalSrcdoc=await frame.getAttribute('srcdoc');
+  await page.evaluate(()=>{
     const f=document.querySelector('[data-cv-live-frame]');
-    return f?.getAttribute('srcdoc')?.includes('NGUYỄN VĂN QA');
-  },null,{timeout:15000});
+    f.contentDocument.documentElement.setAttribute('data-qa-persistent-document','yes');
+  });
+  await nameTarget.click();
+  assert(await nameTarget.getAttribute('contenteditable')==='plaintext-only',
+    'Click CV text should enable direct plaintext editing');
+  assert(await page.locator('[data-cv-focused] input').count()===0,
+    'Text editing must not require a contextual input');
+  await nameTarget.fill('NGUYỄN VĂN QA');
+  assert((await nameTarget.textContent())?.trim()==='NGUYỄN VĂN QA','Text did not update at the caret');
+  assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
+    'Typing must not replace iframe.srcdoc or cause visible flicker');
+  assert(await page.evaluate(()=>document.querySelector('[data-cv-live-frame]')?.contentDocument
+    ?.documentElement.getAttribute('data-qa-persistent-document'))==='yes',
+    'Typing replaced the CV document, resetting scroll and focus');
+  // Basic markup injection remains text; never executable HTML.
+  await nameTarget.fill('<b>QA</b>');
+  assert((await nameTarget.textContent())?.trim()==='<b>QA</b>',
+    'Pasted-looking markup should remain plain text');
+  assert(await cvFrame.locator('b').filter({hasText:'QA'}).count()===0,
+    'User input created an HTML element');
+  await nameTarget.fill('NGUYỄN VĂN QA');
   assert(await page.locator('[data-cv-builder-fields] details').count()>0,
     'Template-defined array fields must be editable');
   await cvFrame.locator('[data-cv-inline="profile.avatarUrl"]').first().click();
@@ -114,8 +131,13 @@ try {
   const other=cvFrame.locator('[data-cv-inline^="experiences."]').first();
   assert(await other.count()>0,'Experience entries must be addressable on the CV');
   await other.click();
-  assert(await page.locator('[data-cv-focused] input,[data-cv-focused] textarea').count()>0,
-    'Click experience must focus a template-defined editor');
+  assert(await other.getAttribute('contenteditable')==='plaintext-only',
+    'Click experience must edit the corresponding template field in place');
+  await other.fill('KINH NGHIỆM QA');
+  assert((await other.textContent())?.trim()==='KINH NGHIỆM QA',
+    'Experience field failed to update in the CV');
+  assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
+    'Editing nested experience must not reload the iframe');
   await advanced.locator('summary').first().click();
   assert(await advanced.getAttribute('open')!==null,'Adding and removing groups must remain available');
   await page.locator('[data-cv-draft-save]').click();
@@ -125,11 +147,10 @@ try {
   await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
   const restored=page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline="profile.fullName"]').first();
   await restored.waitFor({state:'visible',timeout:15000});
-  await restored.click();
-  assert((await page.locator('[data-cv-focused] input').inputValue())==='NGUYỄN VĂN QA',
-    'Draft should survive a reload in the same test browser');
+  assert((await restored.textContent())?.trim()==='NGUYỄN VĂN QA',
+    'Inline text draft should survive a reload in the same test browser');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
-  console.log('ESC CV Studio: password eye, clean wizard, visual CV click-to-edit, photo/experience inspector and local draft: PASS');
+  console.log('ESC CV Studio: password eye, clean wizard, in-place plaintext typing without iframe flicker, portrait upload and local draft: PASS');
 
 }catch(e){
   console.error('ESC CV Studio public-flow QA failed:',e?.stack||e, 'Browser errors:',errors);

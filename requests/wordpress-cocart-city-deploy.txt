@@ -1,0 +1,5 @@
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=c59c75dc28a5b6035b46a5e10822ced24f59b222
+target=admin.esc.vn
+reason=Restore empty city in external ESC Contact registration only; preserve WooCommerce billing and BACS region

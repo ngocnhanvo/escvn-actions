@@ -1,6 +1,6 @@
-reason=Retest ESC CV one-click editing with corrected empty-text placeholder unit regression
+reason=ESC CV universal repeatable editor: nested groups, in-place toolbar, reorder, stable item IDs, generic M99 template tests
 astro_branch=github
-astro_sha=c24a9a9c601c73bdaa7da1046e700a71b9b9b73c
+astro_sha=ae1c1432f41df7fc983d94eb1ff9798467bd794d
 php_branch=master
 php_sha=03fe4bfb8dbf2d8b31a1f471fba782294fe81d61
 regressions=builder;table;marketing;seo-files;multilingual

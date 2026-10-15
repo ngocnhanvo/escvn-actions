@@ -1,0 +1,8 @@
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=365d4891c128c430466b2d8ffd80c2f3a4160a1f
+expected_page_slug=tao-cv-truc-tuyen
+expected_page_key=cv-studio
+expected_page_action=CVStudioPage
+expected_tables=cvstudio_00,cvstudio_01,cvstudio_02
+insert_method=classic_editor_ESC_Table_picker_only

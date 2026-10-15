@@ -4,3 +4,5 @@ Astro branch: master
 Astro SHA: f974e3bef8c68169deae66edc082b5f2bf66c1d0
 Deploy run: 38760452325 (success)
 Assertions: eye show/hide, domain heading only at top, template selection no duplicate icon/title, click CV text/image/group -> contextual form, local draft, no JS exceptions.
+
+Re-run reason: correct selector for popup heading; card titles are legitimate inner h3 elements.

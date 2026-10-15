@@ -1,0 +1,61 @@
+name: Verify ESC home_06 live WordPress content
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/esc-home06-data-check.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-home06-source-check
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Verify ESC Table key-value schema and seeded report copy
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$WP_ADMIN_URL"
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          raw=os.environ['WP_ADMIN_URL']
+          url=urlsplit(raw if '://' in raw else 'https://'+raw)
+          if url.hostname != 'admin.esc.vn': raise SystemExit('Unexpected WP host')
+          print(url.hostname)
+          PY
+          )"
+          url="https://$host/wp-json/tablepress/v1/table/home_06"
+          curl --fail --location --silent --show-error --max-time 45 "$url" -o /tmp/esc-home06.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/esc-home06.json',encoding='utf-8') as fh: result=json.load(fh)
+          assert result.get('success') is True, 'ESC Table REST did not return success'
+          assert result.get('id') == 'home_06', 'Wrong ESC Table'
+          fields=[field['key'] for field in result.get('fields',[])]
+          assert fields == ['key','value'], f'Unexpected schema: {fields}'
+          items=result.get('items',[])
+          assert isinstance(items,list) and len(items)>=18, 'Missing home_06 configuration entries'
+          config={}
+          for item in items:
+              key=item.get('key')
+              assert isinstance(key,str) and key and key not in config, 'Missing/duplicate key'
+              config[key]=item.get('value')
+          required=[
+              'badge','title','description','feature_1','feature_2','feature_3',
+              'primary_text','primary_url','secondary_text','secondary_url',
+              'disclaimer','report_aria_label','report_eyebrow','report_title',
+              'report_subtitle','report_metric_1_title','report_metric_1_description',
+              'report_metric_2_title','report_metric_2_description',
+              'report_metric_3_title','report_metric_3_description',
+              'report_download_text',
+          ]
+          missing=[key for key in required if not isinstance(config.get(key),str) or not config[key].strip()]
+          assert not missing, f'Missing/unset ESC Table keys: {missing}'
+          print(f'home_06 WordPress data verified: {len(items)} configuration rows; all {len(required)} content keys present.')
+          PY

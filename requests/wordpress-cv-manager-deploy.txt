@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=e35905ad77c1d67f431764ad1fab5d3f715c865a
-reason=Fix thumbnail image overflow and provide in-page image dialog for each template/revision; preserve existing M01 and template pagination
+source_sha=d12e8c1c7c8c51ce24aa3f7124edcf96d1fd7e05
+reason=Separate adding new shared CV templates with immediate activation and editing existing templates via dedicated ID-scoped button with version pending; do not modify stored templates

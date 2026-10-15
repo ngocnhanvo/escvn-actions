@@ -1,10 +1,10 @@
-ESC CV Studio compact contextual item hover toolbar production deployment
+ESC CV Studio compact ellipsis and right-click menu production release
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 2542a4186eb771607695655aea1f25e9d4f74c29
-Development branch commit: 96bf855ff2101dbbdf5501860d2327e5be3d4035
-Development verify request commit: e3a4f383b757b1517c70e306489031d8cda91f89
-Release date: 2026-10-16
-Changes: remove oversized persistent Add highlights/empty-group buttons; show overlay Up/Down/Delete/Add/Duplicate tools at the top of the hovered item, add empty child group from parent's toolbar, retain zero-item recovery, keyboard focus access, and generic arbitrary template contract without CV iframe reflow/flicker.
-Deploy workflow: build master using pnpm, check WebNext homepage output, upload resumable byte-verified archive to /domains/esc.vn/public_html, trigger remote unzip.
-Followup: production smoke and CV Studio live QA after successful deploy.
+Astro SHA: aad2710c4b1f2f8b9375c537f0070258f0cb781d
+Developed on github branch SHA: 6247b0a88b363bad32d99d8e768a30bcf544a979
+PR: https://github.com/ngocnhanvo/escvn-astro/pull/103
+Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/fd792fbf6a3650ae75bfd0453c8f0a3763bd55cb
+Changes: hover highlights a repeatable CV item and shows only a 30px ellipsis next to the item. Clicking ellipsis opens Add/Move/Duplicate/Delete menu placed outside the item when space allows, bounded by viewport. Right click on noneditable row opens same actions; right click within editable text keeps browser copy/paste/spellcheck. Touch, keyboard, empty nested group recovery supported without template-specific HTML changes or iframe reload.
+Upload: standard byte-verified resumable FTP to /domains/esc.vn/public_html then remote unzip.
+Followup: auto production smoke and CV Studio public-flow QA.

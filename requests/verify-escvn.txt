@@ -1,6 +1,6 @@
-reason=Verify Home_06 fully editable ESC Table key-value contract, text migration, no hardcoded Astro strings
+reason=Reverify Home_06 key/value after Astro private locals type fix
 astro_branch=github
-astro_sha=92830cdb78ed8ca16422af943f2b18cc4a5bee08
+astro_sha=4bfa32d8d855d9310aa59fad5ee8bd40c32851eb
 php_branch=master
 php_sha=ddb21a4d24ab2a20beec66d5186b8dd3ad00838c
 regressions=builder;table;marketing;seo-files;multilingual

@@ -1,8 +1,8 @@
-reason=Fix custom marketing tag TypeScript narrowing and run full ESC Astro development CI
+reason=Verify Home_06 fully editable ESC Table key-value contract, text migration, no hardcoded Astro strings
 astro_branch=github
-astro_sha=d7276635883f8248fb7b10b49c4314e326f40e34
+astro_sha=92830cdb78ed8ca16422af943f2b18cc4a5bee08
 php_branch=master
-php_sha=6f0ba69ae799094f3cde669a20f84def75669889
+php_sha=ddb21a4d24ab2a20beec66d5186b8dd3ad00838c
 regressions=builder;table;marketing;seo-files;multilingual
 run_unit_tests=true
 run_astro_check=true

@@ -26,3 +26,5 @@ Final Chromium QA after disabled backdrop-click close, source SHA 37ffc51097f083
 Final regression 2026-10-16 CV blank canvas controls: hover actual skills item shows controls, clicking blank paper and Builder outside frame clears toolbar/outline/pencil, normal editing preserved. Deployed SHA c5203059a5e97e56a7d5a6ea793996a76aba3d20.
 
 2026-10-16 rerun after fixing a syntax typo in browser blank-click QA selector; no Astro changes or redeployment.
+
+Final production QA for rich-text pencil dismissal after clicking blank CV paper, source b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783. Recheck outline, ellipsis, icon, outer Builder dismissal, editor and all downloads.

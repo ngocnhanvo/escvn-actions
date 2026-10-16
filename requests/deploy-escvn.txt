@@ -9,3 +9,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 
 
 2026-10-16: Release user CV upload; source ngocnhanvo/escvn-astro @ github/master 601e09575cdb400577c59df78aa819da6908087a. Verified development CI https://github.com/ngocnhanvo/escvn-actions/actions/runs/38880929794. ZIP esc-cv-v1 editable; other safe ZIP HTML/PDF/image readonly. Existing CV publish remains demo-only. Smoke production after FTP.
+
+2026-10-16: Deploy CV Studio gallery server pagination (12 templates/page, numbered navigation, source SHA e124d2c42c9b5f48841efaa818589e07a15b11f3). WP pagination API deployed PASS run 38897375316; Astro QA PASS run 38897461930; PR ngocnhanvo/escvn-astro#111 merged. Check production smoke and public gallery.

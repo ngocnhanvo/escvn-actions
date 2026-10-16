@@ -11,7 +11,8 @@ try{
   const response=await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   assert(response?.ok(),'CV gallery unavailable');
   const gallery=page.locator('[data-cv-gallery]');
-  const card=gallery.locator('article:not([data-cv-gallery-skeleton])').first();
+  // M01 is a one-page CV; exporting it must never append a blank A4 page.
+  const card=gallery.locator('article:not([data-cv-gallery-skeleton])').filter({hasText:'M01'}).first();
   await card.waitFor({state:'visible',timeout:35000});
   assert(await page.locator('[data-cv-dialog]').count()===0,
     'Anonymous template selection must not show a Member login gate');
@@ -49,6 +50,12 @@ try{
     assert(bytes.subarray(0,magic.length).equals(magic),'Invalid '+format+' file signature');
     if(format==='source')assert(bytes.includes(Buffer.from('THỬ XUẤT CV ẨN DANH')),
       'ZIP did not contain the current in-browser CV edits');
+    if(format==='pdf'){
+      const match=bytes.toString('latin1').match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/);
+      assert(!!match,'Cannot read PDF page count');
+      console.log('M01 PDF A4 PAGE COUNT:',match[1]);
+      assert(Number(match[1])===1,'M01 PDF unexpectedly contains a blank second A4 page');
+    }
     console.log('PASS anonymous '+format+' '+bytes.length+' bytes');
   }
   await page.locator('[data-cv-publish]').click();

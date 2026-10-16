@@ -1,8 +1,7 @@
-ESC CV Studio PDF blank second A4 page fix (2026-10-16)
+ESC CV Builder switch template in place, preserve user data (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
-Source branches: github and master identical
-Source SHA: 68d1a9f6d27adbc55eac01fef126962cbea04992
-Verified development: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38858600280
-Cause: 1200px offscreen staging iframe overflowed 794px-width A4 (~1122px); PDF ceil page split created a blank trailing sheet.
-Fix: measure CV height from 1px staging viewport, and scale 1-8% overflow to fit one A4 without cropping. Truly long CV still receives multiple pages.
-Validation: existing lftp FTP ZIP integrity, remote unzip, production smoke; real-browser M01 PDF count QA.
+Source branches: github, master identical
+Source SHA: 480fbab19e35cf69e203878f721cf5b41f85200f
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38860541579
+New: in-builder template gallery with WordPress preview thumbnails/full preview, schema-independent data migration, avatar/rich-text/repeatable preserved, checkpoints of both source and target local drafts, asks before overwriting existing saved destination, no login needed.
+Deploy destination /domains/esc.vn/public_html through verified lftp ZIP transfer, unzip and smoke; follow with live Chromium switch-back/reload QA.

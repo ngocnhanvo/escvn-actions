@@ -90,7 +90,14 @@ try{
     const button=document.querySelector('[data-cv-switch-open]');
     const dialog=document.querySelector('[data-cv-switch-dialog]');
     window.__cvDialogTrace=[];
-    button.addEventListener('click',()=>window.__cvDialogTrace.push('click-capture'),true);
+    for(const type of ['pointerdown','mousedown','pointerup','mouseup','click']){
+      button.addEventListener(type,()=>window.__cvDialogTrace.push('button '+type),true);
+      document.addEventListener(type,event=>{
+        const target=event.target;
+        window.__cvDialogTrace.push('doc '+type+' '+(target?.tagName||'')+
+          ' '+(target?.getAttribute?.('data-cv-switch-open')!==null?'on-switch':''));
+      },true);
+    }
     const show=dialog.showModal.bind(dialog);
     dialog.showModal=()=>{
       window.__cvDialogTrace.push('showModal invoked');
@@ -106,14 +113,15 @@ try{
     dialog.addEventListener('close',()=>window.__cvDialogTrace.push('native close'));
   });
   console.log('Before reopen:',await page.locator('[data-cv-switch-open]').evaluate(el=>({
-    disabled:el.disabled,outer:el.outerHTML.slice(0,220)
+    disabled:el.disabled,outer:el.outerHTML.slice(0,220),rect:el.getBoundingClientRect().toJSON(),active:document.activeElement?.tagName
   })));
   await page.locator('[data-cv-switch-open]').click();
   console.log('After reopen:',await switchDialog.evaluate(el=>({
     open:el.open,hidden:el.hidden,display:getComputedStyle(el).display
   })), 'status:',await page.locator('[data-cv-status]').textContent(),
   'console:',consoleErrors.slice(-10),'exceptions:',errors.slice(-10),
-  'trace:',await page.evaluate(()=>window.__cvDialogTrace));
+  'trace:',await page.evaluate(()=>window.__cvDialogTrace),
+  'active:',await page.evaluate(()=>document.activeElement?.outerHTML?.slice(0,280)));
   await switchDialog.waitFor({state:'visible',timeout:7000});
   await switchDialog.locator('[data-cv-switch-item^="M01@"]').first().click();
   await switchDialog.locator('[data-cv-switch-reuse]').uncheck();

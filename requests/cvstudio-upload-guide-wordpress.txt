@@ -1,0 +1,4 @@
+mode=publish
+scope=esc.vn WordPress CV Studio guide post and ESC Table cvstudio_02 upload_button
+article_slug=huong-dan-chuan-hoa-mau-cv
+no_other_pages=true

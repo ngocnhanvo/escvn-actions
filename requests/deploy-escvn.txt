@@ -21,3 +21,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-16: Deploy CV Studio upload validation report and explicit safe read-only consent. Astro master bc825df03f7675c57a04c20dc525d1a2f949fda6, PR115, dev CI PASS run 38924060591. Verify file-line diagnostics, retry, copy report, readonly confirmation in Chromium after FTP. No WordPress changes.
 
 2026-10-17: CV Builder section-level ⋯ toolbar hover and pointer gap fix. Astro master 762302e21649c08298afd67dff28be5e1c22b543 PR116; dev unit/type/build SUCCESS run 38971157330. Only cvToolbar.ts and cvToolbar.test.ts touched, no PHP/WP/Member changes. Deploy production then run real Chromium section hover regression.
+
+2026-10-17: Follow-up fix from Chromium run 38972208494: prioritize hovering new CV section heading over old field ellipsis corridor. Astro master bdc81d3d748f9c318b72eb2e9a68de56dc39361b PR117, dev CI PASS 38972419458, only cvToolbar.ts/test. Deploy FTP, smoke, rerun CV section hover Chromium QA; no WordPress changes.

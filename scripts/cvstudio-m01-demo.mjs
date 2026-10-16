@@ -144,6 +144,7 @@ try{
       assert(!page.url().includes('wp-login.php'),'WordPress login failed');
     }
     let card=await findCard();
+    await card.locator('details summary').first().click(); // reveal version-history links
     const rows=card.locator('.esc-cv-versions tbody tr');
     const versions=(await rows.locator('td:first-child strong').allTextContents()).map(s=>s.trim());
     assert(versions.includes(template.version),'Active M01 version missing in history');
@@ -211,6 +212,7 @@ try{
     const notice=new URL(page.url()).searchParams;
     assert(notice.get('esc_cv_notice')==='success','Upload rejected: '+(notice.get('esc_cv_message')||page.url()));
     card=await findCard();
+    await card.locator('details summary').first().click(); // activation controls live inside details
     const versionRow=card.locator('.esc-cv-versions tbody tr').filter({has:page.getByText(version,{exact:true})});
     assert(await versionRow.count()===1,'Uploaded M01 version not found');
     const form=versionRow.locator('form').filter({has:page.locator('input[name=operation][value=activate]')});

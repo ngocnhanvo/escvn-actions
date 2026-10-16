@@ -1,8 +1,7 @@
-reason=CV Studio ellipsis/right-click contextual menu: no text overlay, native text copy-paste and mobile touch controls (2026-10-16)
+reason=CV Studio contextual menu must anchor to ellipsis button, not to the CV row; fix wide-item menu displacement (2026-10-16)
 astro_branch=github
-astro_toolbar_sha=79f7cf06e7ddbf8c2504062527220a1fd1c24645
-php_branch=master
-regressions=cv-toolbar;cvstudio-repeatable;builder;table;marketing;seo-files;multilingual
+astro_head=8eb461a8fb7ee2d0759faa688d50b546c8926887
+regressions=cv-toolbar;cvstudio-repeatable;builder
 run_unit_tests=true
 run_astro_check=true
 run_build=true

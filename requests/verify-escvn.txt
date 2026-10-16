@@ -1,5 +1,5 @@
-reason=Anonymous CV Builder entry, deferred demo publication login/domain, and reliable PNG/PDF DOM export (2026-10-16)
+reason=Final anonymous CV Builder + html2canvas export and script-stripped renderer QA (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=47f26c6c7cee4a7d652e09b5ba1a055663bf38d3
-checks=pnpm-frozen-lockfile;vitest;astro-check;build;cvstudio-built-html;ssr
+source_head=da9ad280641160901af40e1e77ed19b229220eaa
+checks=pnpm-frozen-lockfile;unit-tests;astro-check;build;cv-studio-built-html;ssr

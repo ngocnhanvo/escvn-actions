@@ -1,5 +1,6 @@
-reason=CV Builder mobile contextual menu and unobstructed typography toolbar (2026-10-16)
+reason=Final CV mobile toolbar and section Add label verification (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=3c699b9c92a8293aa8c664063fe53274483e564f
-checks=mobile-viewport;cv-toolbar;cv-text-toolbar;cv-builder;astro-check;unit-tests;build;smoke
+source_head=14e8a141d49198ea3a04f46f5e9dfaca7e880e29
+scope=mobile-visible-viewport;touch-ellipsis;contextual-edit;add-item;responsive-rich-text
+checks=unit-tests;astro-check;astro-build;cv-studio;ssr-smoke

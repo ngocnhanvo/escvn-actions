@@ -56,46 +56,12 @@ try {
     'Template preview must use public WordPress image');
   await popup.locator('[data-cv-sample-close]').click();
   assert(!(await popup.isVisible()),'Template preview modal did not close');
-  const demoUser=page.locator('[data-cv-dialog]');
+  // Anonymous visitors select a template, edit and download without login.
   await page.locator('[data-cv-start]').first().click();
-  await demoUser.waitFor({state:'visible'});
-  const login=demoUser.locator('[data-cv-login-form]');
-  await login.locator('input[name=email]').fill('demo@esc.vn');
-  const password=login.locator('input[name=password]');
-  const toggle=login.locator('[data-cv-password-toggle]');
-  assert(await password.getAttribute('type')==='password','Password must initially be concealed');
-  await toggle.click();
-  assert(await password.getAttribute('type')==='text','Password eye must show plaintext');
-  assert(await toggle.getAttribute('aria-pressed')==='true','Password toggle pressed state missing');
-  await toggle.click();
-  assert(await password.getAttribute('type')==='password','Password eye must conceal again');
-  await password.fill('wrong-password');
-  await login.locator('button[type=submit]').click();
-  assert(await seen('[data-cv-login-error]'),'Invalid demo login must show an error');
-  assert(!(await seen('[data-cv-step="domain"]')),'Invalid login bypassed the domain step gate');
-  await login.locator('input[name=password]').fill('Demo@123');
-  await login.locator('button[type=submit]').click();
-  const domainStep=demoUser.locator('[data-cv-step="domain"]');
-  await domainStep.waitFor({state:'visible',timeout:8000});
-  assert(await domainStep.locator('h3').count()===0,'Domain step repeated title');
-  assert(await domainStep.locator(':scope > svg').count()===1,'Domain step icon must remain visible');
-  assert((await demoUser.locator('#cvstudio-dialog-title').textContent())?.trim()==='Chọn tên miền cho CV',
-    'Domain title belongs to dialog header only');
-  const radios=domainStep.locator('input[name=cv-domain]');
-  assert(await radios.count()>=1,'Missing WordPress-configured demo domain');
-  const selected=await radios.first().inputValue();
-  await radios.first().check();
-  await domainStep.locator('[data-cv-domain-next]').click();
-  const templateStep=demoUser.locator('[data-cv-step="templates"]');
-  await templateStep.waitFor({state:'visible',timeout:15000});
-  assert(await templateStep.locator(':scope > h3').count()===0,'Template step repeated title');
-  assert(await templateStep.locator(':scope > svg').count()===0,'Template step icon must be removed');
-  await templateStep.locator('[data-cv-dialog-templates] article').first().waitFor({state:'visible',timeout:15000});
-  // The old fixed 3-field CV form has been removed.
-  assert(await page.locator('[data-cv-step="editor"]').count()===0,'Obsolete 3-field editor still exists');
+  assert(await page.locator('[data-cv-dialog]').count()===0,
+    'Landing must not ask visitors to sign in before editing');
   const chosenTemplate=data.templates.find(t=>t.id==='M26')||data.templates[0];
-  const target=templateStep.locator('article').filter({hasText:chosenTemplate.id}).first();
-  // Preview does not advance the wizard.
+  const target=gallery.locator('article').filter({hasText:chosenTemplate.id}).first();
   await target.locator('button').first().click();
   await popup.waitFor({state:'visible',timeout:10000});
   await popup.locator('[data-cv-sample-close]').click();
@@ -103,10 +69,14 @@ try {
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   const workspace=page.locator('[data-cv-builder-workspace]');
   await workspace.waitFor({state:'visible',timeout:30000});
-  assert((await page.locator('[data-cv-domain]').textContent())===selected,
-    'Selected domain must be carried to the Builder');
+  assert((await page.locator('[data-cv-domain]').textContent())?.includes('Chưa công khai'),
+    'CV must remain private until the Publish CV action');
   assert((await page.locator('[data-cv-template-name]').textContent())?.includes(chosenTemplate.id),
-    'Builder must load the clicked active template');
+    'Builder must load the clicked template anonymously');
+  assert(await page.locator('[data-cv-publish]').isEnabled(),
+    'Publish action must become available after the CV loads');
+  assert(await page.locator('[data-cv-publish-dialog]').isHidden(),
+    'Login must not appear automatically in the CV Builder');
   const frame=page.locator('[data-cv-live-frame]');
   await frame.waitFor({state:'visible'});
   const srcdoc=await frame.getAttribute('srcdoc');
@@ -157,12 +127,12 @@ try {
   });
   // Editing is active before the first click: a single pointer action must
   // place the native caret without an extra click or any iframe reload.
-  assert(await nameTarget.getAttribute('contenteditable')==='plaintext-only',
+  assert(await nameTarget.getAttribute('contenteditable')==='true',
     'CV text must be editable before clicking');
   await nameTarget.click();
   assert(await nameTarget.evaluate(node=>node.ownerDocument.activeElement===node),
     'First click must focus CV text and position its caret');
-  assert(await nameTarget.getAttribute('contenteditable')==='plaintext-only',
+  assert(await nameTarget.getAttribute('contenteditable')==='true',
     'Click CV text should keep direct plaintext editing enabled');
   assert(await page.locator('[data-cv-focused] input').count()===0,
     'Text editing must not require a contextual input');
@@ -265,7 +235,7 @@ try {
   const other=cvFrame.locator('[data-cv-inline^="experiences."]').first();
   assert(await other.count()>0,'Experience entries must be addressable on the CV');
   await other.click();
-  assert(await other.getAttribute('contenteditable')==='plaintext-only',
+  assert(await other.getAttribute('contenteditable')==='true',
     'Click experience must edit the corresponding template field in place');
   await other.fill('KINH NGHIỆM QA');
   assert((await other.textContent())?.trim()==='KINH NGHIỆM QA',
@@ -397,6 +367,46 @@ try {
   await assertNaturalHeight('After deleting a CV experience');
   assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
     'Repeatable editing must not flicker/reload the CV document');
+  // Exercise actual binary downloads, not just button presence.
+  const fs=await import('node:fs/promises');
+  for(const [format,extension,signature] of [
+    ['source','.zip',Buffer.from('504b0304','hex')],
+    ['pdf','.pdf',Buffer.from('%PDF-')],
+    ['png','.png',Buffer.from('89504e470d0a1a0a','hex')]
+  ]){
+    await page.locator('[data-cv-export-summary]').click();
+    const downloadPromise=page.waitForEvent('download',{timeout:45000});
+    await page.locator('[data-cv-export-format="'+format+'"]').click();
+    const download=await downloadPromise;
+    assert(download.suggestedFilename().endsWith(extension),
+      'Incorrect CV '+format+' filename');
+    const file=await fs.readFile(await download.path());
+    assert(file.length>1200 && file.subarray(0,signature.length).equals(signature),
+      'CV '+format+' was not a valid nonempty '+extension+' download');
+    console.log('Anonymous CV '+format.toUpperCase()+' download: '+file.length+' bytes PASS');
+  }
+  // Publishing is the ONLY place where a login and domain selection appear.
+  await page.locator('[data-cv-publish]').click();
+  const publish=page.locator('[data-cv-publish-dialog]');
+  await publish.waitFor({state:'visible'});
+  const login=publish.locator('[data-cv-publish-login]');
+  await login.locator('input[name=email]').fill('demo@esc.vn');
+  await login.locator('input[name=password]').fill('wrong-password');
+  await login.locator('button[type=submit]').click();
+  assert(await publish.locator('[data-cv-publish-error]').isVisible(),
+    'Bad demo credentials should not bypass Publish gate');
+  await login.locator('input[name=password]').fill('Demo@123');
+  await login.locator('button[type=submit]').click();
+  await publish.locator('[data-cv-publish-step="domain"]').waitFor({state:'visible'});
+  const choices=publish.locator('input[name=cv-publish-domain]');
+  assert(await choices.count()>0,'Publish step must list WordPress-owned demo domains');
+  await choices.first().check();
+  await publish.locator('[data-cv-publish-finish]').click();
+  await publish.locator('[data-cv-publish-step="finish"]').waitFor({state:'visible'});
+  assert((await publish.locator('[data-cv-publish-step="finish"]').textContent())
+    ?.includes('chưa được công khai'), 'Demo flow must not claim a live publication');
+  await publish.locator('[data-cv-publish-done]').click();
+  assert(await publish.isHidden(),'Demo publish dialog must close without losing Builder');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
   console.log('ESC CV Studio: one-click editing, ellipsis/context actions add/duplicate/move/delete without iframe reload, photo and draft: PASS');
 

@@ -3,3 +3,5 @@ url=https://esc.vn/tao-cv-truc-tuyen/
 frontend_sha=e124d2c42c9b5f48841efaa818589e07a15b11f3
 backend_sha=c017d7e1893109ad1cd145e1c2ed4f9451899d13
 verify=12-card pages,numeric navigation,last page,url restore,preview lazy images
+
+2026-10-16 slow WP page 2 QA after CV footer-jump fix. Astro master 5bc572f583b95e74d88bd082755b753be860821f. FTP run 38902581575 passed, smoke run 38903368070 passed. Test preserved 12 cards and footer stays offscreen under artificially delayed API.

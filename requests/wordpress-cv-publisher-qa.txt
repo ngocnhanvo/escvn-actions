@@ -1,0 +1,5 @@
+2026-10-17 ESC CV publisher PHP security QA.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=c39660ae568f87de7beed6e0a5a1bcb3e2cffc1b
+checks=PHP 7.4 lint, DNS/host/path guards, FTPS pinned TLS, rate limiting

@@ -5,11 +5,22 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1366,height:860}});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
+// Hold the template registry briefly to verify the SSR skeleton is visible
+// before client AJAX returns; page.request calls are not intercepted.
+await page.route('**/wp-json/esc-cv/v1/templates',async route=>{
+  await new Promise(resolve=>setTimeout(resolve,1300));
+  await route.continue();
+});
 const assert=(ok,msg)=>{if(!ok)throw Error(msg)};
 const seen=async(q)=>await page.locator(q).first().isVisible();
 try {
   const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   assert(response?.status()===200,'CV Studio returns HTTP '+response?.status());
+  // Skeleton lives in initial HTML even before the JS bundle has executed.
+  assert(await page.locator('[data-cv-gallery-skeleton]').count()===2,
+    'CV template grid should reserve two shimmer cards while the registry loads');
+  assert((await page.locator('[data-cv-gallery]').getAttribute('aria-busy'))==='true',
+    'CV gallery should announce that templates are loading');
   await page.locator('#main-header').waitFor({state:'visible',timeout:15000});
   await page.locator('[data-tablepress-preview="cvstudio_00"] h1').waitFor({state:'visible',timeout:15000});
   for(const id of ['cvstudio_00','cvstudio_01','cvstudio_02'])
@@ -22,7 +33,13 @@ try {
   assert(Array.isArray(data.templates),'CV Manager REST payload shape invalid');
   console.log('Active CV templates:',data.templates.map(t=>t.id+'@'+t.version).join(', ') || '(none)');
   if(!data.templates.length)throw Error('No active templates in ESC CV Manager; activate at least one before end-to-end QA');
-  await gallery.locator('article').first().waitFor({state:'visible',timeout:30000});
+  await gallery.locator('article:not([data-cv-gallery-skeleton])').first().waitFor({state:'visible',timeout:30000});
+  assert(await gallery.locator('[data-cv-gallery-skeleton]').count()===0,
+    'Loading placeholders must disappear after the AJAX result is rendered');
+  assert((await gallery.getAttribute('aria-busy'))==='false',
+    'CV gallery must leave loading state once AJAX finishes');
+  assert(await gallery.locator('.cv-gallery-image-shimmer').count()>0,
+    'CV preview cards need a dedicated image-load shimmer');
   // The browser gallery, not only the privileged runner's server-side REST,
   // must be capable of accessing the cross-origin API and loading imagery.
   const first=gallery.locator('article').first();

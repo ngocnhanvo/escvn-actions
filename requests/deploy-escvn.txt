@@ -1,6 +1,8 @@
-ESC CV anonymous edit/download + deferred publish demo + PDF/PNG rasterizer fix (2026-10-16)
+ESC CV PDF PNG bug fix: srcdoc iframe load ordering (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
-Source branches: github and master, both da9ad280641160901af40e1e77ed19b229220eaa
-Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38853295417
-Changes: no login/domain before choosing a CV template or downloading ZIP/PDF/PNG; new Publish CV dialog gates demo login and domain, no false live publication; html2canvas rasterizes isolated script-free CV DOM instead of foreignObject.
-Deploy target: /domains/esc.vn/public_html through standard lftp ZIP verified transfer/unzip and post-deploy smoke.
+Source branches: github and master identical
+Source SHA: 40ea3643bed07e535e5acf934cac57bdd48f830d
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38854494253
+Root cause: about:blank initial load resolved capture readiness before template content had loaded, producing CV height 0.
+Fix: set srcdoc prior to iframe insertion, wait for the correct document. Anonymous edit/download and publish-only demo login unchanged.
+FTP target: /domains/esc.vn/public_html, verified lftp transfer/unzip, post-deploy smoke.

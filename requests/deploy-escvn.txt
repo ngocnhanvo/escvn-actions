@@ -1,8 +1,8 @@
-ESC CV Studio gallery shimmer skeletons during AJAX (2026-10-16)
+ESC CV Studio direct avatar button on CV preview production release (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: e0bfaba70587008ea996f37f01e22ce3427f81e2
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/107
-Verify request: https://github.com/ngocnhanvo/escvn-actions/commit/b04791131f7ed4fd310ed8937ffe0fbec8d7bdc9
-Changes: render two decorative skeleton cards in initial WordPress CV gallery HTML with reflective shimmer before AJAX, keep card/image placeholders until API/image load, clear placeholders on success/error/empty response, set gallery aria-busy, support reduced motion. No changes to CV Builder, CV Manager backend, or templates.
-Workflow: standard ESC Astro master build with built-output validation, FTP archive upload verified byte-by-byte to /domains/esc.vn/public_html and remote unzip. Production smoke follows successful deployment. Live CV Studio QA tests request gating for SSR skeleton placeholders and normal gallery transition.
+Astro SHA: 9172c264ed0d3fded5d2df612613121221519080
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/108
+Development verification request: https://github.com/ngocnhanvo/escvn-actions/commit/9c1981dc8096b75bd785b232e4effa21a89579af
+Changes: provide contextual "Đổi ảnh" action anchored inside the visible CV portrait; direct native image chooser on mouse/keyboard/touch. Both avatar overlay and left sidebar share JPG/PNG/WebP 230KB validation, update profile.avatarUrl and visible image in place without iframe reload or CV layout flicker. Generic avatarUrl binding works across templates; no changes to imported templates or WordPress backend.
+Build & deploy: standard ESC Actions master build with output guards and byte-verified FTP archive to /domains/esc.vn/public_html, followed by remote unzip. Production smoke after successful deployment. CV Studio browser QA asserts avatar file picker and live DOM replacement.

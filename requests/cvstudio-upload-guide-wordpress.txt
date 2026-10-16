@@ -6,3 +6,5 @@ no_other_pages=true
 retry=2026-10-16 add missing upload_button as one new ESC Table row; WordPress guide post 55473 already published, do not recreate.
 
 retry=2026-10-16 fix ESC Table visibility row count when adding upload_button; guide post 55473 already published.
+
+2026-10-16 ESC CV v1 definitive guide revision: update existing WordPress post ID 55473 only; build/upload official sample ZIP through Media REST; add exact HTML/CSS/JSON/avatar/AI prompt/validation checklist; QA public article code. No Astro or TablePress change.

@@ -187,7 +187,7 @@ jobs:
             throw new Error('CV Studio WordPress action/key must be source-owned and match Astro.');
           }
           const ids=['cvstudio_00','cvstudio_01','cvstudio_02'];
-          const counts=[8,14,38];
+          const counts=[8,14,39];
           const found=(page.contents||[]).filter(row=>ids.includes(row?.shortcode));
           for (let i=0;i<ids.length;i++){
             const item=found.find(row=>row.shortcode===ids[i]);

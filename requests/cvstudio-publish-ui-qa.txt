@@ -1,0 +1,7 @@
+2026-10-17: Browser cross-origin session and mocked FTPS CV publisher QA.
+Astro source master e955e3bbdd42048838ad284c747e05b4df93f9a2
+WP MU publisher source c39660ae568f87de7beed6e0a5a1bcb3e2cffc1b
+backend_deploy=38981350989 PASS
+frontend_deploy=38981621557 PASS
+production_smoke=38981789868 PASS
+Use dummy FTP credentials intercepted by Playwright; never connect to a third-party FTP server.

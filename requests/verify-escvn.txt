@@ -1,7 +1,6 @@
-reason=ESC CV Studio direct change-avatar button over portrait, shared image validation and no iframe refresh (2026-10-16)
+reason=CV Studio avatar upload silent failure fix, visible inline error/success notice, safe automatic compression for 230 KB to 15 MB JPG/PNG/WebP (2026-10-16)
 astro_branch=github
-astro_head=59b8ac5403d78a8886e1506d79dc6aad4612fec5
-regressions=cv-avatar-overlay;cvstudio-inline;cvstudio-repeatable;builder
+regressions=cv-avatar-image;cv-avatar-overlay;cvstudio-live-qa;builder
 run_unit_tests=true
 run_astro_check=true
 run_build=true

@@ -31,6 +31,41 @@ try{
   await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
   assert((await page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline="profile.fullName"]').first().textContent())==='THỬ XUẤT CV ẨN DANH','Auto-saved text was lost on reload');
 
+  // Blank CV paper must clear all editing affordances, including the
+  // contextual row outline and the small text-formatting pencil.
+  const canvasFrame=page.frameLocator('[data-cv-live-frame]');
+  const selectedRow=canvasFrame.locator('[data-cv-inline^="skills.0."]').first();
+  await selectedRow.waitFor({state:'visible',timeout:10000});
+  await selectedRow.hover();
+  const contextual=canvasFrame.locator('[data-cv-repeat-toolbar]');
+  assert(await contextual.isVisible(),'Hovering a bound item should show contextual controls');
+  const blankLocation=await canvasFrame.locator('body').evaluate(body=>{
+    const doc=body.ownerDocument;
+    const rect=body.getBoundingClientRect();
+    const width=doc.documentElement.clientWidth;
+    const height=Math.min(doc.documentElement.clientHeight,950);
+    for(const y of [height-35,height-75,650,550,450,300]){
+      for(const x of [width-25,width-75,Math.round(width*.8),Math.round(width*.32)]){
+        if(x<10||y<10||y>height-5)continue;
+        const node=doc.elementFromPoint(x,y);
+        if(!node||node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action]'))continue;
+        return {x:x-rect.left,y:y-rect.top};
+      }
+    }
+    return null;
+  });
+  assert(!!blankLocation,'No blank CV area available for dismissal test');
+  await canvasFrame.locator('body').click({position:blankLocation,force:true});
+  assert(await contextual.isHidden(),'Blank click did not dismiss the row ellipsis');
+  assert(await canvasFrame.locator('.esc-cv-repeat-outline').isHidden(),
+    'Blank click did not clear the blue selected-row border');
+  assert(await canvasFrame.locator('[data-cv-text-quick]').isHidden(),
+    'Blank click kept the floating text pencil visible');
+  // The same item must become selectable again when explicitly hovered.
+  await selectedRow.hover();
+  assert(await contextual.isVisible(),'Item controls did not reappear on a deliberate hover');
+  console.log('PASS CV blank-paper dismissal of all contextual item controls');
+
   const checks=[
     ['source','.zip',Buffer.from([0x50,0x4b,0x03,0x04])],
     ['png','.png',Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],

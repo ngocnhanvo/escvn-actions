@@ -1,7 +1,8 @@
-ESC CV blank click final polishing: explicitly dismiss rich-text pencil and avatar controls on empty canvas (2026-10-16)
-Source: ngocnhanvo/escvn-astro, branch github/master identical
-Commit: b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783
-Development verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38871332229
-Background: previously deployed c5203059a5e97e56a7d5a6ea793996a76aba3d20 fixes false row selection; Chromium browser QA confirmed lingering tiny formatting pencil despite blank click.
-Fix: Builder directly invokes the rich-text and avatar dismiss methods before blurring the active editor so stale selections cannot restore them.
-Deploy /domains/esc.vn/public_html via standard verified FTP ZIP upload/unzip, production smoke, and live Chromium CV blank click QA.
+ESC CV blank click selection dismiss fix at top-level document (2026-10-16)
+Source repo ngocnhanvo/escvn-astro
+Source branches github/master identical
+Source SHA 4a732839d47a4a5b0d6468e70822b8e7ed3ed041
+Verified via https://github.com/ngocnhanvo/escvn-actions/actions/runs/38874090363
+Root cause: when clicking blank apparent canvas space, frame pointer trace was empty; outer-page click never reached iframe or the Builder root, leaving text-edit pencil visible.
+Fix: capture-phase top-level document pointerdown dismisses row ellipsis, outline, text-formatting pencil and avatar action for clicks outside the iframe, including floating overlays/footer and surrounding blank spaces. Native inside-iframe handlers remain.
+Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium regression.

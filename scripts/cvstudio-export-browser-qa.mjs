@@ -39,23 +39,46 @@ try{
   await selectedRow.hover();
   const contextual=canvasFrame.locator('[data-cv-repeat-toolbar]');
   assert(await contextual.isVisible(),'Hovering a bound item should show contextual controls');
-  const blankLocation=await canvasFrame.locator('body').evaluate(body=>{
+  // Playwright locator.click(body, position) can scroll the gigantic
+  // iframe into view AFTER coordinates have been chosen. Click via the
+  // page mouse instead, using the visible intersection of frame + viewport.
+  const frameRect=await page.locator('[data-cv-live-frame]').boundingBox();
+  assert(!!frameRect,'CV iframe bounding rectangle missing');
+  const chosen=await canvasFrame.locator('body').evaluate((body,arg)=>{
     const doc=body.ownerDocument;
-    const rect=body.getBoundingClientRect();
     const width=doc.documentElement.clientWidth;
-    const height=Math.min(doc.documentElement.clientHeight,950);
-    for(const y of [height-35,height-75,650,550,450,300]){
-      for(const x of [width-25,width-75,Math.round(width*.8),Math.round(width*.32)]){
-        if(x<10||y<10||y>height-5)continue;
-        const node=doc.elementFromPoint(x,y);
-        if(!node||node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action'))continue;
-        return {x:x-rect.left,y:y-rect.top};
-      }
+    const height=doc.documentElement.clientHeight;
+    const ymin=Math.max(16,Math.ceil(-arg.top+16));
+    const ymax=Math.min(height-16,Math.floor(arg.screenHeight-arg.top-16));
+    const maxX=Math.min(width-16,Math.floor(arg.screenWidth-arg.left-16));
+    const minX=Math.max(16,Math.ceil(-arg.left+16));
+    const candidatesY=[ymax-20,ymax-55,ymin+25,(ymax+ymin)/2,ymin+100];
+    const candidatesX=[maxX-16,maxX-60,(minX+maxX)/2,minX+24];
+    for(const y0 of candidatesY)for(const x0 of candidatesX){
+      const x=Math.round(x0),y=Math.round(y0);
+      if(x<minX||x>maxX||y<ymin||y>ymax)continue;
+      const node=doc.elementFromPoint(x,y);
+      if(!node||node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action'))continue;
+      return {x,y,target:node.tagName,className:String(node.className).slice(0,100)};
     }
     return null;
+  },{top:frameRect.y,left:frameRect.x,screenHeight:900,screenWidth:1366});
+  assert(!!chosen,'No visible blank CV point found');
+  const clickTrace=await canvasFrame.locator('body').evaluate(body=>{
+    const doc=body.ownerDocument,trace=[];
+    doc.addEventListener('pointerdown',e=>{
+      trace.push({tag:e.target?.tagName,inline:!!e.target?.closest?.('[data-cv-inline]'),x:e.clientX,y:e.clientY});
+    },{once:true,capture:true});
+    return true;
   });
-  assert(!!blankLocation,'No blank CV area available for dismissal test');
-  await canvasFrame.locator('body').click({position:blankLocation,force:true});
+  console.log('CV blank target before click:',chosen, 'frame:',frameRect);
+  await page.mouse.click(frameRect.x+chosen.x,frameRect.y+chosen.y);
+  console.log('CV blank click after:',await canvasFrame.locator('body').evaluate(body=>{
+    const doc=body.ownerDocument;
+    return {active:doc.activeElement?.tagName,editable:doc.activeElement?.getAttribute?.('data-cv-inline'),
+      pencil:doc.querySelector('[data-cv-text-quick]')?.hidden,
+      rowControls:doc.querySelector('[data-cv-repeat-toolbar]')?.hidden};
+  }));
   assert(await contextual.isHidden(),'Blank click did not dismiss the row ellipsis');
   assert(await canvasFrame.locator('.esc-cv-repeat-outline').isHidden(),
     'Blank click did not clear the blue selected-row border');

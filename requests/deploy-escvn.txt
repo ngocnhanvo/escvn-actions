@@ -1,7 +1,8 @@
-ESC CV Builder typography and hyperlinks release (2026-10-16)
-Source repository: ngocnhanvo/escvn-astro
-Source branch: master (synchronized with github)
-Source SHA: 4e0c3c14679b50de2d32d76bf0dc126afb3ae47a
-Verification: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38843380937
-Changes: contextual text color, font sizes, safe HTTP(S) hyperlinks, draft persistence, per-row styling stable across reorder and duplicate. CV toolbar regression fixes tested.
-Workflow: Build Astro master; stage resumable lftp ZIP at /domains/esc.vn/public_html; verify ZIP round-trip bytes; remote unzip; post-deploy smoke test.
+ESC CV Builder mobile editing and touch actions production release (2026-10-16)
+Source repo: ngocnhanvo/escvn-astro
+Source branch: master (identical to github)
+Source SHA: 14e8a141d49198ea3a04f46f5e9dfaca7e880e29
+Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38845727376
+Changes: mobile 44px ellipsis actions for Add, Edit, Duplicate, Move, Delete; dynamic Add item/section; bottom-docked responsive text formatting editor inside auto-height CV iframe, visible selection preservation and keyboard adjustment.
+Destination: FTP /domains/esc.vn/public_html
+Validation: stage ZIP with lftp, verify FTP round-trip bytes, call remote unzip, post-deploy smoke.

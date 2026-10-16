@@ -1,8 +1,8 @@
-ESC CV Studio editable section headings and generic item/section controls (2026-10-16)
+ESC CV Studio gallery shimmer skeletons during AJAX (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: fb93a05f85290a1ce8ebe9dac1cd2bb95746df86
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/106
-Development verification request: https://github.com/ngocnhanvo/escvn-actions/commit/bdfa4af9bea6225e765b9450b451cba9360052e9
-Changes: users can directly edit static CV section headings from English to Vietnamese and vice versa, with plaintext-only in-place editing, local draft save/reload via escSectionTitles and template-independent discovery excluding repeated row text and existing bound profile fields; contextual Add buttons use + Thêm item and + Thêm section labels. Existing full-height preview, ellipsis menu, no-flicker editing remain.
-Workflow: standard Astro master build, build output checks, resumable FTP ZIP with byte verification to /domains/esc.vn/public_html, remote unzip. Post-deploy smoke via workflow_run. E2E script separately covers heading and draft restore.
+Astro SHA: e0bfaba70587008ea996f37f01e22ce3427f81e2
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/107
+Verify request: https://github.com/ngocnhanvo/escvn-actions/commit/b04791131f7ed4fd310ed8937ffe0fbec8d7bdc9
+Changes: render two decorative skeleton cards in initial WordPress CV gallery HTML with reflective shimmer before AJAX, keep card/image placeholders until API/image load, clear placeholders on success/error/empty response, set gallery aria-busy, support reduced motion. No changes to CV Builder, CV Manager backend, or templates.
+Workflow: standard ESC Astro master build with built-output validation, FTP archive upload verified byte-by-byte to /domains/esc.vn/public_html and remote unzip. Production smoke follows successful deployment. Live CV Studio QA tests request gating for SSR skeleton placeholders and normal gallery transition.

@@ -188,6 +188,28 @@ try {
     'Click portrait must open its contextual file picker');
   assert(await page.locator('[data-cv-focused] input[type=file]').count()===1,
     'Portrait field must accept an image upload');
+  // An overlay on the actual portrait must open a native chooser directly;
+  // selecting a picture updates the iframe DOM without resetting the draft.
+  const portrait=cvFrame.locator('img[data-cv-inline="profile.avatarUrl"]').first();
+  const avatarButton=cvFrame.locator('[data-cv-avatar-action]');
+  await portrait.hover();
+  await avatarButton.waitFor({state:'visible',timeout:10000});
+  assert((await avatarButton.textContent())?.includes('Đổi ảnh'),
+    'Hover on a CV portrait must show an in-preview Change photo button');
+  const pickerEvent=page.waitForEvent('filechooser',{timeout:10000});
+  await avatarButton.click();
+  const nativeChooser=await pickerEvent;
+  await nativeChooser.setFiles({
+    name:'portrait.png',mimeType:'image/png',
+    buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/tH0AAAAASUVORK5CYII=','base64')
+  });
+  await page.waitForFunction(()=>{
+    const f=document.querySelector('[data-cv-live-frame]');
+    return f?.contentDocument?.querySelector('img[data-cv-inline="profile.avatarUrl"]')
+      ?.getAttribute('src')?.startsWith('data:image/png;base64,');
+  },null,{timeout:10000});
+  assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
+    'Direct avatar replacement must not reload CV iframe');
   const other=cvFrame.locator('[data-cv-inline^="experiences."]').first();
   assert(await other.count()>0,'Experience entries must be addressable on the CV');
   await other.click();

@@ -292,7 +292,7 @@ async function mediaUpload(zip,token){
   if(found.length){
     assert(found.length===1 && found[0].source_url && found[0].mime_type==='application/zip','Existing sample conflict');
     console.log('[CV GUIDE SAMPLE] REUSED EXISTING MEDIA',found[0].id,found[0].source_url);
-    return found[0].source_url;
+    return new URL(found[0].source_url,origin).href;
   }
   const upload=await page.request.post(origin+'/wp-json/wp/v2/media',{
     headers:{...headers,'Content-Type':'application/zip',
@@ -303,7 +303,7 @@ async function mediaUpload(zip,token){
   const result=await upload.json();
   assert(result.id && result.source_url && result.mime_type==='application/zip','Invalid uploaded sample media');
   console.log('[CV GUIDE SAMPLE] MEDIA CREATED',result.id,result.source_url);
-  return result.source_url;
+  return new URL(result.source_url,origin).href;
 }
 async function updateArticle(html,token){
   const url=origin+'/wp-json/wp/v2/posts/'+postId;

@@ -37,3 +37,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-17: Retry CV selection pencil QA after fixing post-format collapse to compact icon. Astro github 997edb11087120fc2789acbd5d64a55e24110b42; unit previously 171/172, now rerun unit/type/build before merge.
 
 2026-10-17 CV Studio menu Tải CV close on click outside: Astro github 1ad7a15a7774def0a7f43f719435bd94b9fbb515; binds parent document, CV iframe doc, Escape; keeps menu open when clicking within menu. Files only builder.astro + cvExportMenu.ts + test. Verify unit, Astro check, build before merging.
+
+2026-10-17: CV Studio new FTPS publish UI, remove mock Member login; Astro github 6060da7444ad84d2610d1112dc6db1f076b74597. PHP backend c39660ae56 QA SUCCESS 38981001021. Verify unit/check/build with updated FTPS page contract before merge.

@@ -4,3 +4,6 @@ astro_master=762302e21649c08298afd67dff28be5e1c22b543
 ftp_run=38971741046 SUCCESS
 smoke_run=38971950449 SUCCESS
 checks=semantic section and headed DIV hover; field-to-ellipsis cursor path; blank click dismissal
+
+qa_followup=diagnose-headed-div-hover
+previous_run=38972028787 failed after section and pointer-corridor passed

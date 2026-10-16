@@ -1,0 +1,1 @@
+QA 2026-10-16 post-deploy on esc.vn CV Studio. Verify user ESC ZIP editor, autosave, PDF read-only and demo publish, unsafe ZIP sanitization. Production Astro github/master SHA 601e09575cdb400577c59df78aa819da6908087a. Source run https://github.com/ngocnhanvo/escvn-actions/actions/runs/38881573663.

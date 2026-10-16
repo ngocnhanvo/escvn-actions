@@ -86,6 +86,25 @@ try{
   await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().fill('BẢN NHÁP RIÊNG M26');
   await page.waitForFunction(()=>document.querySelector('[data-cv-autosave]')?.textContent?.includes('Đã tự động lưu'),null,{timeout:8000});
   // Unchecked reuse should restore the original saved M01 draft without a popup.
+  await page.evaluate(()=>{
+    const button=document.querySelector('[data-cv-switch-open]');
+    const dialog=document.querySelector('[data-cv-switch-dialog]');
+    window.__cvDialogTrace=[];
+    button.addEventListener('click',()=>window.__cvDialogTrace.push('click-capture'),true);
+    const show=dialog.showModal.bind(dialog);
+    dialog.showModal=()=>{
+      window.__cvDialogTrace.push('showModal invoked');
+      return show();
+    };
+    const close=dialog.close.bind(dialog);
+    dialog.close=()=>{
+      window.__cvDialogTrace.push('close invoked');
+      return close();
+    };
+    const observer=new MutationObserver(()=>window.__cvDialogTrace.push('open='+dialog.open));
+    observer.observe(dialog,{attributes:true,attributeFilter:['open']});
+    dialog.addEventListener('close',()=>window.__cvDialogTrace.push('native close'));
+  });
   console.log('Before reopen:',await page.locator('[data-cv-switch-open]').evaluate(el=>({
     disabled:el.disabled,outer:el.outerHTML.slice(0,220)
   })));
@@ -93,7 +112,8 @@ try{
   console.log('After reopen:',await switchDialog.evaluate(el=>({
     open:el.open,hidden:el.hidden,display:getComputedStyle(el).display
   })), 'status:',await page.locator('[data-cv-status]').textContent(),
-  'console:',consoleErrors.slice(-10),'exceptions:',errors.slice(-10));
+  'console:',consoleErrors.slice(-10),'exceptions:',errors.slice(-10),
+  'trace:',await page.evaluate(()=>window.__cvDialogTrace));
   await switchDialog.waitFor({state:'visible',timeout:7000});
   await switchDialog.locator('[data-cv-switch-item^="M01@"]').first().click();
   await switchDialog.locator('[data-cv-switch-reuse]').uncheck();

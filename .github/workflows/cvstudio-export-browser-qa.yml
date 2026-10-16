@@ -1,0 +1,35 @@
+name: ESC CV Anonymous Export Browser QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-export-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-cvstudio-export-browser
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate browser test syntax
+        run: node --check scripts/cvstudio-export-browser-qa.mjs
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Test real anonymous CV downloads and deferred publish demo
+        run: node scripts/cvstudio-export-browser-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-export-qa-failure
+          path: cv-export-qa-failure.png
+          retention-days: 3
+          if-no-files-found: ignore

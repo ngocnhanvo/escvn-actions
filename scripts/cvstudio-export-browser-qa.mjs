@@ -3,8 +3,9 @@ import {readFile} from 'node:fs/promises';
 
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1366,height:900},acceptDownloads:true});
-const errors=[];
+const errors=[],consoleErrors=[];
 page.on('pageerror',error=>errors.push(error.message));
+page.on('console',message=>{if(message.type()==='error'||message.type()==='warning')consoleErrors.push(message.text());});
 const assert=(ok,message)=>{if(!ok)throw Error(message);};
 try{
   const response=await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
@@ -30,9 +31,18 @@ try{
   ];
   for(const [format,ext,magic] of checks){
     await page.locator('[data-cv-export-summary]').click();
-    const downloadPromise=page.waitForEvent('download',{timeout:60000});
+    const downloadPromise=page.waitForEvent('download',{timeout:15000});
     await page.locator('[data-cv-export-format="'+format+'"]').click();
-    const file=await downloadPromise;
+    let file;
+    try{file=await downloadPromise;}
+    catch(error){
+      console.error('FAILED FORMAT:',format);
+      console.error('BUILDER STATUS:',await page.locator('[data-cv-status]').innerText());
+      console.error('PAGE ERRORS:',errors);
+      console.error('CONSOLE ERRORS:',consoleErrors.slice(-30));
+      console.error('FRAME:',await page.locator('[data-cv-live-frame]').getAttribute('sandbox'));
+      throw error;
+    }
     assert(file.suggestedFilename().endsWith(ext),'Unexpected file type for '+format);
     const bytes=await readFile(await file.path());
     assert(bytes.length>1500,'Empty or incomplete '+format+' file');

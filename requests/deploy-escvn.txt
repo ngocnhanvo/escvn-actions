@@ -15,3 +15,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-16: Fix CV gallery pagination footer jump. Deploy master 5bc572f583b95e74d88bd082755b753be860821f, verified github CI run 38901924412, PR #112 merged; no WordPress changes. Preserve card heights and page anchor during fetch. Then run slow-response live Chromium test.
 
 2026-10-16: ESC CV upload guide and eligibility modal. Astro master eaeeaba2b6a5b26c75c6032982cbfc7d8c14bcb0 PR113; development QA SUCCESS run 38905696300. WordPress post 55473 published, cvstudio_02 upload_button added success run 38905464722. Deploy and verify browser popup/standalone HTML/guide link. No Member changes.
+
+2026-10-16: Fix escaped <img> code example displayed as actual image in WordPress post 55473 (esc.vn/huong-dan-chuan-hoa-mau-cv/). Source Astro master f9810ad4b02c5d59cce2e887198128b80e9f7eb5, merged PR114; github CI SUCCESS run 38909545313. Preserve <pre>/<code> entities, deploy FTP then strict Chromium DOM QA. No WordPress data changes.

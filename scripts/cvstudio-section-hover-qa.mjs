@@ -90,8 +90,31 @@ try{
   const divHeading=cv.locator('.experience h2');
   await divHeading.hover();
   await trigger.waitFor({state:'visible'});
+  const state=await divHeading.evaluate(heading=>{
+    const doc=heading.ownerDocument;
+    const outline=doc.querySelector('.esc-cv-repeat-outline');
+    const menu=doc.querySelector('.esc-cv-repeat-menu');
+    const host=heading.parentElement;
+    const walker=doc.createTreeWalker(doc.body,NodeFilter.SHOW_COMMENT);
+    const markers=[];
+    while(walker.nextNode()){
+      if(walker.currentNode.data.includes('experiences'))markers.push({
+        text:walker.currentNode.data,parent:walker.currentNode.parentElement?.outerHTML.slice(0,100)
+      });
+    }
+    return {
+      selected:outline?.getAttribute('data-cv-selected-path'),
+      menuOpen:menu?!menu.hidden:null,
+      heading:heading.outerHTML.slice(0,300),
+      parent:host?.outerHTML.slice(0,450),
+      markers,hovered:doc.elementFromPoint(
+        heading.getBoundingClientRect().left+heading.getBoundingClientRect().width/2,
+        heading.getBoundingClientRect().top+heading.getBoundingClientRect().height/2)?.outerHTML.slice(0,250)
+    };
+  });
+  console.log('DIV HOVER DEBUG',JSON.stringify(state));
   assert(await outline.getAttribute('data-cv-selected-path')==='experiences',
-    'An AI-generated headed DIV section should also show its group actions');
+    'An AI-generated headed DIV section should also show its group actions: '+JSON.stringify(state));
   // Outside clicks must still hide the blue selection/ellipsis.
   await cv.locator('body').evaluate(el=>{
     el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:2,clientY:2,pointerType:'mouse'}));

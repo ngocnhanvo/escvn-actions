@@ -1,6 +1,6 @@
-reason=Fix CV template picker being dismissed when reopening after in-place text editing (2026-10-16)
+reason=Fix CV switch button lost click due to iframe blur layout shift: pointerdown hits BUTTON but mouseup lands on P (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=37ffc51097f0837f5ca0ecb925320264925e34d9
-scope=prevent-backdrop-click-retargeting;preserve-autosave;reuse-checkbox
-checks=unit-tests;astro-check;build;cvstudio
+source_head=9d2217377f0974764298e1ca3709cddacb6abea6
+change=handle primary pointerdown before layout shift, preserve keyboard click fallback and auto-save / reuse checkbox
+checks=unit-tests;astro-check;build;cv-studio-smoke

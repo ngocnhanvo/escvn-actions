@@ -64,6 +64,7 @@ try{
   assert(await menu.isVisible(),'Section toolbar menu should open by clicking ellipsis');
   assert((await menu.innerText()).includes('Thêm'),'Section ellipsis must offer Add section/item');
   assert(!(await menu.innerText()).includes('Xóa'),'Section menu must not act on a row');
+  await trigger.click(); // Close first: open menus deliberately freeze hover selection.
   // Hover a bound row and physically move toward the ellipsis to reproduce
   // the original disappearing-button bug (the toolbar sits outside the field).
   await cv.locator('[data-cv-inline="skills.0.name"]').hover();
@@ -72,6 +73,7 @@ try{
     'Row hover must select its own item');
   await trigger.click();
   assert((await menu.innerText()).includes('Xóa'),'Row ellipsis must provide Delete');
+  await trigger.click();
   const field=cv.locator('[data-cv-inline="skills.0.name"]');
   await field.hover();
   const triggerBox=await trigger.boundingBox(),fieldBox=await field.boundingBox();
@@ -84,6 +86,7 @@ try{
   await trigger.click();
   assert(await menu.isVisible()&&(await menu.innerText()).includes('Xóa'),
     'Ellipsis should remain clickable after moving through whitespace');
+  await trigger.click();
   const divHeading=cv.locator('.experience h2');
   await divHeading.hover();
   await trigger.waitFor({state:'visible'});

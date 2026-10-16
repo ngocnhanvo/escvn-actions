@@ -1,8 +1,8 @@
-reason=ESC CV Builder keep blue selection outline attached to the same moved item after up/down, enable repeated reorder from the contextual menu (2026-10-16)
+reason=Verify CV Builder text colors, font sizes and hyperlinks (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=8b469a943e1ad2910bca8303d1e29eb2a99a28fa
-regressions=cv-toolbar;cv-repeatable;builder;cvstudio-e2e
+source_head=43242e00a0beaf9c70abfb9728be99b3b221cc51
+change=template-neutral contextual typography, persisted formatting, URL safety and repeatable row styles
 run_unit_tests=true
 run_astro_check=true
 run_build=true

@@ -21,7 +21,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify escaped CV code samples against WordPress source and Astro DOM
         env:
-          QA_STRICT: ${{ vars.CV_GUIDE_STRICT || '0' }}
+          QA_STRICT: '1'
         run: node scripts/cvstudio-guide-code-qa.mjs
       - uses: actions/upload-artifact@v4
         if: failure()

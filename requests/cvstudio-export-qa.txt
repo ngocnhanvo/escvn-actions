@@ -8,3 +8,5 @@ Diagnostic rerun: capture canvas/export error message in browser after failed PN
 Re-run after deploying srcdoc-first iframe fix, source SHA 40ea3643bed07e535e5acf934cac57bdd48f830d.
 
 2026-10-16 M01 regression: assert exactly 1 page in exported A4 PDF after deployed SHA 68d1a9f6d27adbc55eac01fef126962cbea04992; verify ZIP and PNG too.
+
+QA switch: M01 → M26 → M01, preserve edited name in iframe and after reload. Source SHA 480fbab19e35cf69e203878f721cf5b41f85200f. Also test ZIP PNG PDF and deferred publish.

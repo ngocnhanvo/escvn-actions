@@ -1,0 +1,34 @@
+name: ESC CV Export Menu Chromium QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-export-menu-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-export-menu-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Chromium
+        run: |
+          node --check scripts/cvstudio-export-menu-qa.mjs
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify export dropdown outside click, iframe and Escape
+        run: node scripts/cvstudio-export-menu-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-export-menu-screenshot
+          path: cvstudio-export-menu-error.png
+          if-no-files-found: ignore
+          retention-days: 3

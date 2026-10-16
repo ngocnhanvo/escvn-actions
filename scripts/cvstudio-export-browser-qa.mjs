@@ -48,7 +48,7 @@ try{
       for(const x of [width-25,width-75,Math.round(width*.8),Math.round(width*.32)]){
         if(x<10||y<10||y>height-5)continue;
         const node=doc.elementFromPoint(x,y);
-        if(!node||node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action]'))continue;
+        if(!node||node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action'))continue;
         return {x:x-rect.left,y:y-rect.top};
       }
     }

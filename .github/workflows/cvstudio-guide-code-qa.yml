@@ -1,0 +1,31 @@
+name: ESC CV Guide Code Render QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-guide-code-qa.txt']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - run: node --check scripts/cvstudio-guide-code-qa.mjs
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify escaped CV code samples against WordPress source and Astro DOM
+        env:
+          QA_STRICT: ${{ vars.CV_GUIDE_STRICT || '0' }}
+        run: node scripts/cvstudio-guide-code-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-guide-code-qa-error
+          path: cvstudio-guide-code-qa-error.png
+          if-no-files-found: ignore

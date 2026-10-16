@@ -2,3 +2,5 @@ Real Chromium anonymous CV export and publish-gate QA after deploy, 2026-10-16.
 Source: ngocnhanvo/escvn-astro@da9ad280641160901af40e1e77ed19b229220eaa
 Target: https://esc.vn/tao-cv-truc-tuyen/
 Required: anonymous editor, real downloadable ZIP PNG PDF binary signatures, publish login/domain gate and preserved edited CV.
+
+Diagnostic rerun: capture canvas/export error message in browser after failed PNG download.

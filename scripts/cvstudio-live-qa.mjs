@@ -227,6 +227,15 @@ try {
   const action=async(kind)=>{
     await experience.hover();
     await trigger.click();
+    const pin=await trigger.boundingBox();
+    const popup=await menu.boundingBox();
+    assert(pin&&popup,'CV contextual ellipsis or action menu is not measurable');
+    // It must touch the trigger rather than opening beside the full CV row.
+    const xNear=popup.x<=pin.x+pin.width+10&&popup.x+popup.width>=pin.x-10;
+    const yNear=Math.abs(popup.y-(pin.y+pin.height))<=10||
+      Math.abs((popup.y+popup.height)-pin.y)<=10;
+    assert(xNear&&yNear,
+      'CV contextual menu is too far from its ellipsis button: '+JSON.stringify({pin,popup}));
     await menu.locator('[data-cv-action="'+kind+'"]').first().click();
   };
   await action('add');

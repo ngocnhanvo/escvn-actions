@@ -1,0 +1,4 @@
+2026-10-17 production Chromium ESC CV export dropdown outside click QA.
+Astro master 7de6e88669ac0dd36dc478182921cfa623a3730a; PR 120.
+FTP run 38978959133 PASS; smoke run 38979142144 PASS.
+Test pointerdown inside dropdown stays open; outside Builder closes; inside CV iframe closes; Escape closes.

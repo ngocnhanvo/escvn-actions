@@ -12,3 +12,8 @@ qa_followup=confirm-heading-priority-after-deploy
 astro_master=bdc81d3d748f9c318b72eb2e9a68de56dc39361b
 ftp=38972996305 PASS
 smoke=38973229046 PASS
+
+qa_final=own-vs-different-section-hover
+astro_master=24928c68dbfff3ed4ca6258e024329f963863d3c
+ftp=38973963794 SUCCESS
+smoke=38974169947 SUCCESS

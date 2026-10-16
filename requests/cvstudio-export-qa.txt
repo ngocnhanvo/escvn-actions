@@ -6,3 +6,5 @@ Required: anonymous editor, real downloadable ZIP PNG PDF binary signatures, pub
 Diagnostic rerun: capture canvas/export error message in browser after failed PNG download.
 
 Re-run after deploying srcdoc-first iframe fix, source SHA 40ea3643bed07e535e5acf934cac57bdd48f830d.
+
+2026-10-16 M01 regression: assert exactly 1 page in exported A4 PDF after deployed SHA 68d1a9f6d27adbc55eac01fef126962cbea04992; verify ZIP and PNG too.

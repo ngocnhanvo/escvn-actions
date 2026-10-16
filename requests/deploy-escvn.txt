@@ -17,3 +17,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-16: ESC CV upload guide and eligibility modal. Astro master eaeeaba2b6a5b26c75c6032982cbfc7d8c14bcb0 PR113; development QA SUCCESS run 38905696300. WordPress post 55473 published, cvstudio_02 upload_button added success run 38905464722. Deploy and verify browser popup/standalone HTML/guide link. No Member changes.
 
 2026-10-16: Fix escaped <img> code example displayed as actual image in WordPress post 55473 (esc.vn/huong-dan-chuan-hoa-mau-cv/). Source Astro master f9810ad4b02c5d59cce2e887198128b80e9f7eb5, merged PR114; github CI SUCCESS run 38909545313. Preserve <pre>/<code> entities, deploy FTP then strict Chromium DOM QA. No WordPress data changes.
+
+2026-10-16: Deploy CV Studio upload validation report and explicit safe read-only consent. Astro master bc825df03f7675c57a04c20dc525d1a2f949fda6, PR115, dev CI PASS run 38924060591. Verify file-line diagnostics, retry, copy report, readonly confirmation in Chromium after FTP. No WordPress changes.

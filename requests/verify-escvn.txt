@@ -1,7 +1,7 @@
-reason=ESC CV Studio gallery HTML skeleton shimmer before AJAX, dynamic preview image shimmer, loading state and error handling (2026-10-16)
+reason=ESC CV Studio direct change-avatar button over portrait, shared image validation and no iframe refresh (2026-10-16)
 astro_branch=github
-astro_head=3b5d6217f913b3fb8caf4fc19db910fa90af59c6
-regressions=cv-studio-gallery;cv-studio-member;builder;table;marketing
+astro_head=59b8ac5403d78a8886e1506d79dc6aad4612fec5
+regressions=cv-avatar-overlay;cvstudio-inline;cvstudio-repeatable;builder
 run_unit_tests=true
 run_astro_check=true
 run_build=true

@@ -1,0 +1,5 @@
+target=https://esc.vn/tao-cv-truc-tuyen/builder/
+source_commit=78fd62886c036c0efd06040317de7aa633605d47
+ftp_run=38976048096 SUCCESS
+smoke_run=38976259175 SUCCESS
+checks=highlight shows pencil not panel; click icon opens panel; color applies only highlighted text; next selection returns icon

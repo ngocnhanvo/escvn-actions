@@ -95,8 +95,22 @@ try{
   };
   const unobstructed=await choose();
   assert(!!unobstructed,'No visibly unobstructed blank CV point found');
+  await canvasFrame.locator('body').evaluate(body=>{
+    const doc=body.ownerDocument;
+    doc.defaultView.__escBlankTrace=[];
+    for(const type of ['pointerdown','pointerup','click']){
+      doc.addEventListener(type,event=>{
+        doc.defaultView.__escBlankTrace.push({
+          type,tag:event.target?.tagName,
+          inline:event.target?.closest?.('[data-cv-inline]')?.getAttribute('data-cv-inline'),
+          x:event.clientX,y:event.clientY
+        });
+      },true);
+    }
+  });
   console.log('CV blank target before click:',unobstructed, 'frame:',frameRect);
   await page.mouse.click(frameRect.x+unobstructed.x,frameRect.y+unobstructed.y);
+  console.log('CV pointer trace:',await canvasFrame.locator('body').evaluate(body=>body.ownerDocument.defaultView.__escBlankTrace));
   console.log('CV blank click after:',await canvasFrame.locator('body').evaluate(body=>{
     const doc=body.ownerDocument;
     return {active:doc.activeElement?.tagName,editable:doc.activeElement?.getAttribute?.('data-cv-inline'),

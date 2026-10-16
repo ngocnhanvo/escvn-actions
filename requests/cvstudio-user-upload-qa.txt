@@ -1,1 +1,3 @@
 QA 2026-10-16 post-deploy on esc.vn CV Studio. Verify user ESC ZIP editor, autosave, PDF read-only and demo publish, unsafe ZIP sanitization. Production Astro github/master SHA 601e09575cdb400577c59df78aa819da6908087a. Source run https://github.com/ngocnhanvo/escvn-actions/actions/runs/38881573663.
+
+2026-10-16: Final Chromium ESC CV upload popup+guide/HTML readonly+ZIP editor post-production. Astro master eaeeaba2b6a5b26c75c6032982cbfc7d8c14bcb0; WP post 55473 and cvstudio_02 updated. FTP 38906358569, smoke 38907180819 PASS.

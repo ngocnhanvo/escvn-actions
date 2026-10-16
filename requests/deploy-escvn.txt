@@ -25,3 +25,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-17: Follow-up fix from Chromium run 38972208494: prioritize hovering new CV section heading over old field ellipsis corridor. Astro master bdc81d3d748f9c318b72eb2e9a68de56dc39361b PR117, dev CI PASS 38972419458, only cvToolbar.ts/test. Deploy FTP, smoke, rerun CV section hover Chromium QA; no WordPress changes.
 
 2026-10-17: Final CV Builder hover correction: keep row ellipsis across its OWN section heading, still switch when entering a DIFFERENT section heading. Astro master 24928c68dbfff3ed4ca6258e024329f963863d3c PR118, dev QA PASS run 38973448668, Chromium reproduction 38973280925. Deploy FTP, smoke, rerun full Chromium QA. WP untouched.
+
+2026-10-17: CV Builder highlight selection shows only compact pencil, full toolbar only on click, partial range persists and returns to pencil after edits. Astro master 78fd62886c036c0efd06040317de7aa633605d47 via PR119; dev verify SUCCESS https://github.com/ngocnhanvo/escvn-actions/actions/runs/38975634893. Deploy FTP production, smoke, then run Chromium highlight QA. No PHP/WP changes.

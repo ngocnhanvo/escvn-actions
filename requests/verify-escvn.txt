@@ -1,6 +1,6 @@
-reason=Fix CV switch button lost click due to iframe blur layout shift: pointerdown hits BUTTON but mouseup lands on P (2026-10-16)
+reason=CV blank paper tap must clear selected row/ellipsis and rich text pencil, avoid region rectangular false positives (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=9d2217377f0974764298e1ca3709cddacb6abea6
-change=handle primary pointerdown before layout shift, preserve keyboard click fallback and auto-save / reuse checkbox
-checks=unit-tests;astro-check;build;cv-studio-smoke
+source_head=810940e80eb9e0af088b7ae11866dae4609682e0
+scope=CV Studio contextual item region hit tests; blank click dismissal; no stale formatting after click; keep empty list add/menu and moving item selection
+checks=unit-tests;astro-check;build;cvstudio

@@ -1,4 +1,4 @@
-name: ESC CV Upload Guide WordPress
+name: ESC CV Guide Specification WordPress
 on:
   workflow_dispatch:
   push:
@@ -17,9 +17,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check controlled WordPress task syntax
         run: |
-          node --check scripts/cvstudio-upload-guide-wordpress.mjs
-          grep -Fq "admin.esc.vn" scripts/cvstudio-upload-guide-wordpress.mjs
-          grep -Fq "cvstudio_02" scripts/cvstudio-upload-guide-wordpress.mjs
+          node --check scripts/cvstudio-guide-v2-wordpress.mjs
+          grep -Fq "admin.esc.vn" scripts/cvstudio-guide-v2-wordpress.mjs
+          grep -Fq "postId=55473" scripts/cvstudio-guide-v2-wordpress.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -27,16 +27,18 @@ jobs:
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Publish guide article and update CV upload button in WordPress
+      - name: Update existing ESC CV v1 guide and attach verified sample ZIP
         env:
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
-        run: node scripts/cvstudio-upload-guide-wordpress.mjs
+        run: node scripts/cvstudio-guide-v2-wordpress.mjs
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: cvstudio-upload-guide-wp-error
-          path: cvstudio-upload-guide-wp-error.png
+          name: cvstudio-guide-v2-content-backup
+          path: |
+            cvstudio-guide-v2-error.png
+            /tmp/cv-guide-before-update.html
           if-no-files-found: ignore
           retention-days: 3

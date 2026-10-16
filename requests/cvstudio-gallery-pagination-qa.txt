@@ -1,0 +1,5 @@
+mode=live
+url=https://esc.vn/tao-cv-truc-tuyen/
+frontend_sha=e124d2c42c9b5f48841efaa818589e07a15b11f3
+backend_sha=c017d7e1893109ad1cd145e1c2ed4f9451899d13
+verify=12-card pages,numeric navigation,last page,url restore,preview lazy images

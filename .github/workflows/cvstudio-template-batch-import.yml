@@ -1,0 +1,60 @@
+name: ESC CV Gallery Template Batch Import
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload completed ZIP packages to ESC WordPress
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-template-batch-import.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-gallery-template-import
+  cancel-in-progress: false
+jobs:
+  import:
+    name: Generate and validate ESC CV templates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check uploader syntax and controlled target
+        run: |
+          node --check scripts/cvstudio-template-batch-import.mjs
+          grep -q "admin.esc.vn" scripts/cvstudio-template-batch-import.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install preview browser and image processor
+        run: |
+          npm install --no-save playwright@1.55.0 sharp@0.34.4
+          npx playwright install --with-deps chromium
+      - name: Determine QA or publish mode
+        id: mode
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.publish }}" = "true" ]; then echo "publish=1" >> "$GITHUB_OUTPUT"; else echo "publish=0" >> "$GITHUB_OUTPUT"; fi
+          elif grep -qx "mode=publish" requests/cvstudio-template-batch-import.txt; then
+            echo "publish=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=0" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Generate ZIPs, verify previews and optionally upload via WP admin
+        env:
+          BUILD_ONLY: ${{ steps.mode.outputs.publish == '1' && '0' || '1' }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/cvstudio-template-batch-import.mjs
+      - name: Save QA files and generated ZIP packages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv-gallery-m27-m41-${{ github.run_id }}
+          path: generated-cv/
+          if-no-files-found: ignore
+          retention-days: 7

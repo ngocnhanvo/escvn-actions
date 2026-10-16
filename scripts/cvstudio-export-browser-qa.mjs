@@ -52,8 +52,8 @@ try{
     const ymax=Math.min(height-16,Math.floor(arg.screenHeight-arg.top-16));
     const maxX=Math.min(width-16,Math.floor(arg.screenWidth-arg.left-16));
     const minX=Math.max(16,Math.ceil(-arg.left+16));
-    const candidatesY=[ymax-20,ymax-55,ymin+25,(ymax+ymin)/2,ymin+100];
-    const candidatesX=[maxX-16,maxX-60,(minX+maxX)/2,minX+24];
+    const candidatesY=[(ymax+ymin)/2,ymin+100,ymax-125,ymin+25,ymax-25];
+    const candidatesX=[minX+20,(minX+maxX)/3,(minX+maxX)/2,maxX-95,maxX-20];
     for(const y0 of candidatesY)for(const x0 of candidatesX){
       const x=Math.round(x0),y=Math.round(y0);
       if(x<minX||x>maxX||y<ymin||y>ymax)continue;
@@ -64,15 +64,39 @@ try{
     return null;
   },{top:frameRect.y,left:frameRect.x,screenHeight:900,screenWidth:1366});
   assert(!!chosen,'No visible blank CV point found');
-  const clickTrace=await canvasFrame.locator('body').evaluate(body=>{
-    const doc=body.ownerDocument,trace=[];
-    doc.addEventListener('pointerdown',e=>{
-      trace.push({tag:e.target?.tagName,inline:!!e.target?.closest?.('[data-cv-inline]'),x:e.clientX,y:e.clientY});
-    },{once:true,capture:true});
-    return true;
-  });
-  console.log('CV blank target before click:',chosen, 'frame:',frameRect);
-  await page.mouse.click(frameRect.x+chosen.x,frameRect.y+chosen.y);
+  // The host page may overlay an iframe corner with an ESC chat bubble.
+  // Verify that the real top-level hit target is the iframe itself.
+  const choose=async()=>{
+    const candidates=await canvasFrame.locator('body').evaluate((body,arg)=>{
+      const doc=body.ownerDocument,w=doc.documentElement.clientWidth;
+      const h=doc.documentElement.clientHeight;
+      const ymin=Math.max(16,Math.ceil(-arg.top+16));
+      const ymax=Math.min(h-16,Math.floor(arg.screenHeight-arg.top-16));
+      const minX=Math.max(16,Math.ceil(-arg.left+16));
+      const maxX=Math.min(w-16,Math.floor(arg.screenWidth-arg.left-16));
+      const results=[];
+      for(const y of [(ymin+ymax)/2,ymin+100,ymax-125,ymin+25,ymax-25])
+        for(const x of [minX+20,(minX+maxX)/3,(minX+maxX)/2,maxX-95,maxX-20]){
+          const point={x:Math.round(x),y:Math.round(y)};
+          if(point.x<minX||point.x>maxX||point.y<ymin||point.y>ymax)continue;
+          const node=doc.elementFromPoint(point.x,point.y);
+          if(node&&!node.closest('[data-cv-inline],[data-cv-section-title-editable],button,input,textarea,.esc-cv-repeat-outline,.esc-cv-repeat-toolbar,.esc-cv-repeat-menu,.esc-cv-text-toolbar,.esc-cv-text-quick,.esc-cv-avatar-action'))results.push(point);
+        }
+      return results;
+    },{top:frameRect.y,left:frameRect.x,screenHeight:900,screenWidth:1366});
+    for(const point of candidates){
+      const isFrame=await page.evaluate(({x,y})=>{
+        const iframe=document.querySelector('[data-cv-live-frame]');
+        return document.elementFromPoint(x,y)===iframe;
+      },{x:frameRect.x+point.x,y:frameRect.y+point.y});
+      if(isFrame)return point;
+    }
+    return null;
+  };
+  const unobstructed=await choose();
+  assert(!!unobstructed,'No visibly unobstructed blank CV point found');
+  console.log('CV blank target before click:',unobstructed, 'frame:',frameRect);
+  await page.mouse.click(frameRect.x+unobstructed.x,frameRect.y+unobstructed.y);
   console.log('CV blank click after:',await canvasFrame.locator('body').evaluate(body=>{
     const doc=body.ownerDocument;
     return {active:doc.activeElement?.tagName,editable:doc.activeElement?.getAttribute?.('data-cv-inline'),

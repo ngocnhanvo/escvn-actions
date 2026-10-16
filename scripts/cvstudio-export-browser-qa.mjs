@@ -86,8 +86,15 @@ try{
   await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().fill('BẢN NHÁP RIÊNG M26');
   await page.waitForFunction(()=>document.querySelector('[data-cv-autosave]')?.textContent?.includes('Đã tự động lưu'),null,{timeout:8000});
   // Unchecked reuse should restore the original saved M01 draft without a popup.
+  console.log('Before reopen:',await page.locator('[data-cv-switch-open]').evaluate(el=>({
+    disabled:el.disabled,outer:el.outerHTML.slice(0,220)
+  })));
   await page.locator('[data-cv-switch-open]').click();
-  await switchDialog.waitFor({state:'visible'});
+  console.log('After reopen:',await switchDialog.evaluate(el=>({
+    open:el.open,hidden:el.hidden,display:getComputedStyle(el).display
+  })), 'status:',await page.locator('[data-cv-status]').textContent(),
+  'console:',consoleErrors.slice(-10),'exceptions:',errors.slice(-10));
+  await switchDialog.waitFor({state:'visible',timeout:7000});
   await switchDialog.locator('[data-cv-switch-item^="M01@"]').first().click();
   await switchDialog.locator('[data-cv-switch-reuse]').uncheck();
   await switchDialog.locator('[data-cv-switch-confirm]').click();

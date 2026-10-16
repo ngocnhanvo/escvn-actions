@@ -39,6 +39,38 @@ try {
    assert(state.images.length===0,
      'ESC example became a real image element');
    console.log('CV GUIDE CODE RENDER PASS');
+   const main=page.locator('#article-content');
+   const bodyText=await main.innerText();
+   for(const text of ['Tải mẫu ZIP chính thức','File index.html','sample-data.json','Prompt giao việc','Lỗi thường gặp']){
+     assert(bodyText.includes(text),'New article section not available on esc.vn: '+text);
+   }
+   const headings=await main.locator('h2').count();
+   assert(headings>=12,'Missing guide headings on live site: '+headings);
+   const download=main.locator('a').filter({hasText:'Tải mẫu ZIP ESC CV v1 chính thức'}).first();
+   assert(await download.count()===1,'Official sample download missing from site article');
+   const href=new URL(await download.getAttribute('href'),url);
+   assert(href.hostname==='admin.esc.vn' && href.pathname.endsWith('.zip'),
+     'ZIP link must resolve to WordPress uploads, not esc.vn: '+href.href);
+   const zipResponse=await page.request.get(href.href,{timeout:35000});
+   assert(zipResponse.ok(),'Official sample ZIP download HTTP '+zipResponse.status());
+   const zip=await zipResponse.body();
+   assert(zip.length>100 && zip.length<5*1024*1024 && zip.subarray(0,2).toString()==='PK',
+     'Downloaded sample has invalid ZIP signature/size');
+   console.log('ESC CV GUIDE V2 ARTICLE + ZIP LINK PASS',JSON.stringify({headings,bytes:zip.length,href:href.href}));
+   await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
+   const uploader=page.locator('[data-cv-user-upload-input]');
+   await uploader.waitFor({state:'attached',timeout:30000});
+   await uploader.setInputFiles({name:'ESC-CV-v1-mau-chinh-thuc.zip',mimeType:'application/zip',buffer:zip});
+   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
+   await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:25000});
+   assert(await page.locator('[data-cv-upload-readonly]').isHidden(),'Official ESC ZIP must be editable, not readonly');
+   const name=page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline="profile.fullName"]').first();
+   await name.waitFor({state:'visible',timeout:18000});
+   assert((await name.textContent())?.includes('Nguyễn Minh Anh'),'Official ZIP Builder sample missing fullName');
+   const image=page.frameLocator('[data-cv-live-frame]').locator('img.avatar').first();
+   assert(await image.evaluate(el=>el instanceof HTMLImageElement&&el.complete&&el.naturalWidth>0),
+     'Official reference sample avatar missing or broken');
+   console.log('ESC CV OFFICIAL ZIP BUILDER EDITABLE + AVATAR PASS');
  }
 }catch(error){
  await page.screenshot({path:'cvstudio-guide-code-qa-error.png',fullPage:true}).catch(()=>{});

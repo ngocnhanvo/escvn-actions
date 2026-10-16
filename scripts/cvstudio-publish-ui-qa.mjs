@@ -38,6 +38,19 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1366,height:900}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 let published=null,issued=0;
+// Real production session must be CORS-accessible from esc.vn. This never
+// submits credentials or performs an FTP transfer.
+await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
+const realSession=await page.evaluate(async()=>{
+  const result=await fetch('https://admin.esc.vn/wp-json/esc-cv/v1/publish/session',{
+    method:'GET',mode:'cors',credentials:'omit',cache:'no-store'
+  });
+  return {status:result.status,data:await result.json()};
+});
+assert(realSession.status===200&&realSession.data?.protocol==='FTPS'&&
+  typeof realSession.data?.token==='string'&&realSession.data.token.length>50,
+  'Real WordPress publish session must pass browser CORS with a signed token');
+console.log('REAL WP PUBLISH SESSION BROWSER CORS PASS');
 await page.route('https://admin.esc.vn/wp-json/esc-cv/v1/publish/**',async route=>{
   const req=route.request();
   const headers={

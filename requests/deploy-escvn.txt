@@ -1,7 +1,8 @@
-ESC CV Builder automatic drafts and switch-use-existing-data checkbox (2026-10-16)
+ESC CV Builder template switch dialog reopening fix (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
-Source branches: github and master (identical)
-Source SHA: 84ae9fd590e6a341e403b7a89ca4300c67655336
-Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38863387369
-Changes: remove manual browser-draft Save button; debounce autosave on typing, avatar, rich text, headings, repeatable actions, reset; flush on pagehide/hidden, visible quota errors. In switch template dialog, replace native browser confirm with prechecked reuse-data checkbox; unchecked restores destination draft or demo data; keep separate per-template local drafts.
-Deploy target: /domains/esc.vn/public_html with verified FTP ZIP upload/unzip, smoke test and Chromium browser regression.
+Source branches: github and master identical
+Source SHA: 37ffc51097f0837f5ca0ecb925320264925e34d9
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38864854409
+Fix: remove generic backdrop-click dismissal of switch dialog; Chromium could retarget the click opening a modal immediately after iframe inline editing. Close (×) and Escape remain.
+Retains CV autosave and checkbox-based current-vs-target draft switch shipped in 84ae9fd590e6a341e403b7a89ca4300c67655336.
+Deploy target /domains/esc.vn/public_html; verify FTP bytes, unzip, production smoke, live Chromium repeat-open regression.

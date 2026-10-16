@@ -59,8 +59,17 @@ try{
   assert(await contextual.isHidden(),'Blank click did not dismiss the row ellipsis');
   assert(await canvasFrame.locator('.esc-cv-repeat-outline').isHidden(),
     'Blank click did not clear the blue selected-row border');
-  assert(await canvasFrame.locator('[data-cv-text-quick]').isHidden(),
-    'Blank click kept the floating text pencil visible');
+  await page.waitForTimeout(100); // let the browser settle selectionchange/focusout
+  const pencilHidden=await canvasFrame.locator('[data-cv-text-quick]').isHidden();
+  if(!pencilHidden){
+    console.error('PENCIL AFTER BLANK:',await canvasFrame.locator('body').evaluate(body=>{
+      const doc=body.ownerDocument,quick=doc.querySelector('[data-cv-text-quick]');
+      return {hidden:quick?.hidden,focused:doc.activeElement?.outerHTML?.slice(0,250),
+        selected:doc.getSelection()?.toString().slice(0,100),
+        anchor:doc.getSelection()?.anchorNode?.parentElement?.outerHTML?.slice(0,200)};
+    }));
+  }
+  assert(pencilHidden,'Blank click kept the floating text pencil visible');
   // The same item must become selectable again when explicitly hovered.
   await selectedRow.hover();
   assert(await contextual.isVisible(),'Item controls did not reappear on a deliberate hover');

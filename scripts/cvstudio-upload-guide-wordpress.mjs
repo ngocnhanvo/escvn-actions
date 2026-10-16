@@ -95,11 +95,17 @@ async function patchTable(){
     const table=globalThis.tp.table;
     const cells=table.data.map(row=>row.map(value=>String(value??'')));
     if(cells[0].map(x=>x.trim().toLowerCase()).join('|')!==expected.join('|'))throw Error('Unexpected ESC Table schema');
-    const rows=cells.map((row,i)=>row[0]==='upload_button'?i:-1).filter(i=>i>1);
-    if(rows.length!==1)throw Error('Missing or duplicate upload_button row');
-    const index=rows[0],before=cells[index][1],after='↑ Tải lên mẫu CV của bạn';
-    if(before===after)return false;
-    cells[index][1]=after;
+    const rows=cells.map((row,i)=>row[0]==='upload_button'?i:-1).filter(i=>i>=1);
+    if(rows.length>1)throw Error('Duplicate upload_button key: refusing modification');
+    const after='↑ Tải lên mẫu CV của bạn';
+    if(rows.length===0){
+      const order=Math.max(0,...cells.slice(1).map(row=>Number(row[2])||0))+1;
+      cells.push(['upload_button',after,String(order)]);
+    }else{
+      const index=rows[0],before=cells[index][1];
+      if(before===after)return false;
+      cells[index][1]=after;
+    }
     const params=new URLSearchParams({
       action:'tablepress_save_table',_ajax_nonce:globalThis.tp.nonces.edit_table,
       'tablepress[id]':String(table.id),'tablepress[new_id]':id,

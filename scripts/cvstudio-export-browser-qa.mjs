@@ -65,6 +65,16 @@ try{
   await selectedRow.hover();
   assert(await contextual.isVisible(),'Item controls did not reappear on a deliberate hover');
   console.log('PASS CV blank-paper dismissal of all contextual item controls');
+  // Clicking the outer Builder sidebar should also dismiss controls in
+  // the isolated CV iframe (not only clicks within the paper itself).
+  await selectedRow.hover();
+  assert(await contextual.isVisible(),'Contextual controls did not reappear for outer-click test');
+  await page.locator('[data-cv-template-name]').click();
+  assert(await contextual.isHidden(),'Builder sidebar click did not dismiss CV item controls');
+  assert(await canvasFrame.locator('[data-cv-text-quick]').isHidden(),
+    'Builder sidebar click left floating CV format icon visible');
+  console.log('PASS CV outside-iframe selection dismissal');
+
 
   const checks=[
     ['source','.zip',Buffer.from([0x50,0x4b,0x03,0x04])],

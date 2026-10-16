@@ -1,6 +1,6 @@
-reason=Final CV mobile toolbar and section Add label verification (2026-10-16)
+reason=CV inline typography toolbar only after text highlight; small optional caret icon (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=14e8a141d49198ea3a04f46f5e9dfaca7e880e29
-scope=mobile-visible-viewport;touch-ellipsis;contextual-edit;add-item;responsive-rich-text
-checks=unit-tests;astro-check;astro-build;cv-studio;ssr-smoke
+source_head=24a13c4053001b74eb51f47bed3518b7313b0b37
+checks=unit-tests;astro-check;build;cv-studio;ssr
+scope=focus-no-full-panel;highlighted-substring;manual-whole-field;url-editor;mobile

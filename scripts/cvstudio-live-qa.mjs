@@ -5,10 +5,12 @@ const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1366,height:860}});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-// Hold the template registry briefly to verify the SSR skeleton is visible
-// before client AJAX returns; page.request calls are not intercepted.
+// Gate the template registry until the initial HTML skeleton has been
+// asserted, regardless of runner/network speed. page.request is separate.
+let releaseTemplateFetch=()=>{};
+const templateFetchGate=new Promise(resolve=>{releaseTemplateFetch=resolve;});
 await page.route('**/wp-json/esc-cv/v1/templates',async route=>{
-  await new Promise(resolve=>setTimeout(resolve,1300));
+  await templateFetchGate;
   await route.continue();
 });
 const assert=(ok,msg)=>{if(!ok)throw Error(msg)};
@@ -21,6 +23,7 @@ try {
     'CV template grid should reserve two shimmer cards while the registry loads');
   assert((await page.locator('[data-cv-gallery]').getAttribute('aria-busy'))==='true',
     'CV gallery should announce that templates are loading');
+  releaseTemplateFetch();
   await page.locator('#main-header').waitFor({state:'visible',timeout:15000});
   await page.locator('[data-tablepress-preview="cvstudio_00"] h1').waitFor({state:'visible',timeout:15000});
   for(const id of ['cvstudio_00','cvstudio_01','cvstudio_02'])

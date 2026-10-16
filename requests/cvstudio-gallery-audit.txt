@@ -1,2 +1,2 @@
-scope=remaining-after-M41
+scope=remaining-M66-M77
 source=https://esc.vn/mau-cv

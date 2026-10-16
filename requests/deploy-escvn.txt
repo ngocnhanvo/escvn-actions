@@ -1,10 +1,9 @@
-ESC CV Studio compact ellipsis and right-click menu production release
+ESC CV Studio contextual popup positioning fix (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: aad2710c4b1f2f8b9375c537f0070258f0cb781d
-Developed on github branch SHA: 6247b0a88b363bad32d99d8e768a30bcf544a979
-PR: https://github.com/ngocnhanvo/escvn-astro/pull/103
-Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/fd792fbf6a3650ae75bfd0453c8f0a3763bd55cb
-Changes: hover highlights a repeatable CV item and shows only a 30px ellipsis next to the item. Clicking ellipsis opens Add/Move/Duplicate/Delete menu placed outside the item when space allows, bounded by viewport. Right click on noneditable row opens same actions; right click within editable text keeps browser copy/paste/spellcheck. Touch, keyboard, empty nested group recovery supported without template-specific HTML changes or iframe reload.
-Upload: standard byte-verified resumable FTP to /domains/esc.vn/public_html then remote unzip.
-Followup: auto production smoke and CV Studio public-flow QA.
+Astro SHA: 48aaafea517f4557e6569a4662b6d2161c1e8f47
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/104
+Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/f8022b2a196ff35951affc21ba5aabeda3e8a4ae
+Regression: action popup must anchor to the ellipsis button rather than the repeated item rectangle, align directly below or above trigger, clamp to mobile viewport and scroll when space is limited. No template or backend modifications.
+Production build and FTP: standard ESC Actions workflow, lftp verified archive to /domains/esc.vn/public_html and unzip.
+Post-deploy smoke and CVStudio live QA: ensure menu remains adjacent to ellipsis; avoid duplicate concurrent deploy.

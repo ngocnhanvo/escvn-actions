@@ -1,5 +1,5 @@
-reason=Verify offline CV Builder source ZIP, PNG and multipage PDF export feature (2026-10-16)
+reason=Anonymous CV Builder entry, deferred demo publication login/domain, and reliable PNG/PDF DOM export (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=76190707a34c055580357a7633eb276eb113229c
-scope=cv-export;source-files;png-capture;pdf-a4;browser-download;unit-tests;build
+source_head=47f26c6c7cee4a7d652e09b5ba1a055663bf38d3
+checks=pnpm-frozen-lockfile;vitest;astro-check;build;cvstudio-built-html;ssr

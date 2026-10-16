@@ -9,7 +9,7 @@ page.on('pageerror',error=>errors.push(error.message));
 // asserted, regardless of runner/network speed. page.request is separate.
 let releaseTemplateFetch=()=>{};
 const templateFetchGate=new Promise(resolve=>{releaseTemplateFetch=resolve;});
-await page.route(/\\/wp-json\\/esc-cv\\/v1\\/templates\\?/,async route=>{
+await page.route(url=>url.pathname.endsWith('/wp-json/esc-cv/v1/templates') && url.searchParams.has('page'),async route=>{
   await templateFetchGate;
   await route.continue();
 });

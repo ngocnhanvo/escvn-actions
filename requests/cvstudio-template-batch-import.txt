@@ -1,3 +1,3 @@
-mode=build
+mode=publish
 scope=M42-M47+M49-M65
-reason=Build and visually QA remaining gallery references before WordPress upload
+reason=QA passed run 38891135837; safe new-ID WordPress import

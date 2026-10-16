@@ -1,6 +1,6 @@
-reason=CV inline typography toolbar only after text highlight; small optional caret icon (2026-10-16)
+reason=Recheck CV highlight-only formatting after updating unit expectations (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=24a13c4053001b74eb51f47bed3518b7313b0b37
+source_head=b31eb405ddb4dc3cff48125421f21dfe3daf7e53
 checks=unit-tests;astro-check;build;cv-studio;ssr
-scope=focus-no-full-panel;highlighted-substring;manual-whole-field;url-editor;mobile
+scope=caret-icon;real-selection-toolbar;typing-no-panel;partial-formatting;url-commands

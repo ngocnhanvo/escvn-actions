@@ -1,0 +1,118 @@
+name: Deploy ESC CV FTPS Publisher
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-cv-publisher-deploy.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-ftps-php-publisher
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Validate WordPress target and exact source commit
+        id: target
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          for name in FTP_SERVER FTP_USERNAME FTP_PASSWORD WP_ADMIN_URL SOURCE_REPO_PAT; do
+            test -n "${!name}"
+          done
+          expected=$(sed -n 's/^source_sha=//p' control/requests/wordpress-cv-publisher-deploy.txt | tail -1 | tr -d '\r')
+          [[ "$expected" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          test "$(python3 -c 'import os,urllib.parse;print(urllib.parse.urlparse(os.environ["WP_ADMIN_URL"]).hostname)')" = 'admin.esc.vn'
+          echo "source_sha=$expected" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl,zip
+          tools: none
+      - name: Verify source and publisher security
+        env:
+          EXPECTED: ${{ steps.target.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED"
+          php -l source/wp-content/mu-plugins/esc-cv-publish.php
+          php source/tests/esc-cv-publish-regression.php
+      - name: Install lftp
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+      - name: Stage, verify and activate new WordPress MU publisher
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          case "$protocol" in ftp|ftps|sftp) ;; *) exit 1;; esac
+          endpoint="$protocol://$FTP_SERVER"
+          folder="/domains/admin.esc.vn/public_html/wp-content/mu-plugins"
+          target="$folder/esc-cv-publish.php"
+          staged="$folder/.esc-cv-publish-stage-$GITHUB_RUN_ID.php"
+          backup="$folder/.esc-cv-publish-backup-$GITHUB_RUN_ID.php"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:timeout 30
+          set net:max-retries 3
+          put "source/wp-content/mu-plugins/esc-cv-publish.php" -o "$staged"
+          get "$staged" -o /tmp/esc-cv-publish-staged.php
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-cv-publish.php /tmp/esc-cv-publish-staged.php
+          if lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; cd \"$folder\"; mv esc-cv-publish.php \"$(basename "$backup")\"; bye" >/dev/null 2>&1; then
+            echo 'Previous publisher backed up.'
+          fi
+          if ! lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; mv \"$staged\" \"$target\"; bye"; then
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; mv \"$backup\" \"$target\"; bye" || true
+            exit 1
+          fi
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; get \"$target\" -o /tmp/esc-cv-publish-live.php; bye"
+          cmp source/wp-content/mu-plugins/esc-cv-publish.php /tmp/esc-cv-publish-live.php
+      - name: Verify WordPress REST session and deny anonymous access without Origin
+        run: |
+          set -euo pipefail
+          endpoint="https://admin.esc.vn/wp-json/esc-cv/v1/publish/session"
+          success=0
+          for attempt in 1 2 3 4 5; do
+            status=$(curl -sS --max-time 20 -H 'Origin: https://esc.vn' -H 'Cache-Control: no-cache' -o /tmp/esc-cv-session.json -w '%{http_code}' "$endpoint" || true)
+            if [ "$status" = 200 ]; then
+              if python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/esc-cv-session.json'))
+          assert data['protocol']=='FTPS'
+          assert len(data['token'])>50
+          assert data['expires_in']<=600
+          PY
+              then success=1; break; fi
+            fi
+            sleep 5
+          done
+          test "$success" = 1
+          unauth=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint" || true)
+          test "$unauth" = 403
+          echo 'FTPS publisher REST ready; unauthenticated cross-origin requests are refused.'

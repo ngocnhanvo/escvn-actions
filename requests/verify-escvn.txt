@@ -1,6 +1,6 @@
-reason=Final CV blank-space deselect without unintended item selection (2026-10-16)
+reason=Fix residual rich-text pencil visible after blank CV click in Chromium live QA (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=c5203059a5e97e56a7d5a6ea793996a76aba3d20
-checks=all-unit-tests;astro-check;astro-build;cv-studio;ssr
-scope=restrict-row-hit-detection-to-actual-editable-fields;preserve-empty-section-add;hide-item-outline-and-ellipsis-on-blank-click;dismiss-text-pencil-and-avatar-when-clicking-outside-iframe;preserve-typing-and-actions
+source_head=b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783
+checks=unit-tests;astro-check;build;cv-studio
+scope=explicit-text-format-toolbar-dismiss-and-avatar-dismiss-when-clicking-blank-canvas;no-stale-selection-restore;no-regression-to-row-add-or-export

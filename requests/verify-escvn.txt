@@ -1,5 +1,5 @@
-reason=Reverify CV Builder text formatting and contextual menu after fixing failed unit checks (2026-10-16)
+reason=CV Builder mobile contextual menu and unobstructed typography toolbar (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=4e0c3c14679b50de2d32d76bf0dc126afb3ae47a
-checks=unit_tests;astro_check;build;php_lint;cv_studio;ssr
+source_head=3c699b9c92a8293aa8c664063fe53274483e564f
+checks=mobile-viewport;cv-toolbar;cv-text-toolbar;cv-builder;astro-check;unit-tests;build;smoke

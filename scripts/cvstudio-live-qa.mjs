@@ -357,8 +357,10 @@ try {
   });
   assert(keepsNativeContext,'Right click on editable CV text must preserve copy/paste');
   const action=async(kind)=>{
-    await experience.hover();
-    await trigger.click();
+    if(!(await menu.isVisible())){
+      await experience.hover();
+      await trigger.click();
+    }
     const pin=await trigger.boundingBox();
     const popup=await menu.boundingBox();
     assert(pin&&popup,'CV contextual ellipsis or action menu is not measurable');
@@ -379,6 +381,17 @@ try {
   assert(await countRows()===beforeRows+2,'Duplicate must insert a copy of the item');
   await action('down');
   assert(await countRows()===beforeRows+2,'Move must preserve row count');
+  const movedOutline=repeatFrame.locator('.esc-cv-repeat-outline');
+  assert(await movedOutline.isVisible(),'Moved CV item must remain outlined after Down');
+  assert((await movedOutline.getAttribute('data-cv-selected-path'))==='experiences.1',
+    'Selection must follow the moved experience to its new index');
+  assert(await menu.isVisible(),
+    'Context menu should remain available for another move without reselecting');
+  await action('up');
+  assert((await movedOutline.getAttribute('data-cv-selected-path'))==='experiences.0',
+    'Up must keep the original moved experience outlined at its new position');
+  assert(await movedOutline.isVisible() && await menu.isVisible(),
+    'Selection outline and menu must survive consecutive moves');
   await action('delete');
   assert(await countRows()===beforeRows+1,'Delete must remove only selected item');
   await assertNaturalHeight('After deleting a CV experience');

@@ -1,3 +1,3 @@
-mode=publish
-scope=M27-M41
-reason=QA passed in run 38889594696; upload new CV IDs through guarded WordPress admin forms
+mode=build
+scope=M42-M47+M49-M65
+reason=Build and visually QA remaining gallery references before WordPress upload

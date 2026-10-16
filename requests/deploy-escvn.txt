@@ -1,7 +1,6 @@
-ESC CV Studio Builder source code ZIP, PDF and PNG download release (2026-10-16)
+ESC CV anonymous edit/download + deferred publish demo + PDF/PNG rasterizer fix (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
-Source branches: github and master identical
-Source SHA: 76190707a34c055580357a7633eb276eb113229c
-Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38850626587
-Changes: self-contained HTML, CSS, current CV JSON and template source packaged as ZIP; downloadable full CV PNG; multipage JPEG-backed A4 PDF; all generated locally from non-editable CV without sidebar controls.
-Target: /domains/esc.vn/public_html by normal FTP with byte verification and unzip, then post-deploy smoke test.
+Source branches: github and master, both da9ad280641160901af40e1e77ed19b229220eaa
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38853295417
+Changes: no login/domain before choosing a CV template or downloading ZIP/PDF/PNG; new Publish CV dialog gates demo login and domain, no false live publication; html2canvas rasterizes isolated script-free CV DOM instead of foreignObject.
+Deploy target: /domains/esc.vn/public_html through standard lftp ZIP verified transfer/unzip and post-deploy smoke.

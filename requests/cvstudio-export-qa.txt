@@ -20,3 +20,5 @@ Final Chromium QA after disabled backdrop-click close, source SHA 37ffc51097f083
 2026-10-16 diagnostic continuation: trace click, showModal and close for second switch-popup attempt; do not redo deployment.
 
 2026-10-16 targeted pointerdown/mousedown diagnostics on second CV template picker opening.
+
+2026-10-16 postdeploy QA: verify pointerdown-based CV template picker reopens directly after iframe editing, checkbox reuse behavior and automatic drafts, source 9d2217377f0974764298e1ca3709cddacb6abea6.

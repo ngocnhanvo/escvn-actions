@@ -30,3 +30,5 @@ Final regression 2026-10-16 CV blank canvas controls: hover actual skills item s
 Final production QA for rich-text pencil dismissal after clicking blank CV paper, source b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783. Recheck outline, ellipsis, icon, outer Builder dismissal, editor and all downloads.
 
 2026-10-16 coordinate-correct Chromium blank click QA rerun; no redeploy; click physically through page mouse at verified visible iframe point.
+
+2026-10-16 CV QA click retest: use only blank coordinates where top-level hit target is iframe (avoid floating chat overlay), existing production commit unchanged.

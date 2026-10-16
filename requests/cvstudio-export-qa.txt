@@ -32,3 +32,5 @@ Final production QA for rich-text pencil dismissal after clicking blank CV paper
 2026-10-16 coordinate-correct Chromium blank click QA rerun; no redeploy; click physically through page mouse at verified visible iframe point.
 
 2026-10-16 CV QA click retest: use only blank coordinates where top-level hit target is iframe (avoid floating chat overlay), existing production commit unchanged.
+
+2026-10-16 pointer event diagnostic: actual click x/y and target inside frame on blank paper; no deploy.

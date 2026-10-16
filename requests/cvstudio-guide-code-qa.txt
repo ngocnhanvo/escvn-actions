@@ -1,0 +1,4 @@
+phase=diagnose
+site=https://esc.vn/huong-dan-chuan-hoa-mau-cv/
+source=WordPress post 55473
+check=escaped tag handling in Astro article body

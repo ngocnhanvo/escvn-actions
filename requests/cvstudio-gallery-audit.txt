@@ -1,0 +1,2 @@
+scope=remaining-after-M41
+source=https://esc.vn/mau-cv

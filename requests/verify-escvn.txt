@@ -15,3 +15,5 @@ Final 2026-10-16 user CV upload QA: escvn-astro@github b118a020e5977db2e902599ea
 CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigation, numbers and existing Builder; escvn-astro@github c1741c097a604edfe4096c9c5a1363721a42e942. Do not promote if tests fail.
 
 2026-10-16 CV gallery scroll stabilization QA: ref cfc623a0792dbafeb0d017ed16aa8fe478213585 (github). Keep grid/pager stable during API loading, prevent footer flash when paging. Verify unit, Astro check and build before merge.
+
+2026-10-16 ESC CV upload criteria modal + readonly sanitized .html/.htm acceptance, source Astro github 4a660863fb1c2c491d88c2e0a4da42e6b074721a. Verify Astro unit tests, TypeScript, build, WP-owned upload_button copy, guide URL. Do not merge until PASS.

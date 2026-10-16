@@ -25,3 +25,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-16: CV Studio upload diagnostics QA github d5376ed926e2851d354aa8295abfa54dbabf0150: errors per file and line, explicit confirmation before read-only Builder, retry without storing rejected file, copy report. Run unit/types/full build; do not deploy on failure.
 
 2026-10-17: CV Builder contextual ellipsis hover fix Astro github 04dee526b931b806c6811cc0811d1bdc1907fbed. Hover section container/heading to show section control, retain row button when crossing whitespace, blank pointerdown still dismisses. Unit tests and full Astro build required before promotion.
+
+2026-10-17: Final generic CV hover fix Astro github 0872e29b6c11866842c5b18455221ff30479358e. Unit tests cover semantic section, AI-generated headed DIV, gap-safe mouse journey, blank click dismiss. New Chromium QA in escvn-actions/scripts/cvstudio-section-hover-qa.mjs. Run dev build/check before merge.

@@ -1,0 +1,54 @@
+name: ESC CV Gallery Source Audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-gallery-audit.txt']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install image processor
+        run: npm install --no-save sharp@0.34.4
+      - name: Discover gallery IDs and render remaining reference contact sheet
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import sharp from 'sharp';
+          const html=await (await fetch('https://esc.vn/mau-cv')).text();
+          console.log('GALLERY_IDS', [...new Set([...html.matchAll(/Mẫu #0*(\d+)/g)].map(x=>Number(x[1])))].sort((a,b)=>a-b).join(','));
+          const imgs=[];
+          for(let n=42;n<=65;n++){
+            const url='https://esc.vn/images/pages/style-'+n+'-768w.webp';
+            try{
+              const res=await fetch(url,{signal:AbortSignal.timeout(14000)});
+              if(!res.ok){console.log('REFERENCE_MISSING',n,res.status);continue;}
+              const bytes=Buffer.from(await res.arrayBuffer());
+              const md=await sharp(bytes).metadata();
+              if((md.width||0)<450)continue;
+              const img=await sharp(bytes).resize(220,310,{fit:'contain',background:'white'}).jpeg({quality:63}).toBuffer();
+              imgs.push({n,img});
+              console.log('REFERENCE_FOUND',n,url,md.width,md.height);
+            }catch(e){console.log('REFERENCE_ERROR',n,String(e).slice(0,150));}
+          }
+          if(!imgs.length)throw Error('No remaining reference images');
+          const cols=4,rows=Math.ceil(imgs.length/cols),w=240,h=340;
+          const layers=[];
+          for(let i=0;i<imgs.length;i++){
+            const x=i%cols*w,y=Math.floor(i/cols)*h;
+            layers.push({input:imgs[i].img,left:x+10,top:y+24});
+            const title=Buffer.from('<svg width="220" height="24"><text x="8" y="17" font-family="Arial" font-size="17" font-weight="bold">M'+imgs[i].n+'</text></svg>');
+            layers.push({input:title,left:x+10,top:y});
+          }
+          const sheet=await sharp({create:{width:w*cols,height:h*rows,channels:3,background:'#eeeeee'}}).composite(layers).jpeg({quality:58}).toBuffer();
+          console.log('CONTACT_SHEET_BEGIN');
+          console.log(sheet.toString('base64'));
+          console.log('CONTACT_SHEET_END');
+          NODE

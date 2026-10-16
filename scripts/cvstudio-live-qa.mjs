@@ -9,7 +9,7 @@ page.on('pageerror',error=>errors.push(error.message));
 // asserted, regardless of runner/network speed. page.request is separate.
 let releaseTemplateFetch=()=>{};
 const templateFetchGate=new Promise(resolve=>{releaseTemplateFetch=resolve;});
-await page.route('**/wp-json/esc-cv/v1/templates',async route=>{
+await page.route(/\\/wp-json\\/esc-cv\\/v1\\/templates\\?/,async route=>{
   await templateFetchGate;
   await route.continue();
 });
@@ -30,10 +30,13 @@ try {
     assert(await page.locator('[data-tablepress-preview="'+id+'"]').count()>=1,'Section missing: '+id);
   const gallery=page.locator('[data-cv-gallery]');
   await gallery.waitFor({state:'attached'});
-  const apiRes=await page.request.get(api,{timeout:30000});
+  const apiRes=await page.request.get(api+'?page=1&per_page=12',{timeout:30000});
   assert(apiRes.ok(),'CV Manager public REST returned '+apiRes.status());
   const data=await apiRes.json();
   assert(Array.isArray(data.templates),'CV Manager REST payload shape invalid');
+  assert(data.page===1 && data.per_page===12 && data.total_pages===Math.ceil(data.total/12),
+    'CV public API must return real server-side pagination metadata');
+  assert(data.templates.length<=12,'Gallery fetched more than one page of CV metadata');
   console.log('Active CV templates:',data.templates.map(t=>t.id+'@'+t.version).join(', ') || '(none)');
   if(!data.templates.length)throw Error('No active templates in ESC CV Manager; activate at least one before end-to-end QA');
   await gallery.locator('article:not([data-cv-gallery-skeleton])').first().waitFor({state:'visible',timeout:30000});
@@ -47,6 +50,19 @@ try {
   // must be capable of accessing the cross-origin API and loading imagery.
   const first=gallery.locator('article').first();
   assert((await first.locator('img').getAttribute('src'))?.startsWith('https://admin.esc.vn/'),'Gallery image is not the public WordPress image');
+  if(data.total_pages>1){
+    const pagination=page.locator('[data-cv-pagination]');
+    assert(await pagination.isVisible(),'CV gallery must display numbered pagination');
+    assert(await gallery.locator('article').count()===data.templates.length,'CV gallery rendered beyond the current page');
+    await pagination.locator('[data-cv-pagination-next]').click();
+    await page.waitForURL('**/tao-cv-truc-tuyen/?cv_page=2*',{timeout:15000});
+    await pagination.locator('[data-cv-pagination-summary]').getByText('Trang 2/',{exact:false}).waitFor({state:'visible',timeout:20000});
+    assert(await gallery.locator('article').count()<=12,'Page two must render at most 12 CV cards');
+    await pagination.locator('[data-cv-pagination-prev]').click();
+    await page.waitForURL('**/tao-cv-truc-tuyen/**',{timeout:15000});
+    await page.waitForFunction(()=>document.querySelector('[data-cv-pagination-summary]')?.textContent?.includes('Trang 1/'),null,{timeout:20000});
+    assert(await gallery.locator('article').count()===data.templates.length,'Back to first page must restore its cards');
+  }
   // Full-template preview works without starting the wizard.
   await first.locator('button').first().click();
   const popup=page.locator('[data-cv-sample-preview]');

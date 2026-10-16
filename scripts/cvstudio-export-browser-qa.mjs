@@ -58,6 +58,40 @@ try{
     }
     console.log('PASS anonymous '+format+' '+bytes.length+' bytes');
   }
+  // Switching design is an anonymous, in-place operation and must preserve edits.
+  await page.locator('[data-cv-switch-open]').click();
+  const switchDialog=page.locator('[data-cv-switch-dialog]');
+  await switchDialog.waitFor({state:'visible',timeout:10000});
+  const nextDesign=switchDialog.locator('[data-cv-switch-item^="M26@"]').first();
+  await nextDesign.waitFor({state:'visible',timeout:15000});
+  await nextDesign.click();
+  assert((await switchDialog.locator('[data-cv-switch-name]').textContent())?.length>0,
+    'Switch preview failed to display template name');
+  await switchDialog.locator('[data-cv-switch-confirm]').click();
+  await switchDialog.waitFor({state:'hidden',timeout:20000});
+  assert((await page.locator('[data-cv-template-name]').textContent())?.includes('M26'),
+    'CV template did not switch to M26 in-place');
+  await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().waitFor({state:'visible'});
+  assert((await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().textContent())
+    ==='THỬ XUẤT CV ẨN DANH','Switching CV templates lost the name user edited');
+  assert((await page.locator('[data-cv-domain]').textContent())?.includes('Chưa công khai'),
+    'Template switch unexpectedly triggered publication');
+  // Switching back must never discard the user edits, even with an existing local snapshot.
+  await page.locator('[data-cv-switch-open]').click();
+  await switchDialog.waitFor({state:'visible'});
+  await switchDialog.locator('[data-cv-switch-item^="M01@"]').first().click();
+  page.once('dialog',dialog=>dialog.accept());
+  await switchDialog.locator('[data-cv-switch-confirm]').click();
+  await switchDialog.waitFor({state:'hidden',timeout:20000});
+  assert((await page.locator('[data-cv-template-name]').textContent())?.includes('M01'),
+    'CV did not switch back to the original template');
+  assert((await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().textContent())
+    ==='THỬ XUẤT CV ẨN DANH','Switching back lost the edited CV data');
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
+  assert((await page.frameLocator('[data-cv-live-frame]').locator(
+    '[data-cv-inline="profile.fullName"]').first().textContent())==='THỬ XUẤT CV ẨN DANH',
+    'Browser reload after switching CV templates lost the edited data');
   await page.locator('[data-cv-publish]').click();
   const dialog=page.locator('[data-cv-publish-dialog]');
   await dialog.waitFor({state:'visible'});

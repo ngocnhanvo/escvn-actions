@@ -1,0 +1,28 @@
+name: ESC Personal CV Upload Browser QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-user-upload-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-cvstudio-user-upload-browser
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate QA script
+        run: node --check scripts/cvstudio-user-upload-browser-qa.mjs
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Test ESC and non-ESC personal CV uploads on production
+        run: node scripts/cvstudio-user-upload-browser-qa.mjs

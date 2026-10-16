@@ -52,6 +52,38 @@ try{
   await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   const uploader=page.locator('[data-cv-user-upload-input]');
   await uploader.waitFor({state:'attached',timeout:30000});
+  const uploadButton=page.locator('[data-cv-user-upload-open]');
+  assert((await uploadButton.textContent())?.includes('Tải lên mẫu CV của bạn'),
+    'Upload button should be written for visitors, not as first person');
+  await uploadButton.click();
+  const uploadGuide=page.locator('[data-cv-upload-guide]');
+  await uploadGuide.waitFor({state:'visible',timeout:10000});
+  assert((await uploadGuide.innerText()).includes('ZIP chuẩn ESC CV v1'),
+    'Upload dialog must explain which ZIPs are editable');
+  assert((await uploadGuide.innerText()).includes('HTML rời'),
+    'Upload dialog must explain read-only HTML');
+  const guideUrl=await uploadGuide.locator('[data-cv-upload-guide-link]').getAttribute('href');
+  assert(guideUrl==='/huong-dan-chuan-hoa-mau-cv/','Guide points to unexpected WordPress article');
+  const guide=await page.request.get(new URL(guideUrl,'https://esc.vn').href,{timeout:30000});
+  assert(guide.ok()&&(await guide.text()).includes('Hướng dẫn chuẩn hóa mẫu CV'),
+    'Published guide article missing from production');
+  await uploadGuide.locator('[data-cv-upload-guide-cancel]').click();
+  assert(await uploadGuide.isHidden(),'Cancel should close the upload guide');
+  await uploadButton.click();
+  const choose=page.waitForEvent('filechooser',{timeout:10000});
+  await uploadGuide.locator('[data-cv-upload-guide-select]').click();
+  const picker=await choose;
+  assert(!await uploadGuide.isVisible(),'Selecting a file should close the upload dialog');
+  await picker.setFiles({name:'cv-dang-html.html',mimeType:'text/html',
+    buffer:Buffer.from('<!doctype html><html><body><h1>CV HTML riêng</h1><script>window.top.BAD=true</script></body></html>')});
+  await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
+  await page.locator('[data-cv-upload-readonly]').waitFor({state:'visible',timeout:20000});
+  assert(await page.locator('[data-cv-builder-workspace]').isHidden(),'Standalone HTML must stay read-only');
+  assert((await page.locator('[data-cv-upload-readonly]').textContent())?.includes('CV HTML riêng'),
+    'HTML preview content missing');
+  assert(!(await page.evaluate(()=>window.BAD)),'Unsafe HTML executed outside sandbox');
+  console.log('PASS upload criteria modal, WordPress guide link and sanitized HTML readonly');
+  await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   await uploader.setInputFiles({name:'resume.pdf',mimeType:'application/pdf',
     buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n')});
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});

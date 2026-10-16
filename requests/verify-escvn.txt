@@ -7,3 +7,5 @@ change=attach capture-phase click dismissal to top-level document rather than on
 checks=unit-tests;astro-check;build;SSR-smoke
 
 2026-10-16 user-upload QA: check src/lib/cvstudio/cvUserUpload.ts tests, Astro route build and compile on escvn-astro@github SHA 389387fc08c3193f3d723f2b8b765525b2524746. Do not deploy to production before tests pass.
+
+Rerun 2026-10-16: test harness fix for jsdom File.arrayBuffer; Astro github SHA 5eb5e1ca5dde6233efc2dc75057a93c68bb85f15.

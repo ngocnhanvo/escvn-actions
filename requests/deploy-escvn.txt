@@ -6,3 +6,6 @@ Verified via https://github.com/ngocnhanvo/escvn-actions/actions/runs/3887409036
 Root cause: when clicking blank apparent canvas space, frame pointer trace was empty; outer-page click never reached iframe or the Builder root, leaving text-edit pencil visible.
 Fix: capture-phase top-level document pointerdown dismisses row ellipsis, outline, text-formatting pencil and avatar action for clicks outside the iframe, including floating overlays/footer and surrounding blank spaces. Native inside-iframe handlers remain.
 Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium regression.
+
+
+2026-10-16: Release user CV upload; source ngocnhanvo/escvn-astro @ github/master 601e09575cdb400577c59df78aa819da6908087a. Verified development CI https://github.com/ngocnhanvo/escvn-actions/actions/runs/38880929794. ZIP esc-cv-v1 editable; other safe ZIP HTML/PDF/image readonly. Existing CV publish remains demo-only. Smoke production after FTP.

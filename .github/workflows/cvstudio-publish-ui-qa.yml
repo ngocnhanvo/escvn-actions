@@ -1,0 +1,34 @@
+name: ESC CV FTPS Publish UI Chromium QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-publish-ui-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-ftps-ui-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Chromium
+        run: |
+          node --check scripts/cvstudio-publish-ui-qa.mjs
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify CV publication with MOCK API only
+        run: node scripts/cvstudio-publish-ui-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-publish-ui-screenshot
+          path: cvstudio-publish-ui-failure.png
+          if-no-files-found: ignore
+          retention-days: 3

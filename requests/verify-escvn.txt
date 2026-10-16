@@ -1,5 +1,6 @@
-reason=Final anonymous CV Builder + html2canvas export and script-stripped renderer QA (2026-10-16)
+reason=Fix PNG/PDF iframe initial about:blank load race observed in real Chromium QA (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=da9ad280641160901af40e1e77ed19b229220eaa
-checks=pnpm-frozen-lockfile;unit-tests;astro-check;build;cv-studio-built-html;ssr
+source_head=40ea3643bed07e535e5acf934cac57bdd48f830d
+observed=png export failed with zero CV height because initial about:blank load fired before srcdoc navigation
+checks=frozen-lock;unit;astro-check;build;cvstudio

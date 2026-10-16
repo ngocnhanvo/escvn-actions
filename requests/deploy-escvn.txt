@@ -1,7 +1,7 @@
-ESC CV Builder contextual text formatting only on selected text (2026-10-16)
-Source repository: ngocnhanvo/escvn-astro
-Source branches: master, github (identical)
-Source SHA: 0b12f0f09cbef737ac863a903e683ed33546fa64
-Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38847857800
-Scope: text editor does not expand on caret focus; selecting text opens formatting, tiny optional pencil icon opens whole field, tapping text again collapses toolbar; preserves existing link and draft formatting logic.
-Deploy: standard Astro master build, lftp verified FTP upload into /domains/esc.vn/public_html, remote unzip and post-deploy smoke.
+ESC CV Studio Builder source code ZIP, PDF and PNG download release (2026-10-16)
+Source repo: ngocnhanvo/escvn-astro
+Source branches: github and master identical
+Source SHA: 76190707a34c055580357a7633eb276eb113229c
+Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38850626587
+Changes: self-contained HTML, CSS, current CV JSON and template source packaged as ZIP; downloadable full CV PNG; multipage JPEG-backed A4 PDF; all generated locally from non-editable CV without sidebar controls.
+Target: /domains/esc.vn/public_html by normal FTP with byte verification and unzip, then post-deploy smoke test.

@@ -2,3 +2,9 @@ phase=diagnose
 site=https://esc.vn/huong-dan-chuan-hoa-mau-cv/
 source=WordPress post 55473
 check=escaped tag handling in Astro article body
+
+phase=post-deploy-strict-qa
+astro_master=f9810ad4b02c5d59cce2e887198128b80e9f7eb5
+ftp_run=38910219902 PASS
+smoke=38911637459 PASS
+validate=literal-img-tag-code,zero-real-img-dom-elements

@@ -25,6 +25,12 @@ try{
   const name=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
   await name.waitFor({state:'visible',timeout:15000});
   await name.fill('THỬ XUẤT CV ẨN DANH');
+  assert(await page.locator('[data-cv-draft-save]').count()===0,'Manual Save Draft button must be removed');
+  await page.waitForFunction(()=>document.querySelector('[data-cv-autosave]')?.textContent?.includes('Đã tự động lưu'),null,{timeout:8000});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
+  assert((await page.frameLocator('[data-cv-live-frame]').locator('[data-cv-inline="profile.fullName"]').first().textContent())==='THỬ XUẤT CV ẨN DANH','Auto-saved text was lost on reload');
+
   const checks=[
     ['source','.zip',Buffer.from([0x50,0x4b,0x03,0x04])],
     ['png','.png',Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])],

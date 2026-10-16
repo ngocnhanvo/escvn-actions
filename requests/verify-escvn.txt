@@ -11,3 +11,5 @@ checks=unit-tests;astro-check;build;SSR-smoke
 Rerun 2026-10-16: test harness fix for jsdom File.arrayBuffer; Astro github SHA 5eb5e1ca5dde6233efc2dc75057a93c68bb85f15.
 
 Final 2026-10-16 user CV upload QA: escvn-astro@github b118a020e5977db2e902599eab800b3c5105a613, includes safe HTML preview and strict ZIP asset/executable checks. Validate unit, Astro, full build before production.
+
+CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigation, numbers and existing Builder; escvn-astro@github c1741c097a604edfe4096c9c5a1363721a42e942. Do not promote if tests fail.

@@ -1,7 +1,7 @@
-ESC CV Studio fix blank-space selection and dismiss contextual edit UI (2026-10-16)
-Source repository: ngocnhanvo/escvn-astro
-Source branches: github + master (identical)
-Source SHA: c5203059a5e97e56a7d5a6ea793996a76aba3d20
-Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38870106592
-Changes: detect row interactions only on real data-bound inline fields, not large background Range rectangles; clicking empty CV paper or Builder outside iframe dismisses row outlines/ellipsis, formatting pencil, avatar edit and active sidebar context; preserve empty section Add and keyboard/touch contextual actions.
-FTP: standard /domains/esc.vn/public_html verified upload + unzip, post deploy smoke. Live Chromium regression will confirm blank click and preserving normal hover/actions.
+ESC CV blank click final polishing: explicitly dismiss rich-text pencil and avatar controls on empty canvas (2026-10-16)
+Source: ngocnhanvo/escvn-astro, branch github/master identical
+Commit: b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783
+Development verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38871332229
+Background: previously deployed c5203059a5e97e56a7d5a6ea793996a76aba3d20 fixes false row selection; Chromium browser QA confirmed lingering tiny formatting pencil despite blank click.
+Fix: Builder directly invokes the rich-text and avatar dismiss methods before blurring the active editor so stale selections cannot restore them.
+Deploy /domains/esc.vn/public_html via standard verified FTP ZIP upload/unzip, production smoke, and live Chromium CV blank click QA.

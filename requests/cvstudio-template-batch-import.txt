@@ -1,0 +1,3 @@
+mode=build
+scope=M27-M41
+reason=Generate and visual QA before uploading any CV templates

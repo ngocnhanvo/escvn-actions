@@ -45,6 +45,8 @@ jobs:
           fi
       - name: Generate ZIPs, verify previews and optionally upload via WP admin
         env:
+          CV_MIN: '42'
+          CV_MAX: '65'
           BUILD_ONLY: ${{ steps.mode.outputs.publish == '1' && '0' || '1' }}
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}

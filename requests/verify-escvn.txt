@@ -31,3 +31,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-17: Follow-up QA CV hover; priority fixes headed DIV new section hover stuck on old row due transit corridor. Astro github 41e1cc1008d33a3b261b731b4c6dddd12cad1cc7; exact reproduction Chromium run 38972208494, unit regression test added. Verify full unit/check/build before merge.
 
 2026-10-17: Chromium 38973280925 found same-section heading preempts row while pointer travels to ⋯. Fix Astro github 4429631980b6eafe42020744325dbe6ec6c4cb23: retain previous row on same section, switch only for different section. Added unit regression; run unit/check/build, then browser QA.
+
+2026-10-17: CV Builder selected text should show only pencil until clicked; preserve selection and partial color/size/link edits. Astro github 28f06136b191851ac227750663b09cfcb40f4ad9; cvTextToolbar.ts/test.ts only. Verify unit, Astro check, build before merge and FTP.

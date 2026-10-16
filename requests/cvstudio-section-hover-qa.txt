@@ -7,3 +7,8 @@ checks=semantic section and headed DIV hover; field-to-ellipsis cursor path; bla
 
 qa_followup=diagnose-headed-div-hover
 previous_run=38972028787 failed after section and pointer-corridor passed
+
+qa_followup=confirm-heading-priority-after-deploy
+astro_master=bdc81d3d748f9c318b72eb2e9a68de56dc39361b
+ftp=38972996305 PASS
+smoke=38973229046 PASS

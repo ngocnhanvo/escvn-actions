@@ -210,6 +210,58 @@ try {
   },null,{timeout:10000});
   assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
     'Direct avatar replacement must not reload CV iframe');
+  // Simulate a realistic >230KB PNG, using native browser canvas pixels,
+  // then exercise the same avatar input change path as the file chooser.
+  const bigAvatarBytes=await page.evaluate(async()=>{
+    const frame=document.querySelector('[data-cv-live-frame]');
+    const doc=frame.contentDocument;
+    const input=doc.querySelector('input[type=file][accept*="image/jpeg"]');
+    if(!input)throw Error('Direct avatar file input missing');
+    const canvas=document.createElement('canvas');
+    canvas.width=780;canvas.height=780;
+    const ctx=canvas.getContext('2d');
+    const img=ctx.createImageData(canvas.width,canvas.height);
+    let seed=12345;
+    for(let i=0;i<img.data.length;i+=4){
+      seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+      img.data[i]=seed&255;
+      img.data[i+1]=(seed>>>8)&255;
+      img.data[i+2]=(seed>>>16)&255;
+      img.data[i+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    if(!blob||blob.size<=230000)throw Error('Test image was not larger than the upload budget');
+    const file=new File([blob],'large-avatar.png',{type:'image/png'});
+    const transfer=new DataTransfer();transfer.items.add(file);
+    input.files=transfer.files;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    return blob.size;
+  });
+  assert(bigAvatarBytes>230000,'Large avatar fixture must exercise image compression');
+  await page.waitForFunction(()=>{
+    const text=document.querySelector('[data-cv-avatar-toast-text]')?.textContent||'';
+    return text.includes('tự tối ưu');
+  },null,{timeout:30000});
+  const optimized=await portrait.getAttribute('src');
+  assert(/^data:image\/(webp|jpeg);base64,/.test(optimized||''),
+    'Large avatar should be optimized into a JPEG or WebP data URL');
+  assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
+    'Auto-compressing a large avatar must not reload the CV iframe');
+  // Unsupported types must give an immediately visible, explicit error.
+  await page.evaluate(()=>{
+    const doc=document.querySelector('[data-cv-live-frame]').contentDocument;
+    const input=doc.querySelector('input[type=file][accept*="image/jpeg"]');
+    const transfer=new DataTransfer();
+    transfer.items.add(new File(['invalid'],'photo.heic',{type:'image/heic'}));
+    input.files=transfer.files;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  await page.locator('[data-cv-avatar-toast]').waitFor({state:'visible',timeout:10000});
+  assert((await page.locator('[data-cv-avatar-toast-text]').textContent())?.includes('HEIC'),
+    'Unsupported avatar format must show a visible HEIC error');
+  assert((await frame.getAttribute('srcdoc'))===originalSrcdoc,
+    'Rejected avatar upload must not reload CV preview');
   const other=cvFrame.locator('[data-cv-inline^="experiences."]').first();
   assert(await other.count()>0,'Experience entries must be addressable on the CV');
   await other.click();

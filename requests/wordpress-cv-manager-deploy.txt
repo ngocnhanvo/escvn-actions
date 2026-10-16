@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=59fcefd61e6da5d7b5eaffe59328ad9766b7517c
-reason=Deploy and verify archived CV template permanent purge with ID confirmation and regression checks
+source_sha=c017d7e1893109ad1cd145e1c2ed4f9451899d13
+reason=Deploy backwards-compatible public CV gallery pagination with regression coverage

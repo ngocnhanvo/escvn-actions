@@ -19,3 +19,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-16 ESC CV upload criteria modal + readonly sanitized .html/.htm acceptance, source Astro github 4a660863fb1c2c491d88c2e0a4da42e6b074721a. Verify Astro unit tests, TypeScript, build, WP-owned upload_button copy, guide URL. Do not merge until PASS.
 
 2026-10-16 final ESC CV upload guide QA: WP new row in cvstudio_02 verified via Actions 38905464722 (39 entries), guide published post 55473. Astro source github 4a660863fb1c2c491d88c2e0a4da42e6b074721a. Verify full build and WP-owned row before production merge.
+
+2026-10-16: QA WordPress escaped HTML code fixes; escvn-astro github ddda5c87cfcdfa052929d3b68d04bd2a4267a5d9. WordPress guide post 55473 has &lt;img escaped correctly, Astro getData must preserve it under <pre>/<code> through set:html. Run unit, types, build and SSR smoke.

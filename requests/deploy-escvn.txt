@@ -1,8 +1,8 @@
-ESC CV Studio fix silent avatar image failures and auto-compress uploads (2026-10-16)
+ESC CV Builder preserve item outline across up/down reorder (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 5c2ab1927857b97700ba6aef45924112d34600e7
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/109
-Development verification request: https://github.com/ngocnhanvo/escvn-actions/commit/3c0370e948c7f39108ef4024fed024456ef73983
-Changes: browser-only validation/decode of avatar images, auto-optimize supported JPG/PNG/WebP up to 15 MB into <=230 KB CV-compatible data URL, visible dismissible toast for processing, success/error, explicit HEIC/invalid/corrupt/oversized messages, and shared processing between sidebar upload and inline Change photo button. No template changes, no new API requests, no iframe reload.
-Deployment: standard Astro production master build, generated page validation, resumable byte-verified FTP ZIP to /domains/esc.vn/public_html, remote unzip. Followup: production smoke and CV Studio browser QA for larger-than-230KB uploads and format-error feedback.
+Astro SHA: cbc9bca72b4a07e46f757c8ba1c3f7fd0379beef
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/110
+Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/74d7327a4f18866a4615c92af35b939b9bc137ac
+Changes: after Move Up or Move Down of any repeatable CV item, preserve the dashed blue outline at the moved row's new index and keep the contextual ellipsis/menu available for repeated moves. Recompute disabled Up/Down state at list boundaries, clear stale selection for non-move actions, no iframe.srcdoc reload, no changes to templates or WordPress backend.
+Workflow: standard ESC Astro master build with output guards, lftp byte-verified resumable ZIP upload to /domains/esc.vn/public_html and remote unzip. Post-deploy smoke and CV Studio browser QA should check selection outline at experiences.1 and back to experiences.0.

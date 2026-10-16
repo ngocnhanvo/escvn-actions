@@ -38,3 +38,5 @@ Final production QA for rich-text pencil dismissal after clicking blank CV paper
 2026-10-16 final prod CV QA: top-level document capture of blank-outside-iframe click clears residual text pencil and row item controls. Astro commit 4a732839d47a4a5b0d6468e70822b8e7ed3ed041 deployed. Test ZIP/PNG/PDF, switch, autosave and deferred publish too.
 
 2026-10-16 routing diagnostic: log outer-document pointer events and iframe window blur on apparent blank click; no FTP deployment needed.
+
+2026-10-16 final CV QA using iframe body dispatch plus real top-level Builder click, retaining previous PDF PNG ZIP, switch, autosave and publish validations.

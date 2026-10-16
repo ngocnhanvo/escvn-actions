@@ -1,7 +1,8 @@
-reason=CV Studio avatar upload silent failure fix, visible inline error/success notice, safe automatic compression for 230 KB to 15 MB JPG/PNG/WebP (2026-10-16)
-astro_branch=github
-regressions=cv-avatar-image;cv-avatar-overlay;cvstudio-live-qa;builder
+reason=Final CV avatar bug fix: visible image errors, safe auto-compress 230 KB-15 MB, validate broken images even when small, shared sidebar and direct avatar handler (2026-10-16)
+source_repo=ngocnhanvo/escvn-astro
+source_branch=github
+source_head=e7f04cc40522878a8c68b6b6dfd81c41ebae23c7
 run_unit_tests=true
 run_astro_check=true
 run_build=true
-run_php_lint=true
+regressions=cvAvatarImage;cvAvatarOverlay;cvstudio-live-qa

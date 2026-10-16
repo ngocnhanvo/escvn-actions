@@ -24,3 +24,5 @@ Final Chromium QA after disabled backdrop-click close, source SHA 37ffc51097f083
 2026-10-16 postdeploy QA: verify pointerdown-based CV template picker reopens directly after iframe editing, checkbox reuse behavior and automatic drafts, source 9d2217377f0974764298e1ca3709cddacb6abea6.
 
 Final regression 2026-10-16 CV blank canvas controls: hover actual skills item shows controls, clicking blank paper and Builder outside frame clears toolbar/outline/pencil, normal editing preserved. Deployed SHA c5203059a5e97e56a7d5a6ea793996a76aba3d20.
+
+2026-10-16 rerun after fixing a syntax typo in browser blank-click QA selector; no Astro changes or redeployment.

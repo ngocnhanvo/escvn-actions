@@ -120,6 +120,15 @@ try {
   const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
   await nameTarget.waitFor({state:'visible',timeout:15000});
   await assertNaturalHeight('Initial CV '+chosenTemplate.id);
+  const sectionTitle=cvFrame.locator('[data-cv-section-title-editable]').first();
+  await sectionTitle.waitFor({state:'visible',timeout:15000});
+  const sectionTitleId=await sectionTitle.getAttribute('data-cv-section-title-editable');
+  const beforeTitleEdit=await frame.getAttribute('srcdoc');
+  await sectionTitle.fill('KINH NGHIỆM NỔI BẬT QA');
+  assert((await sectionTitle.textContent())==='KINH NGHIỆM NỔI BẬT QA',
+    'User must edit static English/Vietnamese headings directly in CV');
+  assert((await frame.getAttribute('srcdoc'))===beforeTitleEdit,
+    'Editing CV section heading must not reload the iframe');
   // Edit at the caret inside the live template, not in a separate form.
   const originalSrcdoc=await frame.getAttribute('srcdoc');
   await page.evaluate(()=>{
@@ -180,6 +189,11 @@ try {
   await restored.waitFor({state:'visible',timeout:15000});
   assert((await restored.textContent())?.trim()==='NGUYỄN VĂN QA',
     'Inline text draft should survive a reload in the same test browser');
+  const restoredTitle=page.frameLocator('[data-cv-live-frame]')
+    .locator('[data-cv-section-title-editable="'+sectionTitleId+'"]');
+  await restoredTitle.waitFor({state:'visible',timeout:15000});
+  assert((await restoredTitle.textContent())==='KINH NGHIỆM NỔI BẬT QA',
+    'Edited section heading must persist in the saved local CV draft');
   // M01 regression: the GitHub/other empty bound fields must be large enough
   // to hit, visibly labeled and editable with precisely one click.
   const m01=data.templates.find(t=>t.id==='M01');

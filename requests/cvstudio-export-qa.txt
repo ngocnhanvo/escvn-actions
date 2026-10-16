@@ -14,3 +14,5 @@ QA switch: M01 → M26 → M01, preserve edited name in iframe and after reload.
 2026-10-16 autosave regression: no manual save button, edited name survives reload; checkbox checked transfers current CV; unchecked keeps independent M26/M01 autosaved drafts; no native overwrite alert. Release SHA 84ae9fd590e6a341e403b7a89ca4300c67655336.
 
 Diagnostic rerun: log state of switch dialog and button on second open after M26 edit (2026-10-16).
+
+Final Chromium QA after disabled backdrop-click close, source SHA 37ffc51097f0837f5ca0ecb925320264925e34d9. Test repeated dialog openings, checked & unchecked reuse, independent autosave and downloads.

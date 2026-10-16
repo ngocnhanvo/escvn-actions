@@ -1,8 +1,9 @@
-ESC CV Builder template switch dialog reopening fix (2026-10-16)
+ESC CV Builder primary pointerdown handling for template picker after iframe inline edit (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branches: github and master identical
-Source SHA: 37ffc51097f0837f5ca0ecb925320264925e34d9
-Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38864854409
-Fix: remove generic backdrop-click dismissal of switch dialog; Chromium could retarget the click opening a modal immediately after iframe inline editing. Close (×) and Escape remain.
-Retains CV autosave and checkbox-based current-vs-target draft switch shipped in 84ae9fd590e6a341e403b7a89ca4300c67655336.
-Deploy target /domains/esc.vn/public_html; verify FTP bytes, unzip, production smoke, live Chromium repeat-open regression.
+Source SHA: 9d2217377f0974764298e1ca3709cddacb6abea6
+Verified development: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38867628757
+Root cause proven in Chromium: pointerdown target BUTTON; pointerup target P; click target DIV due to iframe blur layout shift.
+Fix: open template dialog on primary pointerdown before layout shift, keep click fallback for keyboard and accessible input, guard duplicate openings.
+Retain autosaved CV drafts, reuse-data checkbox, PDF/PNG/ZIP, deferred publish flow.
+Deploy: standard ESC production FTP ZIP verified upload/unzip, post-deploy smoke, Chromium QA.

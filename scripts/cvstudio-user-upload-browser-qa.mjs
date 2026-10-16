@@ -76,6 +76,11 @@ try{
   assert(!await uploadGuide.isVisible(),'Selecting a file should close the upload dialog');
   await picker.setFiles({name:'cv-dang-html.html',mimeType:'text/html',
     buffer:Buffer.from('<!doctype html><html><body><h1>CV HTML riêng</h1><script>window.top.BAD=true</script></body></html>')});
+  const report=page.locator('[data-cv-upload-report]');
+  await report.waitFor({state:'visible',timeout:20000});
+  assert(page.url().endsWith('/tao-cv-truc-tuyen/'),'Unconfirmed HTML must not auto-navigate');
+  assert((await report.innerText()).includes('HTML rời'),'Read-only explanation missing');
+  await report.locator('[data-cv-upload-report-view]').click();
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   await page.locator('[data-cv-upload-readonly]').waitFor({state:'visible',timeout:20000});
   assert(await page.locator('[data-cv-builder-workspace]').isHidden(),'Standalone HTML must stay read-only');
@@ -89,6 +94,9 @@ try{
   await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   await uploader.setInputFiles({name:'resume.pdf',mimeType:'application/pdf',
     buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n')});
+  await page.locator('[data-cv-upload-report]').waitFor({state:'visible',timeout:20000});
+  assert(page.url().endsWith('/tao-cv-truc-tuyen/'),'PDF must wait for read-only confirmation');
+  await page.locator('[data-cv-upload-report-view]').click();
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   await page.locator('[data-cv-upload-readonly]').waitFor({state:'visible',timeout:20000});
   assert(await page.locator('[data-cv-builder-workspace]').isHidden(),'Readonly CV unexpectedly editable');
@@ -122,6 +130,27 @@ try{
   });
   await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   await uploader.setInputFiles({name:'unsafe.zip',mimeType:'application/zip',buffer:unsafe});
+  const rejected=page.locator('[data-cv-upload-report]');
+  await rejected.waitFor({state:'visible',timeout:30000});
+  assert(page.url().endsWith('/tao-cv-truc-tuyen/'),'Unsafe ZIP must never navigate before explicit consent');
+  assert((await rejected.innerText()).includes('index.html') &&
+    (await rejected.innerText()).includes('Thẻ HTML không được phép'),
+    'Unsafe ZIP should report exact file, reason and fix');
+  const badFile=zipArchive({
+    'template.json':JSON.stringify({...manifest,name:'Untrusted AI sample'}),
+    'index.html':'<h1>{{profile.fullName}}</h1>\n<meta charset="utf-8">\n<link rel="stylesheet" href="style.css">',
+    'style.css':'body{font-family:sans-serif}',
+    'preview.png':png
+  });
+  const retryChooser=page.waitForEvent('filechooser',{timeout:10000});
+  await rejected.locator('[data-cv-upload-report-retry]').click();
+  await (await retryChooser).setFiles({name:'ai-generated.zip',mimeType:'application/zip',buffer:badFile});
+  await rejected.waitFor({state:'visible',timeout:25000});
+  const details=await rejected.innerText();
+  assert(details.includes('dòng 2')&&details.includes('dòng 3')&&
+    details.includes('meta')&&details.includes('link'),'Retry should show multiple exact AI-template errors');
+  assert(page.url().endsWith('/tao-cv-truc-tuyen/'),'Retry must remain on upload page');
+  await rejected.locator('[data-cv-upload-report-view]').click();
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   await page.locator('[data-cv-upload-readonly]').waitFor({state:'visible',timeout:25000});
   assert(await page.locator('[data-cv-builder-workspace]').isHidden(),'Executable HTML got editable privilege');

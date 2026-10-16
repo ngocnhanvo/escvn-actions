@@ -79,8 +79,11 @@ try{
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   await page.locator('[data-cv-upload-readonly]').waitFor({state:'visible',timeout:20000});
   assert(await page.locator('[data-cv-builder-workspace]').isHidden(),'Standalone HTML must stay read-only');
-  assert((await page.locator('[data-cv-upload-readonly]').textContent())?.includes('CV HTML riêng'),
-    'HTML preview content missing');
+  const htmlPreview=page.locator('[data-cv-upload-html]');
+  assert(await htmlPreview.isVisible(),'HTML read-only preview iframe missing');
+  const htmlSource=await htmlPreview.getAttribute('srcdoc');
+  assert(htmlSource?.includes('CV HTML riêng')&&!htmlSource.includes('<script>'),
+    'Sandboxed HTML preview must show content without executable code');
   assert(!(await page.evaluate(()=>window.BAD)),'Unsafe HTML executed outside sandbox');
   console.log('PASS upload criteria modal, WordPress guide link and sanitized HTML readonly');
   await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});

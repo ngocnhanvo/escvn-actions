@@ -18,3 +18,5 @@ Diagnostic rerun: log state of switch dialog and button on second open after M26
 Final Chromium QA after disabled backdrop-click close, source SHA 37ffc51097f0837f5ca0ecb925320264925e34d9. Test repeated dialog openings, checked & unchecked reuse, independent autosave and downloads.
 
 2026-10-16 diagnostic continuation: trace click, showModal and close for second switch-popup attempt; do not redo deployment.
+
+2026-10-16 targeted pointerdown/mousedown diagnostics on second CV template picker opening.

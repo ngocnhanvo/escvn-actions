@@ -1,9 +1,8 @@
-ESC CV Studio auto-height CV preview production deployment (2026-10-16)
+ESC CV Studio editable section headings and generic item/section controls (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 9ec775c13ed53f4e3e03ffba5f16b85a55e5763e
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/105
-Development QA requested: https://github.com/ngocnhanvo/escvn-actions/commit/4b389ec35f7d09a51517e8c164c5ec7eb3971828
-Changes: remove fixed 1160px iframe height and nested vertical scrolling. Sandbox preview grows/shrinks with content using ResizeObserver, MutationObserver, image load and font readiness; refreshes on text changes and repeatable list operations without iframe reload, supports 100vh template layouts without unbounded growth. Outer page handles vertical scrolling, mobile keeps horizontal overflow as needed.
-Workflow: production Astro build, WebNext guards, byte verified resumable ZIP FTP to /domains/esc.vn/public_html, then remote unzip.
-Followup: automatic production smoke and CV Studio live QA verifying no nested iframe scrollbar.
+Astro SHA: fb93a05f85290a1ce8ebe9dac1cd2bb95746df86
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/106
+Development verification request: https://github.com/ngocnhanvo/escvn-actions/commit/bdfa4af9bea6225e765b9450b451cba9360052e9
+Changes: users can directly edit static CV section headings from English to Vietnamese and vice versa, with plaintext-only in-place editing, local draft save/reload via escSectionTitles and template-independent discovery excluding repeated row text and existing bound profile fields; contextual Add buttons use + Thêm item and + Thêm section labels. Existing full-height preview, ellipsis menu, no-flicker editing remain.
+Workflow: standard Astro master build, build output checks, resumable FTP ZIP with byte verification to /domains/esc.vn/public_html, remote unzip. Post-deploy smoke via workflow_run. E2E script separately covers heading and draft restore.

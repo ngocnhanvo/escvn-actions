@@ -1,0 +1,33 @@
+name: Verify ESC CV FTPS Publisher
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-cv-publisher-qa.txt']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl,zip
+          tools: none
+      - name: Validate PHP publisher and security regressions
+        run: |
+          php -l source/wp-content/mu-plugins/esc-cv-publish.php
+          php -l source/tests/esc-cv-publish-regression.php
+          php source/tests/esc-cv-publish-regression.php
+          grep -Fq 'CURLOPT_SSL_VERIFYPEER => true' source/wp-content/mu-plugins/esc-cv-publish.php
+          grep -Fq 'CURLOPT_RESOLVE' source/wp-content/mu-plugins/esc-cv-publish.php
+          grep -Fq 'no-store, private' source/wp-content/mu-plugins/esc-cv-publish.php

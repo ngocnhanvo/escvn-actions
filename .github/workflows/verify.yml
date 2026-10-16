@@ -214,9 +214,10 @@ jobs:
               !builder.includes('data-cv-live-frame') ||
               !builder.includes('data-cv-export-menu') ||
               !builder.includes('data-cv-publish-dialog') ||
-              !builder.includes('data-cv-publish-step="login"') ||
-              !builder.includes('data-cv-publish-step="domain"')) {
-            throw new Error('CV Builder does not provide editable schema fields with live template iframe');
+              !builder.includes('data-cv-publish-ftps-form') ||
+              !builder.includes('data-cv-publish-member') ||
+              builder.includes('data-cv-publish-login')) {
+            throw new Error('CV Builder missing editor/export or real FTPS publishing form');
           }
           if(html.includes('data-cv-step="editor"') ||
              html.includes('data-cv-step="preview"') ||

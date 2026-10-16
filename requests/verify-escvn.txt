@@ -1,6 +1,7 @@
-reason=Fix residual rich-text pencil visible after blank CV click in Chromium live QA (2026-10-16)
+reason=CV Builder click-to-deselect must work on outside-of-iframe and covered canvas regions, not only inside Builder root (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=b4d5d0f7af81c41a843d6fd00c9e9085fbf7c783
-checks=unit-tests;astro-check;build;cv-studio
-scope=explicit-text-format-toolbar-dismiss-and-avatar-dismiss-when-clicking-blank-canvas;no-stale-selection-restore;no-regression-to-row-add-or-export
+source_head=4a732839d47a4a5b0d6468e70822b8e7ed3ed041
+root_cause=Chromium QA recorded empty iframe pointer trace for click blank outside rendered resume; contextual pencil stays focused in iframe
+change=attach capture-phase click dismissal to top-level document rather than only Builder root, keeping iframe interactions intact
+checks=unit-tests;astro-check;build;SSR-smoke

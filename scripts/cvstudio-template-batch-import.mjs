@@ -21,7 +21,31 @@ const designs=[
 [38,'Jonathan Hayes','Management Consultant','#15233f','#e5a01e','left','dark',[35,27,76,80]],
 [39,'Ryan Mitchell','B2B Sales Manager','#0c405b','#20a3ba','right','dark',[388,28,82,82]],
 [40,'Christopher Reed','Compliance Manager','#183f33','#56c4a3','top','dark',[32,22,82,81]],
-[41,'Kevin Walker','Operations Manager','#f2f1ff','#898bee','top','light',[397,26,75,82]]
+[41,'Kevin Walker','Operations Manager','#f2f1ff','#898bee','top','light',[397,26,75,82]],
+
+[42,'Michael Reynolds','Senior Financial Analyst','#fff8fb','#d68a9f','top','light',[106,28,64,72]],
+[43,'Ethan Carter','Senior Software Engineer','#ffffff','#ada364','plain','light',[0,0,120,120]],
+[44,'Matthew Foster','Marketing Analyst','#ffffff','#35b9cb','plain','light',[0,0,120,120]],
+[45,'Daniel Brooks','Business Analyst','#18263b','#b5d26e','left','dark',[14,27,73,78]],
+[46,'Ryan Mitchell','B2B Sales Manager','#44306e','#9d81c9','top','dark',[18,24,72,77]],
+[47,'Christopher Reed','Compliance Manager','#f4fffb','#4ad2ad','top','light',[406,28,68,74]],
+[49,'Ethan Carter','Senior Software Engineer','#073f58','#39c5d6','right','dark',[391,27,73,75]],
+[50,'Michael Reynolds','Senior Financial Analyst','#ecfcf7','#209c7f','top','light',[21,42,67,67]],
+[51,'Daniel Brooks','Business Analyst','#283c98','#6a72da','left','dark',[17,31,72,72]],
+[52,'Kevin Walker','Operations Manager','#80314d','#c87695','right','dark',[411,27,75,75]],
+[53,'Ryan Mitchell','B2B Sales Manager','#faf3e6','#c4a965','left','light',[23,25,77,77]],
+[54,'Lucas Bennett','Senior Product Designer','#ffffff','#39baca','plain','light',[0,0,120,120]],
+[55,'Andrew Collins','Business Consultant','#ffffff','#a7c54c','plain','light',[0,0,120,120]],
+[56,'Matthew Foster','Marketing Analyst','#412470','#a58bda','top','dark',[414,28,68,72]],
+[57,'Michael Reynolds','Senior Financial Analyst','#f3fffc','#3ab89e','top','light',[24,31,71,74]],
+[58,'Jonathan Hayes','Management Consultant','#172942','#d7a520','right','dark',[403,28,76,80]],
+[59,'Ethan Carter','Senior Software Engineer','#ffffff','#139b93','plain','light',[0,0,120,120]],
+[60,'Michael Reynolds','Senior Financial Analyst','#edfbf6','#39bd9e','top','light',[20,28,69,73]],
+[61,'Daniel Brooks','Business Analyst','#353ea0','#7b7fe3','top','dark',[24,22,73,76]],
+[62,'Kevin Walker','Operations Manager','#7c2d4b','#c57d95','right','dark',[416,26,70,72]],
+[63,'Ryan Mitchell','B2B Sales Manager','#5c3d29','#bea16d','top','dark',[40,19,98,110]],
+[64,'Lucas Bennett','Senior Product Designer','#f6fcfe','#3ac8f0','top','light',[17,18,68,70]],
+[65,'Andrew Collins','Business Consultant','#202733','#accc59','right','dark',[397,30,82,92]]
 ];
 const origin=new URL(process.env.WP_ADMIN_URL||'https://admin.esc.vn').origin;
 if(new URL(origin).hostname!=='admin.esc.vn')throw Error('Unsafe WP target');
@@ -42,6 +66,7 @@ const name='<h1>{{profile.fullName}}</h1><p class="role">{{profile.jobTitle}}</p
 function html(n,layout){
  const side=contact+edu+skills+langs;
  if(layout==='split')return '<!doctype html><html><head></head><body><div class="cv v'+n+' split"><aside><div class="intro">'+name+about+'</div>'+side+'</aside><main>'+avatar+work+impact+'</main></div></body></html>';
+ if(layout==='plain')return '<!doctype html><html><head></head><body><div class="cv v'+n+' plain"><header>'+name+'</header>'+about+'<div class="columns"><main>'+work+impact+'</main><aside>'+edu+skills+langs+contact+'</aside></div></div></body></html>';
  if(layout==='top')return '<!doctype html><html><head></head><body><div class="cv v'+n+' top"><header>'+avatar+'<div>'+name+'<p class="mini">{{profile.location}} · {{profile.email}}</p></div></header><div class="columns"><aside>'+about+edu+skills+langs+'</aside><main>'+work+impact+'</main></div></div></body></html>';
  return '<!doctype html><html><head></head><body><div class="cv v'+n+' '+layout+'"><aside><div class="photo">'+avatar+'</div>'+side+'</aside><main><header>'+name+'</header>'+about+work+impact+'</main></div></body></html>';
 }
@@ -86,6 +111,27 @@ function css(d){
  if(n===39)c+='.cv{grid-template-columns:69% 31%}.cv>main{padding-top:54px}.cv>aside{background:#0c405b}\n';
  if(n===40)c+='.top>header{background:#183f33;color:white}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1;padding-left:12px}.top .columns>main{grid-column:1;grid-row:1;padding-left:48px}.top .columns aside .about{display:none}.top .columns main:before{content:ABOUT ME;display:block;border-bottom:2px solid var(--accent);color:var(--accent);font-weight:800;padding-bottom:8px;margin-bottom:16px}\n';
  if(n===41)c+='.top>header{border-top:9px solid #8b8df6;background:#f2f1ff}.top .columns{grid-template-columns:50% 50%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1;padding-left:48px}.top .columns aside .about{display:none}\n';
+ if(layout==='plain')c+='.cv.plain{display:block;padding:45px 52px;min-height:1130px}.plain>header{border-bottom:2px solid var(--accent);padding-bottom:27px;margin-bottom:45px}.plain>header h1{font-size:29px}.plain>.about{margin-bottom:52px}.plain .columns{display:grid;grid-template-columns:61% 39%;gap:22px}.plain .columns>main,.plain .columns>aside{padding:0;background:white;min-height:0;color:#28313b}.plain .columns aside section{margin-bottom:40px}.plain .columns aside h2{border-bottom-color:var(--accent);color:var(--accent)}\n';
+ if(n===42)c+='.top>header{background:#fff;color:#34313b;flex-direction:column;text-align:center;border-bottom:2px solid #d88aa1}.top>header .avatar{width:80px;height:80px}.top .columns{display:block}.top .columns>aside{display:grid;grid-template-columns:1fr 1fr;gap:16px}.top .columns>main{padding:25px 45px 0}.top .columns>aside .about{display:none}\n';
+ if(n===43||n===44||n===55)c+='.plain .columns{grid-template-columns:65% 35%}.plain>header{margin-bottom:28px}.plain section h2{letter-spacing:2px}.plain>.about{margin-bottom:58px}\n';
+ if(n===45)c+='.cv{grid-template-columns:28% 72%}.cv>aside{min-height:1128px}.cv>aside .avatar{width:95px;height:95px}.cv>main{padding-top:47px}.cv>main .about{background:#f8fcf2;padding:14px}\n';
+ if(n===46)c+='.top>header{background:#44306e;color:#fff}.top .columns{grid-template-columns:38% 62%}.top .columns aside .about{background:#f6f1fc;padding:15px;border-radius:14px}\n';
+ if(n===47)c+='.top>header{background:#fff;color:#163d41;border-left:10px solid #4ad2ad}.top>header .avatar{order:2}.top .columns .work{background:#f2fff9;padding:20px;border-radius:13px}\n';
+ if(n===49)c+='.cv{grid-template-columns:72% 28%}.cv>aside{background:#0c4059;border-radius:14px;margin:0 8px 10px}.cv main section{margin-bottom:60px}.cv main .work{min-height:420px}\n';
+ if(n===50)c+='.top>header{background:#fff;color:#173c37}.top .columns{display:block}.top .columns>aside{display:grid;grid-template-columns:1fr 1fr;gap:18px}.top .columns>main{padding:20px 45px}.top .columns aside .about{display:none}.cv:after{content:REFERENCES;display:block;background:#18543f;color:white;padding:25px 45px;margin-top:20px}\n';
+ if(n===51)c+='.cv{grid-template-columns:17% 83%}.cv>aside{padding:20px 12px;background:#343a98}.cv>aside .avatar{width:84px;height:84px}.cv aside section{margin-bottom:36px}.cv>main{padding-top:38px}\n';
+ if(n===52||n===62)c+='.cv{grid-template-columns:82% 18%}.cv>aside{padding:18px 13px}.cv>aside .avatar{width:89px;height:89px}.cv aside section{font-size:9px}.cv>main{padding-top:43px}\n';
+ if(n===53)c+='.cv{grid-template-columns:31% 69%}.cv>aside{background:#faf3e6;color:#6f5b34}.cv>main{padding-top:35px}\n';
+ if(n===54)c+='.plain .work .entry{border-left:3px solid #39baca;padding-left:20px;position:relative}.plain .work .entry:before{content:●;color:#39baca;position:absolute;left:-7px;top:0}.plain .columns{grid-template-columns:60% 40%}\n';
+ if(n===56)c+='.top>header{background:#412470;color:#fff}.top .columns{grid-template-columns:63% 37%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns aside .skills{background:#4b3175;color:#fff;padding:18px;border-radius:14px}.top .columns aside .skills h2{color:#fff}\n';
+ if(n===57)c+='.top>header{background:#f5fffc;color:#183d36}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns aside .skills{background:#153b33;color:#fff;padding:15px;border-radius:12px}.top .columns aside .skills h2{color:white}\n';
+ if(n===58)c+='.cv{grid-template-columns:70% 30%}.cv>aside{border-left:8px solid #d7a520}.cv>main{padding-top:46px}\n';
+ if(n===59)c+='.plain .columns{grid-template-columns:50% 50%;gap:55px}.plain .columns main{border-right:12px solid #0d4650;padding-right:28px}.plain .work .entry{margin-bottom:36px}\n';
+ if(n===60)c+='.top{border-left:12px solid #45c5a5}.top>header{background:#fff;color:#194035}.top .columns{display:block}.top .columns>main{padding:25px 45px}.top .columns>aside{display:grid;grid-template-columns:1fr 1fr;gap:20px}.top .columns aside .about{display:none}\n';
+ if(n===61)c+='.top>header{background:#fff;color:#364397}.top>header .avatar{background:#353ea0;border:14px solid #353ea0}.top .columns{display:block}.top .columns>aside{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.top .columns>main{padding:24px 45px}\n';
+ if(n===63)c+='.top>header{background:#fff;color:#4b2f1c}.top>header .avatar{width:147px;height:147px;border-radius:13px;border:12px solid #583921}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns aside .skills{background:#583921;color:#fff;padding:18px;border-radius:12px}\n';
+ if(n===64)c+='.top>header{background:#fff;color:#115d72}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns .about{background:#3cc9ec;color:#fff;padding:17px;border-radius:12px}\n';
+ if(n===65)c+='.cv{grid-template-columns:68% 32%}.cv>aside{margin-top:0;background:#202733}.cv>aside .avatar{width:129px;height:129px}\n';
  return c;
 }
 function sample(d){
@@ -192,7 +238,7 @@ async function upload(item){
 }
 try{
  const packages=[];
- for(const d of designs)packages.push(await make(d,browser));
+ for(const d of designs.filter(d=>d[0]>=Number(process.env.CV_MIN||27)&&d[0]<=Number(process.env.CV_MAX||77)))packages.push(await make(d,browser));
  if(process.env.BUILD_ONLY==='1'){console.log('BUILD_ONLY completed, no WordPress changes');}
  else{
   for(const k of ['WP_ADMIN_USERNAME','WP_ADMIN_PASSWORD'])if(!process.env[k])throw Error('Missing '+k);

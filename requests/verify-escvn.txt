@@ -1,8 +1,9 @@
-reason=Final CV avatar bug fix: visible image errors, safe auto-compress 230 KB-15 MB, validate broken images even when small, shared sidebar and direct avatar handler (2026-10-16)
+reason=ESC CV Builder keep blue selection outline attached to the same moved item after up/down, enable repeated reorder from the contextual menu (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=e7f04cc40522878a8c68b6b6dfd81c41ebae23c7
+source_head=8b469a943e1ad2910bca8303d1e29eb2a99a28fa
+regressions=cv-toolbar;cv-repeatable;builder;cvstudio-e2e
 run_unit_tests=true
 run_astro_check=true
 run_build=true
-regressions=cvAvatarImage;cvAvatarOverlay;cvstudio-live-qa
+run_php_lint=true

@@ -1,8 +1,7 @@
-ESC CV Builder preserve item outline across up/down reorder (2026-10-16)
-Source repo: ngocnhanvo/escvn-astro
-Source branch: master
-Astro SHA: cbc9bca72b4a07e46f757c8ba1c3f7fd0379beef
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/110
-Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/74d7327a4f18866a4615c92af35b939b9bc137ac
-Changes: after Move Up or Move Down of any repeatable CV item, preserve the dashed blue outline at the moved row's new index and keep the contextual ellipsis/menu available for repeated moves. Recompute disabled Up/Down state at list boundaries, clear stale selection for non-move actions, no iframe.srcdoc reload, no changes to templates or WordPress backend.
-Workflow: standard ESC Astro master build with output guards, lftp byte-verified resumable ZIP upload to /domains/esc.vn/public_html and remote unzip. Post-deploy smoke and CV Studio browser QA should check selection outline at experiences.1 and back to experiences.0.
+ESC CV Builder typography and hyperlinks release (2026-10-16)
+Source repository: ngocnhanvo/escvn-astro
+Source branch: master (synchronized with github)
+Source SHA: 4e0c3c14679b50de2d32d76bf0dc126afb3ae47a
+Verification: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38843380937
+Changes: contextual text color, font sizes, safe HTTP(S) hyperlinks, draft persistence, per-row styling stable across reorder and duplicate. CV toolbar regression fixes tested.
+Workflow: Build Astro master; stage resumable lftp ZIP at /domains/esc.vn/public_html; verify ZIP round-trip bytes; remote unzip; post-deploy smoke test.

@@ -106,6 +106,13 @@ async function patchTable(){
       if(before===after)return false;
       cells[index][1]=after;
     }
+    const visibility={
+      ...(table.visibility||{}),
+      rows:Array.isArray(table.visibility?.rows)?[...table.visibility.rows]:[],
+      columns:Array.isArray(table.visibility?.columns)?[...table.visibility.columns]:[]
+    };
+    while(visibility.rows.length<cells.length)visibility.rows.push(true);
+    while(visibility.columns.length<expected.length)visibility.columns.push(true);
     const params=new URLSearchParams({
       action:'tablepress_save_table',_ajax_nonce:globalThis.tp.nonces.edit_table,
       'tablepress[id]':String(table.id),'tablepress[new_id]':id,
@@ -113,7 +120,7 @@ async function patchTable(){
       'tablepress[description]':String(table.description||''),
       'tablepress[data]':JSON.stringify(cells),
       'tablepress[options]':JSON.stringify(table.options||{}),
-      'tablepress[visibility]':JSON.stringify(table.visibility||{rows:cells.map(()=>1),columns:expected.map(()=>1)}),
+      'tablepress[visibility]':JSON.stringify(visibility),
       'tablepress[number][rows]':String(cells.length),
       'tablepress[number][columns]':String(expected.length)
     });

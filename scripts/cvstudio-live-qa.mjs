@@ -101,17 +101,20 @@ try {
       const doc=frame?.contentDocument;
       return frame&&doc?.body&&
         frame.getAttribute('scrolling')==='no'&&
-        frame.clientHeight+4>=doc.body.scrollHeight&&
-        frame.clientHeight+4>=doc.documentElement.scrollHeight;
+        getComputedStyle(doc.documentElement).overflow==='hidden'&&
+        frame.clientHeight+4>=doc.body.scrollHeight;
     },null,{timeout:15000});
     const sizes=await page.evaluate(()=>{
       const frame=document.querySelector('[data-cv-live-frame]');
       const doc=frame.contentDocument;
       return {frame:frame.clientHeight,body:doc.body.scrollHeight,
-        html:doc.documentElement.scrollHeight};
+        html:doc.documentElement.scrollHeight,
+        overflow:getComputedStyle(doc.documentElement).overflow};
     });
-    assert(sizes.frame+4>=Math.max(sizes.body,sizes.html),
-      stage+': CV is taller than its iframe; nested vertical scrollbar would appear '+JSON.stringify(sizes));
+    // html.scrollHeight can include the template's own body margins even
+    // when no internal scrollbar exists, e.g. min-height:100vh layouts.
+    assert(sizes.overflow==='hidden'&&sizes.frame+4>=sizes.body,
+      stage+': CV content exceeds its iframe height '+JSON.stringify(sizes));
   };
   const cvFrame=page.frameLocator('[data-cv-live-frame]');
   const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();

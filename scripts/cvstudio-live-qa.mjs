@@ -401,28 +401,27 @@ try {
       'CV '+format+' was not a valid nonempty '+extension+' download');
     console.log('Anonymous CV '+format.toUpperCase()+' download: '+file.length+' bytes PASS');
   }
-  // Publishing is the ONLY place where a login and domain selection appear.
+  // Real publication requires the visitor's own FTPS credentials, never ESC
+  // demo credentials. Do not send passwords or issue a hosting write in QA.
   await page.locator('[data-cv-publish]').click();
   const publish=page.locator('[data-cv-publish-dialog]');
   await publish.waitFor({state:'visible'});
-  const login=publish.locator('[data-cv-publish-login]');
-  await login.locator('input[name=email]').fill('demo@esc.vn');
-  await login.locator('input[name=password]').fill('wrong-password');
-  await login.locator('button[type=submit]').click();
-  assert(await publish.locator('[data-cv-publish-error]').isVisible(),
-    'Bad demo credentials should not bypass Publish gate');
-  await login.locator('input[name=password]').fill('Demo@123');
-  await login.locator('button[type=submit]').click();
-  await publish.locator('[data-cv-publish-step="domain"]').waitFor({state:'visible'});
-  const choices=publish.locator('input[name=cv-publish-domain]');
-  assert(await choices.count()>0,'Publish step must list WordPress-owned demo domains');
-  await choices.first().check();
-  await publish.locator('[data-cv-publish-finish]').click();
-  await publish.locator('[data-cv-publish-step="finish"]').waitFor({state:'visible'});
-  assert((await publish.locator('[data-cv-publish-step="finish"]').textContent())
-    ?.includes('chưa được công khai'), 'Demo flow must not claim a live publication');
-  await publish.locator('[data-cv-publish-done]').click();
-  assert(await publish.isHidden(),'Demo publish dialog must close without losing Builder');
+  const ftps=publish.locator('[data-cv-publish-ftps-form]');
+  assert(await ftps.isVisible(),'Real FTPS publication form must be visible');
+  assert(await ftps.locator('input[name=password][type=password]').count()===1,
+    'FTPS password must use a dedicated password field');
+  assert((await publish.textContent())?.includes('FTPS'),'FTPS security notice missing');
+  assert(!(await publish.textContent())?.includes('Demo@123'),
+    'Demo password must not appear in production UI');
+  await publish.locator('[data-cv-publish-choice="member"]').click();
+  assert(await publish.locator('[data-cv-publish-member]').isVisible(),
+    'Member integration status must be explicit, not a fake login');
+  assert((await publish.locator('[data-cv-publish-member]').textContent())
+    ?.includes('Chưa kết nối'),'Member account without API must not claim authentication');
+  await publish.locator('[data-cv-publish-choice="ftps"]').click();
+  assert(await ftps.isVisible(),'Visitors must be able to switch back to hosting credentials');
+  await publish.locator('[data-cv-publish-close]').click();
+  assert(await publish.isHidden(),'Closing publishing must return to Builder');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));
   console.log('ESC CV Studio: one-click editing, ellipsis/context actions add/duplicate/move/delete without iframe reload, photo and draft: PASS');
 

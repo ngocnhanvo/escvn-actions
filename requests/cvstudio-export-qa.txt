@@ -34,3 +34,5 @@ Final production QA for rich-text pencil dismissal after clicking blank CV paper
 2026-10-16 CV QA click retest: use only blank coordinates where top-level hit target is iframe (avoid floating chat overlay), existing production commit unchanged.
 
 2026-10-16 pointer event diagnostic: actual click x/y and target inside frame on blank paper; no deploy.
+
+2026-10-16 final prod CV QA: top-level document capture of blank-outside-iframe click clears residual text pencil and row item controls. Astro commit 4a732839d47a4a5b0d6468e70822b8e7ed3ed041 deployed. Test ZIP/PNG/PDF, switch, autosave and deferred publish too.

@@ -95,9 +95,21 @@ try{
   };
   const unobstructed=await choose();
   assert(!!unobstructed,'No visibly unobstructed blank CV point found');
+  await page.evaluate(()=>{
+    window.__escOuterTrace=[];
+    ['pointerdown','pointerup','click'].forEach(type=>
+      document.addEventListener(type,event=>{
+        window.__escOuterTrace.push({type,tag:event.target?.tagName,
+          id:event.target?.id,cls:String(event.target?.className).slice(0,75),
+          x:event.clientX,y:event.clientY});
+      },true)
+    );
+  });
   await canvasFrame.locator('body').evaluate(body=>{
     const doc=body.ownerDocument;
     doc.defaultView.__escBlankTrace=[];
+    doc.defaultView.addEventListener('blur',()=>doc.defaultView.__escBlankTrace.push({type:'window-blur'}),true);
+    doc.addEventListener('focusout',event=>doc.defaultView.__escBlankTrace.push({type:'focusout',tag:event.target?.tagName}),true);
     for(const type of ['pointerdown','pointerup','click']){
       doc.addEventListener(type,event=>{
         doc.defaultView.__escBlankTrace.push({
@@ -111,6 +123,12 @@ try{
   console.log('CV blank target before click:',unobstructed, 'frame:',frameRect);
   await page.mouse.click(frameRect.x+unobstructed.x,frameRect.y+unobstructed.y);
   console.log('CV pointer trace:',await canvasFrame.locator('body').evaluate(body=>body.ownerDocument.defaultView.__escBlankTrace));
+  console.log('Outer pointer trace:',await page.evaluate(()=>window.__escOuterTrace),
+    'top-hit:',await page.evaluate(({x,y})=>({
+      tag:document.elementFromPoint(x,y)?.tagName,
+      html:document.elementFromPoint(x,y)?.outerHTML?.slice(0,250),
+      active:document.activeElement?.outerHTML?.slice(0,250)
+    }),{x:frameRect.x+unobstructed.x,y:frameRect.y+unobstructed.y}));
   console.log('CV blank click after:',await canvasFrame.locator('body').evaluate(body=>{
     const doc=body.ownerDocument;
     return {active:doc.activeElement?.tagName,editable:doc.activeElement?.getAttribute?.('data-cv-inline'),

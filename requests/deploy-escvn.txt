@@ -1,9 +1,7 @@
-ESC CV Builder primary pointerdown handling for template picker after iframe inline edit (2026-10-16)
-Source repo: ngocnhanvo/escvn-astro
-Source branches: github and master identical
-Source SHA: 9d2217377f0974764298e1ca3709cddacb6abea6
-Verified development: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38867628757
-Root cause proven in Chromium: pointerdown target BUTTON; pointerup target P; click target DIV due to iframe blur layout shift.
-Fix: open template dialog on primary pointerdown before layout shift, keep click fallback for keyboard and accessible input, guard duplicate openings.
-Retain autosaved CV drafts, reuse-data checkbox, PDF/PNG/ZIP, deferred publish flow.
-Deploy: standard ESC production FTP ZIP verified upload/unzip, post-deploy smoke, Chromium QA.
+ESC CV Studio fix blank-space selection and dismiss contextual edit UI (2026-10-16)
+Source repository: ngocnhanvo/escvn-astro
+Source branches: github + master (identical)
+Source SHA: c5203059a5e97e56a7d5a6ea793996a76aba3d20
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38870106592
+Changes: detect row interactions only on real data-bound inline fields, not large background Range rectangles; clicking empty CV paper or Builder outside iframe dismisses row outlines/ellipsis, formatting pencil, avatar edit and active sidebar context; preserve empty section Add and keyboard/touch contextual actions.
+FTP: standard /domains/esc.vn/public_html verified upload + unzip, post deploy smoke. Live Chromium regression will confirm blank click and preserving normal hover/actions.

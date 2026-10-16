@@ -1,0 +1,7 @@
+target_host=admin.esc.vn
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=c39660ae568f87de7beed6e0a5a1bcb3e2cffc1b
+scope=wp-content/mu-plugins/esc-cv-publish.php only
+qa_run=38981001021 PASS
+allowed_protocol=FTPS explicit TLS only for end users

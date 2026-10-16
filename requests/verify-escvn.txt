@@ -1,6 +1,6 @@
-reason=Final CV Builder autosave and reuse-checkbox revision including avatar UI copy (2026-10-16)
+reason=Fix CV template picker being dismissed when reopening after in-place text editing (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=84ae9fd590e6a341e403b7a89ca4300c67655336
-scope=autosave-input-avatar-repeatables-section-title-rich-text;reuse-checkbox;target-independent-draft;no-native-confirm
-checks=unit-tests;astro-check;build;cv-studio
+source_head=37ffc51097f0837f5ca0ecb925320264925e34d9
+scope=prevent-backdrop-click-retargeting;preserve-autosave;reuse-checkbox
+checks=unit-tests;astro-check;build;cvstudio

@@ -93,9 +93,30 @@ try {
   assert(srcdoc?.includes('Content-Security-Policy'),'Preview must be sandboxed');
   const advanced=page.locator('[data-cv-advanced]');
   assert(!(await advanced.getAttribute('open')),'Long editor form must initially be collapsed');
+  // The preview must expand to the real CV height and leave vertical scroll
+  // to the parent page; check this both before and after structural edits.
+  const assertNaturalHeight=async(stage)=>{
+    await page.waitForFunction(()=>{
+      const frame=document.querySelector('[data-cv-live-frame]');
+      const doc=frame?.contentDocument;
+      return frame&&doc?.body&&
+        frame.getAttribute('scrolling')==='no'&&
+        frame.clientHeight+4>=doc.body.scrollHeight&&
+        frame.clientHeight+4>=doc.documentElement.scrollHeight;
+    },null,{timeout:15000});
+    const sizes=await page.evaluate(()=>{
+      const frame=document.querySelector('[data-cv-live-frame]');
+      const doc=frame.contentDocument;
+      return {frame:frame.clientHeight,body:doc.body.scrollHeight,
+        html:doc.documentElement.scrollHeight};
+    });
+    assert(sizes.frame+4>=Math.max(sizes.body,sizes.html),
+      stage+': CV is taller than its iframe; nested vertical scrollbar would appear '+JSON.stringify(sizes));
+  };
   const cvFrame=page.frameLocator('[data-cv-live-frame]');
   const nameTarget=cvFrame.locator('[data-cv-inline="profile.fullName"]').first();
   await nameTarget.waitFor({state:'visible',timeout:15000});
+  await assertNaturalHeight('Initial CV '+chosenTemplate.id);
   // Edit at the caret inside the live template, not in a separate form.
   const originalSrcdoc=await frame.getAttribute('srcdoc');
   await page.evaluate(()=>{
@@ -240,6 +261,7 @@ try {
   };
   await action('add');
   assert(await countRows()===beforeRows+1,'Add must append one CV experience row');
+  await assertNaturalHeight('After adding a CV experience');
   assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
     'Adding a CV item must patch one region, not reload the iframe');
   await action('duplicate');
@@ -248,6 +270,7 @@ try {
   assert(await countRows()===beforeRows+2,'Move must preserve row count');
   await action('delete');
   assert(await countRows()===beforeRows+1,'Delete must remove only selected item');
+  await assertNaturalHeight('After deleting a CV experience');
   assert((await repeatIframe.getAttribute('srcdoc'))===originalRepeatDoc,
     'Repeatable editing must not flicker/reload the CV document');
   assert(errors.length===0,'Frontend JavaScript exception: '+errors.join(' | '));

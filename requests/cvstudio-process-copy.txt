@@ -1,0 +1,5 @@
+ESC CV Studio process text only. Source ngocnhanvo/escvn-php, master branch.
+source_sha=416f9d0e0966242f2f7dde653352445261d5e265
+Target: admin.esc.vn ESC Tables cvstudio_01 and cvstudio_02 only.
+Changes: anonymous choose template -> edit -> free ZIP/PDF/PNG; login and domain only at Publish CV.
+Idempotent. Keep all other WP table content and all other projects unchanged.

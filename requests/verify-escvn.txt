@@ -1,6 +1,6 @@
-reason=CV Builder switch design without losing input, avatar, formatting or local drafts (2026-10-16)
+reason=CV Builder auto-save and checkbox-controlled template switching (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=480fbab19e35cf69e203878f721cf5b41f85200f
-scope=wordpress-registry-gallery;modal-preview;schema-portable-draft;no-login;local-backup;switch-back
-checks=unit-test;astro-check;build;cvstudio-smoke
+source_head=e3c60a7aadd3b718246bfcc0623939ef55a7ce8a
+scope=remove-manual-save;debounced-local-autosave;switch-reuse-checkbox;restore-target-draft-or-demo;no-overwrite-alert
+checks=unit-tests;astro-check;build;cv-studio

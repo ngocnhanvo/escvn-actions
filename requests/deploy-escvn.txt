@@ -1,7 +1,7 @@
-ESC CV Builder switch template in place, preserve user data (2026-10-16)
+ESC CV Builder automatic drafts and switch-use-existing-data checkbox (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
-Source branches: github, master identical
-Source SHA: 480fbab19e35cf69e203878f721cf5b41f85200f
-Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38860541579
-New: in-builder template gallery with WordPress preview thumbnails/full preview, schema-independent data migration, avatar/rich-text/repeatable preserved, checkpoints of both source and target local drafts, asks before overwriting existing saved destination, no login needed.
-Deploy destination /domains/esc.vn/public_html through verified lftp ZIP transfer, unzip and smoke; follow with live Chromium switch-back/reload QA.
+Source branches: github and master (identical)
+Source SHA: 84ae9fd590e6a341e403b7a89ca4300c67655336
+Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38863387369
+Changes: remove manual browser-draft Save button; debounce autosave on typing, avatar, rich text, headings, repeatable actions, reset; flush on pagehide/hidden, visible quota errors. In switch template dialog, replace native browser confirm with prechecked reuse-data checkbox; unchecked restores destination draft or demo data; keep separate per-template local drafts.
+Deploy target: /domains/esc.vn/public_html with verified FTP ZIP upload/unzip, smoke test and Chromium browser regression.

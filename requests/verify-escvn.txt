@@ -1,6 +1,6 @@
-reason=CV blank paper tap must clear selected row/ellipsis and rich text pencil, avoid region rectangular false positives (2026-10-16)
+reason=Final CV blank-space deselect without unintended item selection (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=810940e80eb9e0af088b7ae11866dae4609682e0
-scope=CV Studio contextual item region hit tests; blank click dismissal; no stale formatting after click; keep empty list add/menu and moving item selection
-checks=unit-tests;astro-check;build;cvstudio
+source_head=c5203059a5e97e56a7d5a6ea793996a76aba3d20
+checks=all-unit-tests;astro-check;astro-build;cv-studio;ssr
+scope=restrict-row-hit-detection-to-actual-editable-fields;preserve-empty-section-add;hide-item-outline-and-ellipsis-on-blank-click;dismiss-text-pencil-and-avatar-when-clicking-outside-iframe;preserve-typing-and-actions

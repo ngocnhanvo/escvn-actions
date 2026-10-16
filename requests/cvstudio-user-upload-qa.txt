@@ -3,3 +3,5 @@ QA 2026-10-16 post-deploy on esc.vn CV Studio. Verify user ESC ZIP editor, autos
 2026-10-16: Final Chromium ESC CV upload popup+guide/HTML readonly+ZIP editor post-production. Astro master eaeeaba2b6a5b26c75c6032982cbfc7d8c14bcb0; WP post 55473 and cvstudio_02 updated. FTP 38906358569, smoke 38907180819 PASS.
 
 2026-10-16 retry browser QA: inspect sanitized HTML iframe srcdoc, not outer wrapper textContent; production unchanged.
+
+2026-10-16: Live Chromium QA CV upload diagnostics / confirmation / retry. Production Astro bc825df03f7675c57a04c20dc525d1a2f949fda6. FTP SUCCESS 38924851297, smoke SUCCESS 38925121590. Verify no auto-readonly navigation, source file and line report, safe confirmation, retry, PDF and valid ZIP.

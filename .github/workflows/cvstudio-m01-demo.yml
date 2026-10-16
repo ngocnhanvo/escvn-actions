@@ -1,0 +1,40 @@
+name: Populate CV M01 demo data
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-m01-demo.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-m01-demo-data
+  cancel-in-progress: false
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Lint M01 migration script
+        run: node --check scripts/cvstudio-m01-demo.mjs
+      - name: Install ZIP and browser tools
+        run: |
+          npm install --no-save playwright@1.55.0 adm-zip@0.5.16
+          npx playwright install --with-deps chromium
+      - name: Update M01 package on admin.esc.vn
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/cvstudio-m01-demo.mjs
+      - name: Failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cvstudio-m01-demo-failure
+          path: cvstudio-m01-demo-failure.png
+          retention-days: 3
+          if-no-files-found: ignore

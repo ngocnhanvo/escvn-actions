@@ -1,6 +1,7 @@
-reason=CV Studio WordPress process copy now reflects anonymous-first workflow and Astro icon changes (2026-10-16)
+reason=Fix CV Studio M01 PDF exporting blank second A4 page (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=50956293c759acb3459e6666235dadbe7c7d3079
-wp_automation=https://github.com/ngocnhanvo/escvn-actions/actions/runs/38856218055
-checks=unit-tests;astro-check;build;cvstudio-live-page-contract;ssr
+source_head=68d1a9f6d27adbc55eac01fef126962cbea04992
+cause=staging iframe 1200px artificially exceeds A4 page height ~1122px; ceil() creates blank trailing page
+fix=measure content with 1px iframe and fit slight overflow on one A4 sheet without clipping
+checks=unit-tests;astro-check;build;cv-studio;ssr

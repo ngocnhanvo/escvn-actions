@@ -1,8 +1,7 @@
-ESC CV Builder mobile editing and touch actions production release (2026-10-16)
-Source repo: ngocnhanvo/escvn-astro
-Source branch: master (identical to github)
-Source SHA: 14e8a141d49198ea3a04f46f5e9dfaca7e880e29
-Verified workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38845727376
-Changes: mobile 44px ellipsis actions for Add, Edit, Duplicate, Move, Delete; dynamic Add item/section; bottom-docked responsive text formatting editor inside auto-height CV iframe, visible selection preservation and keyboard adjustment.
-Destination: FTP /domains/esc.vn/public_html
-Validation: stage ZIP with lftp, verify FTP round-trip bytes, call remote unzip, post-deploy smoke.
+ESC CV Builder contextual text formatting only on selected text (2026-10-16)
+Source repository: ngocnhanvo/escvn-astro
+Source branches: master, github (identical)
+Source SHA: 0b12f0f09cbef737ac863a903e683ed33546fa64
+Verified: https://github.com/ngocnhanvo/escvn-actions/actions/runs/38847857800
+Scope: text editor does not expand on caret focus; selecting text opens formatting, tiny optional pencil icon opens whole field, tapping text again collapses toolbar; preserves existing link and draft formatting logic.
+Deploy: standard Astro master build, lftp verified FTP upload into /domains/esc.vn/public_html, remote unzip and post-deploy smoke.

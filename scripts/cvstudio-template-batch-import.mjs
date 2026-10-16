@@ -45,7 +45,20 @@ const designs=[
 [62,'Kevin Walker','Operations Manager','#7c2d4b','#c57d95','right','dark',[416,26,70,72]],
 [63,'Ryan Mitchell','B2B Sales Manager','#5c3d29','#bea16d','top','dark',[40,19,98,110]],
 [64,'Lucas Bennett','Senior Product Designer','#f6fcfe','#3ac8f0','top','light',[17,18,68,70]],
-[65,'Andrew Collins','Business Consultant','#202733','#accc59','right','dark',[397,30,82,92]]
+[65,'Andrew Collins','Business Consultant','#202733','#accc59','right','dark',[397,30,82,92]],
+
+[66,'Matthew Foster','Marketing Analyst','#ffffff','#9373b7','top','light',[20,23,70,73]],
+[67,'Christopher Reed','Compliance Manager','#e9fcf5','#2fcca0','left','light',[32,27,68,78]],
+[68,'Brandon Scott','Business Consultant','#0e2546','#cbaa4c','top','dark',[17,25,75,76]],
+[69,'Thomas Parker','Business Analyst','#0e4560','#27bad4','top','dark',[19,26,72,79]],
+[70,'Nathan Evans','Business Consultant','#174537','#3bbf95','top','dark',[405,24,72,78]],
+[71,'Samuel Wright','Product Designer','#f5f3fe','#6b68ca','top','light',[21,29,75,81]],
+[72,'Ethan Carter','Senior Software Engineer','#641c3c','#e06891','left','dark',[19,27,77,81]],
+[73,'Michael Reynolds','Senior Financial Analyst','#ffffff','#bf9231','top','light',[389,28,81,91]],
+[74,'Daniel Brooks','Business Analyst','#eefbff','#39bcd1','top','light',[18,28,73,73]],
+[75,'Kevin Walker','Operations Manager','#fbfdf2','#c7d556','top','light',[23,28,71,79]],
+[76,'Andrew Collins','Business Consultant','#42266c','#a486d4','top','dark',[19,26,73,78]],
+[77,'Noah Adams','Business Consultant','#ffffff','#35b99f','top','light',[220,26,66,76]]
 ];
 const origin=new URL(process.env.WP_ADMIN_URL||'https://admin.esc.vn').origin;
 if(new URL(origin).hostname!=='admin.esc.vn')throw Error('Unsafe WP target');
@@ -132,6 +145,18 @@ function css(d){
  if(n===63)c+='.top>header{background:#fff;color:#4b2f1c}.top>header .avatar{width:147px;height:147px;border-radius:13px;border:12px solid #583921}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns aside .skills{background:#583921;color:#fff;padding:18px;border-radius:12px}\n';
  if(n===64)c+='.top>header{background:#fff;color:#115d72}.top .columns{grid-template-columns:65% 35%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns .about{background:#3cc9ec;color:#fff;padding:17px;border-radius:12px}\n';
  if(n===65)c+='.cv{grid-template-columns:68% 32%}.cv>aside{margin-top:0;background:#202733}.cv>aside .avatar{width:129px;height:129px}\n';
+ if(n===66)c+='.top>header{background:#fff;color:#54416e}.top .columns{grid-template-columns:63% 37%}.top .columns>aside{grid-column:2;grid-row:1}.top .columns>main{grid-column:1;grid-row:1}.top .columns .about{background:#faf5fe;padding:15px}\n';
+ if(n===67)c+='.cv{grid-template-columns:26% 74%}.cv>aside{background:#effdfa;color:#286652;padding-top:35px}.cv aside section h2{color:#3ba98e;border-color:#3ba98e}.cv main section{margin-bottom:64px}\n';
+ if(n===68)c+='.top>header{background:#0e2546;color:white}.top .columns{grid-template-columns:31% 69%}.top .columns aside{background:#fffaf0;padding-right:17px}.top .columns main{padding-left:26px}\n';
+ if(n===69)c+='.top>header{background:#0e4560;color:white}.top>header:after{content:CV;position:absolute;right:0;top:116px;background:#27bad4;color:#fff;padding:10px 35px}.top .columns{grid-template-columns:34% 66%}.top .columns>main{padding:30px 34px}\n';
+ if(n===70)c+='.top>header{background:#174537;color:white}.top>header .avatar{order:2}.top .columns{grid-template-columns:65% 35%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns main .about{background:#effcf6;padding:14px}\n';
+ if(n===71)c+='.top>header{background:#f5f3fe;color:#34398e;border-radius:13px;margin:18px}.top .columns{grid-template-columns:65% 35%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns aside .skills{padding:18px;background:#383d9c;border-radius:12px;color:white}.top .columns aside .skills h2{color:#fff}\n';
+ if(n===72)c+='.cv{grid-template-columns:27% 73%}.cv>aside{background:#641c3c}.cv aside .photo{background:#ee7196;margin:-36px -33px 55px;padding:22px}.cv>main{padding-top:45px}.cv main .about{padding:14px;background:#fff5f8}\n';
+ if(n===73)c+='.top>header{background:#fff;color:#3c3322}.top>header .avatar{order:2;width:125px;height:125px}.top .columns{grid-template-columns:66% 34%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns main .about{background:#fef8eb;padding:16px}\n';
+ if(n===74)c+='.top>header{background:#fff;color:#245c69}.top .columns{grid-template-columns:65% 35%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns main .about{background:#edfbff;padding:22px;border-radius:15px}\n';
+ if(n===75)c+='.top>header{background:#fbfef2;color:#50601a}.top .columns{grid-template-columns:64% 36%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns aside .skills{background:#1c2938;color:white;padding:17px;border-radius:10px}.top .columns aside .skills h2{color:#fff}\n';
+ if(n===76)c+='.top>header{background:#42266c;color:white}.top .columns{grid-template-columns:65% 35%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns main .about{background:#f8f4fd;padding:16px;border-radius:12px}\n';
+ if(n===77)c+='.cv.top{border:2px solid #383f3d;min-height:1125px}.top>header{background:#fff;color:#18483d;flex-direction:column;text-align:center}.top .columns{grid-template-columns:67% 33%}.top .columns aside{grid-column:2;grid-row:1}.top .columns main{grid-column:1;grid-row:1}.top .columns main .about{border-top:2px solid #46c8b0}\n';
  return c;
 }
 function sample(d){

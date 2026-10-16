@@ -31,7 +31,41 @@ try{
   assert(await grid.locator('article').count()===12,'First page must contain 12 cards');
   assert(await grid.locator('img[loading="lazy"]').count()===12,'Images must load lazily');
   const first=await grid.locator('article p').allTextContents();
+  // Hold a real page-two request so we can inspect the intermediate UI.
+  // Previously the gallery collapsed to three skeletons, exposing the footer
+  // for a moment before a smooth scroll returned to the CV cards.
+  let resumePageTwo=()=>{};
+  const heldPageTwo=new Promise(resolve=>{resumePageTwo=resolve;});
+  await page.route(u=>u.pathname.endsWith('/wp-json/esc-cv/v1/templates')&&
+    u.searchParams.get('page')==='2',async route=>{
+    await heldPageTwo;
+    await route.continue();
+  });
+  await nav.locator('[data-cv-pagination-next]').scrollIntoViewIfNeeded();
+  const oldPageHeight=await page.evaluate(()=>document.documentElement.scrollHeight);
   await nav.locator('[data-cv-pagination-next]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-cv-gallery]')?.getAttribute('aria-busy')==='true');
+  const transitional=await page.evaluate(()=>{
+    const gallery=document.querySelector('[data-cv-gallery]');
+    const pager=document.querySelector('[data-cv-pagination]');
+    const footer=document.querySelector('footer');
+    return {count:gallery?.querySelectorAll('article').length,
+      pagerVisible:!!pager&&getComputedStyle(pager).display!=='none',
+      galleryTop:gallery?.getBoundingClientRect().top,
+      footerTop:footer?.getBoundingClientRect().top,
+      viewportHeight:window.innerHeight,
+      pageHeight:document.documentElement.scrollHeight};
+  });
+  assert(transitional.count===12,
+    'Changing page must retain existing 12 CV cards while loading: '+JSON.stringify(transitional));
+  assert(transitional.pagerVisible,'Pagination must remain visible while the next page loads');
+  assert(Math.abs(transitional.pageHeight-oldPageHeight)<200,
+    'Gallery collapsed while fetching, causing footer jump: '+JSON.stringify(transitional));
+  assert(transitional.galleryTop>=80&&transitional.galleryTop<350,
+    'Paging must go directly to gallery below sticky header: '+JSON.stringify(transitional));
+  assert(transitional.footerTop===undefined||transitional.footerTop>transitional.viewportHeight,
+    'Footer entered viewport while paging: '+JSON.stringify(transitional));
+  resumePageTwo();
   await page.waitForURL(/cv_page=2/,{timeout:20000});
   await settled();
   const second=await grid.locator('article p').allTextContents();

@@ -114,5 +114,5 @@ jobs:
           done
           test "$success" = 1
           unauth=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint" || true)
-          test "$unauth" = 403
+          case "$unauth" in 401|403) ;; *) echo "Unexpected unauthenticated status: $unauth"; exit 1;; esac
           echo 'FTPS publisher REST ready; unauthenticated cross-origin requests are refused.'

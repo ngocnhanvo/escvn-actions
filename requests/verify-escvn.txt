@@ -1,6 +1,6 @@
-reason=Fix PNG/PDF iframe initial about:blank load race observed in real Chromium QA (2026-10-16)
+reason=CV Studio WordPress process copy now reflects anonymous-first workflow and Astro icon changes (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=40ea3643bed07e535e5acf934cac57bdd48f830d
-observed=png export failed with zero CV height because initial about:blank load fired before srcdoc navigation
-checks=frozen-lock;unit;astro-check;build;cvstudio
+source_head=50956293c759acb3459e6666235dadbe7c7d3079
+wp_automation=https://github.com/ngocnhanvo/escvn-actions/actions/runs/38856218055
+checks=unit-tests;astro-check;build;cvstudio-live-page-contract;ssr

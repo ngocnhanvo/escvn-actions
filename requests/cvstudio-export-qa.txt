@@ -4,3 +4,5 @@ Target: https://esc.vn/tao-cv-truc-tuyen/
 Required: anonymous editor, real downloadable ZIP PNG PDF binary signatures, publish login/domain gate and preserved edited CV.
 
 Diagnostic rerun: capture canvas/export error message in browser after failed PNG download.
+
+Re-run after deploying srcdoc-first iframe fix, source SHA 40ea3643bed07e535e5acf934cac57bdd48f830d.

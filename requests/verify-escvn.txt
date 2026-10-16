@@ -1,6 +1,6 @@
-reason=CV Builder auto-save and checkbox-controlled template switching (2026-10-16)
+reason=Final CV Builder autosave and reuse-checkbox revision including avatar UI copy (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=e3c60a7aadd3b718246bfcc0623939ef55a7ce8a
-scope=remove-manual-save;debounced-local-autosave;switch-reuse-checkbox;restore-target-draft-or-demo;no-overwrite-alert
+source_head=84ae9fd590e6a341e403b7a89ca4300c67655336
+scope=autosave-input-avatar-repeatables-section-title-rich-text;reuse-checkbox;target-independent-draft;no-native-confirm
 checks=unit-tests;astro-check;build;cv-studio

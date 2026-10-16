@@ -1,0 +1,42 @@
+name: ESC CV Upload Guide WordPress
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-upload-guide-wordpress.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-upload-guide-wp
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check controlled WordPress task syntax
+        run: |
+          node --check scripts/cvstudio-upload-guide-wordpress.mjs
+          grep -Fq "admin.esc.vn" scripts/cvstudio-upload-guide-wordpress.mjs
+          grep -Fq "cvstudio_02" scripts/cvstudio-upload-guide-wordpress.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Publish guide article and update CV upload button in WordPress
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/cvstudio-upload-guide-wordpress.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-upload-guide-wp-error
+          path: cvstudio-upload-guide-wp-error.png
+          if-no-files-found: ignore
+          retention-days: 3

@@ -1,0 +1,34 @@
+name: ESC CV Section Hover Chromium QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-section-hover-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-section-hover-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Chromium
+        run: |
+          node --check scripts/cvstudio-section-hover-qa.mjs
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify section hover, safe pointer corridor and blank dismissal
+        run: node scripts/cvstudio-section-hover-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cvstudio-section-hover-screenshot
+          path: cvstudio-section-hover-error.png
+          if-no-files-found: ignore
+          retention-days: 3

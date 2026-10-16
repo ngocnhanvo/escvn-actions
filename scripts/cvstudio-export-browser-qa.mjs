@@ -83,6 +83,8 @@ try{
     ==='THỬ XUẤT CV ẨN DANH','Switching CV templates lost the name user edited');
   assert((await page.locator('[data-cv-domain]').textContent())?.includes('Chưa công khai'),
     'Template switch unexpectedly triggered publication');
+  await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().fill('BẢN NHÁP RIÊNG M26');
+  await page.waitForFunction(()=>document.querySelector('[data-cv-autosave]')?.textContent?.includes('Đã tự động lưu'),null,{timeout:8000});
   // Unchecked reuse should restore the original saved M01 draft without a popup.
   await page.locator('[data-cv-switch-open]').click();
   await switchDialog.waitFor({state:'visible'});
@@ -102,6 +104,8 @@ try{
   await switchDialog.waitFor({state:'hidden',timeout:20000});
   assert((await page.locator('[data-cv-template-name]').textContent())?.includes('M26'),
     'Switching without reuse should load the separate M26 draft');
+  assert((await cvFrame.locator('[data-cv-inline="profile.fullName"]').first().textContent())
+    ==='BẢN NHÁP RIÊNG M26','Unchecked reuse should restore M26 independent autosaved draft');
   await page.locator('[data-cv-switch-open]').click();
   await switchDialog.waitFor({state:'visible'});
   await switchDialog.locator('[data-cv-switch-item^="M01@"]').first().click();

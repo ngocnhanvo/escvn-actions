@@ -1,6 +1,6 @@
-reason=Recheck CV highlight-only formatting after updating unit expectations (2026-10-16)
+reason=Final ESC CV in-place highlight-only format panel and caret icon QA (2026-10-16)
 source_repo=ngocnhanvo/escvn-astro
 source_branch=github
-source_head=b31eb405ddb4dc3cff48125421f21dfe3daf7e53
-checks=unit-tests;astro-check;build;cv-studio;ssr
-scope=caret-icon;real-selection-toolbar;typing-no-panel;partial-formatting;url-commands
+source_head=0b12f0f09cbef737ac863a903e683ed33546fa64
+scope=selection-only-formatting;small-edit-icon;manual-entire-field;caret-dismiss;safe-url
+checks=full-unit-tests;astro-check;astro-build;cv-studio;ssr-smoke

@@ -1,9 +1,9 @@
-ESC CV Studio contextual popup positioning fix (2026-10-16)
+ESC CV Studio auto-height CV preview production deployment (2026-10-16)
 Source repo: ngocnhanvo/escvn-astro
 Source branch: master
-Astro SHA: 48aaafea517f4557e6569a4662b6d2161c1e8f47
-Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/104
-Verification request: https://github.com/ngocnhanvo/escvn-actions/commit/f8022b2a196ff35951affc21ba5aabeda3e8a4ae
-Regression: action popup must anchor to the ellipsis button rather than the repeated item rectangle, align directly below or above trigger, clamp to mobile viewport and scroll when space is limited. No template or backend modifications.
-Production build and FTP: standard ESC Actions workflow, lftp verified archive to /domains/esc.vn/public_html and unzip.
-Post-deploy smoke and CVStudio live QA: ensure menu remains adjacent to ellipsis; avoid duplicate concurrent deploy.
+Astro SHA: 9ec775c13ed53f4e3e03ffba5f16b85a55e5763e
+Pull request: https://github.com/ngocnhanvo/escvn-astro/pull/105
+Development QA requested: https://github.com/ngocnhanvo/escvn-actions/commit/4b389ec35f7d09a51517e8c164c5ec7eb3971828
+Changes: remove fixed 1160px iframe height and nested vertical scrolling. Sandbox preview grows/shrinks with content using ResizeObserver, MutationObserver, image load and font readiness; refreshes on text changes and repeatable list operations without iframe reload, supports 100vh template layouts without unbounded growth. Outer page handles vertical scrolling, mobile keeps horizontal overflow as needed.
+Workflow: production Astro build, WebNext guards, byte verified resumable ZIP FTP to /domains/esc.vn/public_html, then remote unzip.
+Followup: automatic production smoke and CV Studio live QA verifying no nested iframe scrollbar.

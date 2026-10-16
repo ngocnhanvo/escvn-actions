@@ -1,3 +1,3 @@
-mode=build
+mode=publish
 scope=M27-M41
-reason=Generate and visual QA before uploading any CV templates
+reason=QA passed in run 38889594696; upload new CV IDs through guarded WordPress admin forms

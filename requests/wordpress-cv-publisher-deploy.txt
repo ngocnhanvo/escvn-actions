@@ -61,3 +61,8 @@ reason=2026-10-17 read-only live check after user saved admin.esc.vn wp-config.p
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=f7e211537e556a5891cb7d43cb59aa93dfea7cc6
+
+reason=2026-10-17 allow optional CV blank slug with explicit homepage index.html confirmation in WordPress and signed Windows FTPS Gateway request, strict boolean root_confirmed, backend mock regression. Old nested folder CV flow unaffected. Windows Gateway exe update staged separately and required before actual root upload. No real FTP test or secrets.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=0c1188d06b53b9d5226c1b3d2e0324f033ef6b30

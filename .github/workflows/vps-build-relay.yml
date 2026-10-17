@@ -1,0 +1,36 @@
+name: ESC VPS Build Relay (NO FTP)
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [wp_trigger_vps_build]
+permissions:
+  contents: read
+concurrency:
+  group: vps-relay-esc
+  cancel-in-progress: false
+jobs:
+  relay:
+    name: Request approved private build for esc
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Authorize private Hub request
+        shell: bash
+        env:
+          BUILD_HUB_TOKEN: ${{ secrets.BUILD_HUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$BUILD_HUB_TOKEN" || { echo 'BUILD_HUB_TOKEN not configured; no production change.'; exit 1; }
+          code=$(curl --silent --show-error --output /tmp/build-hub-dispatch-response --write-out '%{http_code}' \
+            --max-time 25 --request POST \
+            -H "Authorization: Bearer $BUILD_HUB_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            https://api.github.com/repos/ngocnhanvo/esc-build-hub/dispatches \
+            --data '{"event_type":"esc-build-request"}')
+          if [[ "$code" != "204" ]]; then
+            echo "::error::Private build request failed (HTTP $code). No FTP was attempted."
+            exit 1
+          fi
+          echo 'Private Hub accepted build request. The actual build result is tracked there.'
+          echo "Requested project: esc (source: master; NO FTP)" >> "$GITHUB_STEP_SUMMARY"

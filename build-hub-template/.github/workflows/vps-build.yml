@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ngocnhanvo/escvn-actions
-          ref: b126acc4d64ba5dbb06b257c242042173074822f
+          ref: dfad3eae94862c28854d0f4cff3fd6f4e3a2923a
           path: control
           clean: true
           persist-credentials: false
@@ -115,7 +115,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $source=Join-Path $env:GITHUB_WORKSPACE 'source-input'
-          & .\control\build-hub-template\scripts\run-project-build.ps1 -Project $env:TARGET_PROJECT -CheckoutRoot $source -BasePath 'C:\ESC-Build' -CacheMode $env:CACHE_MODE
+          & .\control\build-hub-template\scripts\run-project-build.ps1 -Project $env:TARGET_PROJECT -CheckoutRoot $source -CacheMode $env:CACHE_MODE
           if($LASTEXITCODE -ne 0){throw 'Windows build script failed'}
 
       - name: Archive build status only

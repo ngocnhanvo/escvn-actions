@@ -37,3 +37,15 @@ jobs:
             rm -f "$strict"
             echo "::endgroup::"
           done
+      - name: Verify explicit one-certificate CA trust without FTP login
+        shell: bash
+        run: |
+          set -euo pipefail
+          cert="$(mktemp)"
+          trap 'rm -f "$cert"' EXIT
+          timeout 20 openssl s_client -starttls ftp -connect wphosting.io.vn:21 -servername wphosting.io.vn -showcerts </dev/null 2>/dev/null |
+            sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' | head -80 > "$cert"
+          test -s "$cert"
+          openssl verify -CAfile "$cert" -purpose sslserver "$cert"
+          openssl x509 -in "$cert" -noout -fingerprint -sha256
+          echo 'Manual certificate trust anchor works with CA verification on; hostname check is separately waived only after explicit fingerprint approval.'

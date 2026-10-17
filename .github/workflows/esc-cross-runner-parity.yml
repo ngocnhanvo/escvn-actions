@@ -1,0 +1,120 @@
+name: ESC Cross-Runner Parity via Hosted - NO FTP
+on:
+  push:
+    branches: [main]
+    paths: ['requests/esc-cross-runner-parity.txt']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: esc-cross-runner-parity
+  cancel-in-progress: false
+
+jobs:
+  hosted_build:
+    name: GitHub-hosted Linux clean build - No Deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ESC_PINNED_SHA: be16a6060084265743061147532661abea6913ff
+    steps:
+      - name: Checkout private audit tools (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: 8e49e525953a7bafac8a44bbb09288931a707250
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: control
+          persist-credentials: false
+      - name: Checkout private production source (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: be16a6060084265743061147532661abea6913ff
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Clean build and generate data/output manifest (no FTP)
+        shell: bash
+        env:
+          BENCH_ENV: ${{ secrets.ENV_FILE }}
+          cachePage: 'false'
+          cacheTablePress: 'false'
+        run: |
+          set -euo pipefail
+          test -n "$BENCH_ENV" || { echo 'Missing original production ENV_FILE'; exit 1; }
+          test "$(git -C source rev-parse HEAD)" = "$ESC_PINNED_SHA" || { echo 'Wrong Astro commit'; exit 1; }
+          umask 077
+          printf '%s' "$BENCH_ENV" > source/.env
+          trap 'rm -f source/.env' EXIT
+          rm -rf source/.cache source/dist
+          pushd source
+          start=$SECONDS
+          pnpm install --frozen-lockfile
+          deps=$((SECONDS-start))
+          start=$SECONDS
+          pnpm run build-git
+          build=$((SECONDS-start))
+          popd
+          node control/scripts/esc-cache-manifest.mjs source hosted manifest-hosted.json
+          echo "GitHub-hosted install: $deps s; Astro build: $build s" >> "$GITHUB_STEP_SUMMARY"
+          echo 'No FTP, zip deployment, or production write.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload sanitized manifest only
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-parity-hosted
+          path: manifest-hosted.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove environment
+        if: always()
+        shell: bash
+        run: rm -f source/.env
+
+  compare_to_vps:
+    name: Compare hosted vs private VPS artifact (No FTP)
+    needs: hosted_build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      ESC_PINNED_SHA: be16a6060084265743061147532661abea6913ff
+    steps:
+      - name: Checkout pinned comparison tool
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: 8e49e525953a7bafac8a44bbb09288931a707250
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: control
+          persist-credentials: false
+      - name: Download this job's hosted manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: esc-parity-hosted
+          path: reports/hosted
+      - name: Download VPS manifest from its private-run benchmark
+        uses: actions/download-artifact@v4
+        with:
+          name: esc-parity-vps
+          repository: ngocnhanvo/escvn-astro
+          run-id: 39059327338
+          github-token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: reports/vps
+      - name: Compare data and generated output paths
+        run: node control/scripts/esc-hosted-vps-compare.mjs reports/hosted/manifest-hosted.json reports/vps/manifest-vps.json
+      - name: Upload final comparison result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-cross-runner-result
+          path: esc-hosted-vps-parity-result.json
+          if-no-files-found: ignore
+          retention-days: 7

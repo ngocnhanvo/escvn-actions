@@ -1,0 +1,43 @@
+name: Verify ESC Windows FTPS Gateway (No Credentials)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-esc-ftps-windows-gateway.yml
+permissions:
+  contents: read
+jobs:
+  secure-gateway-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify HTTPS Tunnel and reject unsigned FTP uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://esc.webnvn.com'
+          curl --proto '=https' --tlsv1.2 -fsS --max-time 20 \
+            -H 'Cache-Control: no-store' "$base/health" -o /tmp/esc-health.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/esc-health.json', encoding='utf-8') as f:
+            j=json.load(f)
+          assert j['ok'] is True
+          assert j['component']=='esc-ftps-gateway'
+          print('Gateway /health on Cloudflare Tunnel: PASS')
+          PY
+          code=$(curl --proto '=https' --tlsv1.2 -sS --max-time 20 \
+            -H 'Content-Type: application/json' -o /tmp/esc-rejected.json -w '%{http_code}' \
+            -X POST --data '{"host":"invalid.invalid","domain":"invalid.invalid"}' \
+            "$base/v1/publish")
+          python3 - "$code" <<'PY'
+          import json, sys
+          code=int(sys.argv[1])
+          with open('/tmp/esc-rejected.json', encoding='utf-8') as f:
+            j=json.load(f)
+          assert code == 403, (code,j.get('code'))
+          assert j.get('ok') is False and j.get('code')=='signature_invalid'
+          print('Gateway rejects unsigned publish request: PASS')
+          print('No FTP account, password or file upload used in this verification.')
+          PY

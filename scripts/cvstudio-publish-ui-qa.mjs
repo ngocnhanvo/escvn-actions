@@ -99,11 +99,21 @@ try{
   await dialog.locator('[data-cv-publish-choice="ftps"]').click();
   const form=dialog.locator('[data-cv-publish-ftps-form]');
   assert(await form.isVisible(),'Switching back to FTPS must restore form');
-  await form.locator('input[name=host]').fill('103.45.229.176');
+  // Only the publication domain is entered by default; FTPS host is derived.
+  await form.locator('input[name=domain]').fill('example.com');
+  const derivedHost=dialog.locator('[data-cv-publish-derived-host]');
+  assert((await derivedHost.textContent())==='ftp.example.com',
+    'Domain must derive ftp.example.com automatically');
+  const advanced=dialog.locator('[data-cv-publish-host-advanced]');
+  await advanced.locator('summary').click();
+  const override=advanced.locator('input[name=host_override]');
+  await override.fill('ftps.hosting-provider.example');
+  assert((await derivedHost.textContent())==='ftps.hosting-provider.example',
+    'Advanced hostname must override the derived host when present');
+  await override.fill('103.45.229.176');
   await form.locator('input[name=username]').fill('qa-user');
   await form.locator('input[name=password]').fill('dummy-qa-secret-not-real');
   await form.locator('input[name=root]').fill('public_html');
-  await form.locator('input[name=domain]').fill('example.com');
   await form.locator('input[name=slug]').fill('cv-demo');
   const passwordField=form.locator('[data-cv-publish-password]');
   const passwordToggle=form.locator('[data-cv-publish-password-toggle]');
@@ -126,7 +136,9 @@ try{
   assert(issued===0&&published===null,'Invalid host must never reach the FTPS API');
   assert(await form.locator('input[name=password]').inputValue()==='dummy-qa-secret-not-real',
     'Preflight error must preserve unsent password until dialog closes');
-  await form.locator('input[name=host]').fill('ftp.example.com');
+  await override.fill('');
+  assert((await derivedHost.textContent())==='ftp.example.com',
+    'Clearing override must restore derived hostname');
   await submit.click();
   await dialog.locator('[data-cv-publish-finish]').waitFor({state:'visible',timeout:20000});
   assert(issued===1,'Secure session must be fetched exactly once');

@@ -16,3 +16,8 @@ reason=Recover admin.esc.vn fatal caused by previous *.php backup in mu-plugins;
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=884811d3a079591874be7f079537b4e0ad558786
+
+reason=2026-10-17 fix ESC CV publisher HTML validator false-positive: content= is safe, onerror/onclick are not. Browser mocked QA #39002610736 identified false positive; PHP regression now checks meta content attribute.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=95ee25f88a153506f40c8b8d34084007ac1c58b4

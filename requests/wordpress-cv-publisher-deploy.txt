@@ -41,3 +41,8 @@ reason=2026-10-17 CV FTPS FileZilla parity phase 1: extract ONLY 227 PASV or 229
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=41992171b9c04e746ebab7b9fb8da1d654203775
+
+reason=2026-10-17 strictly allowlisted temporary, anonymous-credential-free TCP egress comparison from WordPress PHP runtime to wphosting.io.vn:21/35704 and www.cloudflare.com:8443/443. Signed session and rate limit. No passwords, no FTP login, no uploads, no arbitrary host/port input. Compare with successful Github runner external 35704 test #39011027914. Roll back/remove diagnostic endpoint after testing.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=9ba7557ebbc7dfdc2fd9c24c7a1f0453fa452a0c

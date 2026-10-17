@@ -1,0 +1,5 @@
+source=ngocnhanvo/escvn-astro
+sha=be16a6060084265743061147532661abea6913ff
+vps_run=39059327338
+side_effects=no-ftp
+stage=parity-only

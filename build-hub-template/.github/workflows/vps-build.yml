@@ -14,23 +14,25 @@ on:
         options: [fresh, warm]
         default: fresh
         required: true
+  repository_dispatch:
+    types: [esc-build-request, anhsang-build-request]
 permissions:
   contents: read
 concurrency:
-  group: private-hub-build-${{ inputs.project }}
+  group: private-hub-build-${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }}
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Build ${{ inputs.project }} on Windows VPS (NO FTP)
+    name: Build ${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }} on Windows VPS (NO FTP)
     runs-on: [self-hosted, Windows, X64, esc-build-worker]
     timeout-minutes: 75
     steps:
       - name: Validate approved project and cache mode
         shell: powershell
         env:
-          TARGET_PROJECT: ${{ inputs.project }}
-          CACHE_MODE: ${{ inputs.cache_mode }}
+          TARGET_PROJECT: ${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }}
+          CACHE_MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.cache_mode) || 'fresh' }}
         run: |
           if ($env:TARGET_PROJECT -notin @('esc','anhsang')) { throw 'Project not authorized' }
           if ($env:CACHE_MODE -notin @('fresh','warm')) { throw 'Cache policy not authorized' }
@@ -49,7 +51,7 @@ jobs:
           }
           if(-not $gitPath){
             $archive=Join-Path $env:RUNNER_TEMP 'MinGit-2.56.0.2.zip'
-            $dest=Join-Path $env:USERPROFILE 'esc-astro-private-tools\MinGit-2.56.0.2'
+            $dest=Join-Path (Split-Path $env:RUNNER_TEMP -Parent) 'esc-private-build-tools\MinGit-2.56.0.2'
             New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent)|Out-Null
             Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.2/MinGit-2.56.0.2-64-bit.zip' -OutFile $archive -UseBasicParsing
             $expected='da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be'
@@ -79,7 +81,7 @@ jobs:
       - name: Checkout approved Astro master
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.project == 'esc' && 'ngocnhanvo/escvn-astro' || 'ngocnhanvo/anhsangvacuocsong-astro' }}
+          repository: ${{ ((github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang') == 'esc' && 'ngocnhanvo/escvn-astro' || 'ngocnhanvo/anhsangvacuocsong-astro' }}
           ref: master
           token: ${{ secrets.SOURCE_REPO_PAT }}
           path: source-input
@@ -109,9 +111,9 @@ jobs:
       - name: Build Astro with persistent local-style dependencies
         shell: powershell
         env:
-          TARGET_PROJECT: ${{ inputs.project }}
-          CACHE_MODE: ${{ inputs.cache_mode }}
-          HUB_ENV_FILE: ${{ inputs.project == 'esc' && secrets.ENV_FILE_ESC || secrets.ENV_FILE_ANHSANG }}
+          TARGET_PROJECT: ${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }}
+          CACHE_MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.cache_mode) || 'fresh' }}
+          HUB_ENV_FILE: ${{ (((github.event_name == 'workflow_dispatch' && inputs.project == 'esc') || github.event.action == 'esc-build-request') && secrets.ENV_FILE_ESC) || secrets.ENV_FILE_ANHSANG }}
         run: |
           $ErrorActionPreference='Stop'
           $source=Join-Path $env:GITHUB_WORKSPACE 'source-input'
@@ -122,7 +124,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-report-${{ inputs.project }}-${{ github.run_id }}
+          name: build-report-${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }}-${{ github.run_id }}
           path: |
             build-report.json
             esc-build-data-manifest.json

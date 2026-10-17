@@ -27,3 +27,27 @@ jobs:
               echo "RESULT $host:$port TCP_UNREACHABLE elapsed=$(( $(date +%s)-start ))s"
             fi
           done
+
+      - name: Compare same destination ports from WordPress PHP (no credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://admin.esc.vn/wp-json/esc-cv/v1/publish"
+          agent="ESC-CV-Egress-QA/1.0"
+          token="$(curl -fsS --max-time 20 -H 'Origin: https://esc.vn' -H "User-Agent: $agent" -H 'Cache-Control: no-store' "$endpoint/session" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')"
+          status="$(curl -sS --max-time 35 -H 'Origin: https://esc.vn' -H "User-Agent: $agent" -H 'Cache-Control: no-store' -H 'Content-Type: application/json' \
+            -o /tmp/esc-cv-egress.json -w '%{http_code}' \
+            -d "{\"token\":\"$token\"}" "$endpoint/network-diagnostic")"
+          python3 - "$status" <<'PY'
+          import json,sys
+          code=int(sys.argv[1])
+          response=json.load(open('/tmp/esc-cv-egress.json',encoding='utf-8'))
+          if code!=200 or response.get('ok') is not True:
+            raise SystemExit(f"WordPress PHP egress diagnostic endpoint error HTTP {code}: {response.get('code','no_code')}")
+          assert response['probe_type']=='tcp_connect_only_no_credentials'
+          for entry in response['results']:
+            print("WORDPRESS RESULT {} ip={} connected={} ms={} socket_errno={}".format(
+              entry['target'],entry.get('ip'),entry['connected'],
+              entry.get('elapsed_ms'),entry.get('socket_errno')))
+          assert len(response['results'])==4
+          PY

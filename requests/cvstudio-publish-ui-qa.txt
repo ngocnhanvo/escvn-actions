@@ -7,3 +7,4 @@ production_smoke=38981789868 PASS
 Use dummy FTP credentials intercepted by Playwright; never connect to a third-party FTP server.
 
 2026-10-17: Run safe Chromium FTPS publication UI regression after Astro master 1b91d9e88d86772612d4fd688a733c7ba0ba0d1b production deploy #39002363036 PASS and PHP publisher recovery #39001942485 PASS. Verify password show/hide, backdrop click stays open, ownership consent gates submit, raw IP hostname is rejected before API, mock FTPS success; browser mock MUST intercept FTP POST and use dummy credentials only.
+2026-10-17: Rerun Chromium safe mock CV FTPS QA with credential-free error diagnostics; last #39002494910 timeout on success display. Source Astro master 1b91d9e88d86772612d4fd688a733c7ba0ba0d1b, no actual FTPS request.

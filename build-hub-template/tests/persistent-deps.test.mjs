@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'esc-persistent-deps-'));
+const fixture=path.join(temp,'checkout');
+const base=path.join(temp,'private-build-cache');
+fs.mkdirSync(fixture,{recursive:true});
+const script=path.resolve('build-hub-template/scripts/persistent-deps.mjs');
+const wr=(file,contents)=>fs.writeFileSync(path.join(fixture,file),contents);
+const execute=(action,project='esc')=>{
+ const proc=spawnSync(process.execPath,[script,action,project,fixture,base,'9.15.0'],{encoding:'utf8'});
+ if(proc.status!==0)throw new Error(action+' exited '+proc.status+': '+proc.stderr);
+ return proc.stdout.trim();
+};
+try{
+ wr('package.json',JSON.stringify({name:'sample',dependencies:{astro:'7.0.0'}}));
+ wr('pnpm-lock.yaml','lockfileVersion: 9.0\n');
+ wr('index.js','console.log("v1")');
+ let state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,true);
+ const workspace=state.workspace;
+ fs.mkdirSync(path.join(workspace,'node_modules','.bin'),{recursive:true});
+ fs.writeFileSync(path.join(workspace,'node_modules','.modules.yaml'),'layout: isolated');
+ fs.writeFileSync(path.join(workspace,'node_modules','.bin',process.platform==='win32'?'astro.cmd':'astro'),'sample');
+ execute('mark-installed');
+ state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,false,'second run must reuse dependencies');
+ fs.writeFileSync(path.join(workspace,'.env'),'MUST_NOT_PERSIST');
+ wr('index.js','console.log("v2")');
+ state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,false,'ordinary source changes must not reinstall');
+ assert.equal(fs.existsSync(path.join(workspace,'.env')),false,'no old secrets in reused workspace');
+ assert.equal(fs.readFileSync(path.join(workspace,'index.js'),'utf8'),'console.log("v2")');
+ wr('pnpm-lock.yaml','lockfileVersion: 9.0\n# changed');
+ state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,true,'changed lockfile requires install');
+ execute('mark-installed');
+ fs.rmSync(path.join(workspace,'node_modules','.bin',process.platform==='win32'?'astro.cmd':'astro'));
+ state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,true,'damaged node_modules requires install');
+ let denied=false;
+ try{execute('prepare','unknown-project')}catch{denied=true}
+ assert.equal(denied,true,'unknown project must be rejected');
+ console.log('Persistent dependencies: PASS (reused, invalidated, isolated, env wiped)');
+}finally{fs.rmSync(temp,{recursive:true,force:true})}

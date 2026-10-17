@@ -27,11 +27,11 @@ jobs:
         id: preflight
         shell: bash
         env:
-          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }
-          FTP_SERVER: ${{ secrets.FTP_SERVER }
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }
-          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
         run: |
           set -euo pipefail
           for key in SOURCE_REPO_PAT FTP_SERVER FTP_USERNAME FTP_PASSWORD WP_ADMIN_URL; do
@@ -57,15 +57,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ngocnhanvo/escvn-php
-          ref: ${{ steps.preflight.outputs.source_sha }
-          token: ${{ secrets.SOURCE_REPO_PAT }
+          ref: ${{ steps.preflight.outputs.source_sha }}
+          token: ${{ secrets.SOURCE_REPO_PAT }}
           path: source
           persist-credentials: false
 
       - name: Validate scope and syntax
         shell: bash
         env:
-          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }}
         run: |
           set -euo pipefail
           test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
@@ -84,12 +84,12 @@ jobs:
       - name: Stage, back up, deploy and byte-verify two theme files
         shell: bash
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }
-          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }
-          REMOTE_THEME: ${{ steps.preflight.outputs.remote_theme }
-          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+          REMOTE_THEME: ${{ steps.preflight.outputs.remote_theme }}
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }}
         run: |
           set -euo pipefail
           protocol="$FTP_PROTOCOL"
@@ -200,8 +200,8 @@ jobs:
       - name: Check public CSS endpoint
         shell: bash
         env:
-          HOST: ${{ steps.preflight.outputs.host }
-          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+          HOST: ${{ steps.preflight.outputs.host }}
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }}
         run: |
           set -euo pipefail
           url="https://$HOST/wp-content/themes/vibe-code-theme/mce.css?rev=$EXPECTED_SHA"

@@ -11,7 +11,7 @@ $targets=[ordered]@{
   'wp-pages'='https://admin.esc.vn/wp-json/wp/v2/pages?per_page=1&_fields=id,slug'
   'esc-table-status'='https://admin.esc.vn/wp-json/esc-table/v1/status'
 }
-function Measure([string]$url){
+function Invoke-EscGeoProbe([string]$url){
   $sw=[Diagnostics.Stopwatch]::StartNew()
   try{
     $response=$http.GetAsync($url).GetAwaiter().GetResult()
@@ -27,9 +27,9 @@ function Measure([string]$url){
 }
 $report=@()
 foreach($label in $targets.Keys){
-  $warm=Measure -url ([string]$targets[$label])
+  $warm=Invoke-EscGeoProbe -url ([string]$targets[$label])
   $readings=@()
-  for($n=0;$n -lt $Samples;$n++){ $readings += (Measure -url ([string]$targets[$label])) }
+  for($n=0;$n -lt $Samples;$n++){ $readings += (Invoke-EscGeoProbe -url ([string]$targets[$label])) }
   if($readings.Count -ne $Samples){throw "Probe produced $($readings.Count)/$Samples results for $label"}
   $good=@($readings|Where-Object{$_.status -ge 200 -and $_.status -lt 400}|Sort-Object ms)
   $median=$null

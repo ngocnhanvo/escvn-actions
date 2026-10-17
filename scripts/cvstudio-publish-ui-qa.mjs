@@ -37,7 +37,7 @@ const zip=zipArchive({
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1366,height:900}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-let published=null,issued=0;
+let published=null,issued=0,certificateChecked=null;
 // Real production session must be CORS-accessible from esc.vn. This never
 // submits credentials or performs an FTP transfer.
 await page.goto('https://esc.vn/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
@@ -64,6 +64,23 @@ await page.route('https://admin.esc.vn/wp-json/esc-cv/v1/publish/**',async route
     issued++;
     return route.fulfill({status:200,headers,body:JSON.stringify({
       token:'1700000000.'+'a'.repeat(64),expires_in:600,protocol:'FTPS'
+    })});
+  }
+  if(req.url().includes('/publish/certificate')){
+    certificateChecked=req.postDataJSON();
+    assert(Object.keys(certificateChecked).sort().join(',')==='host,token',
+      'Certificate inspection must not send FTP username or password');
+    return route.fulfill({status:200,headers,body:JSON.stringify({
+      host:certificateChecked.host,
+      subject:'selfsigned.directadmin.test',
+      issuer:'selfsigned.directadmin.test',
+      expires:'2035-04-14',
+      self_signed:true,
+      fingerprint:'f'.repeat(64),
+      fingerprint_sha256:'FF:'.repeat(31)+'FF',
+      epoch:Math.floor(Date.now()/1000),
+      proof:'c'.repeat(64),
+      expires_in:300
     })});
   }
   if(req.url().includes('/publish/ftps')){
@@ -139,10 +156,24 @@ try{
   await override.fill('');
   assert((await derivedHost.textContent())==='ftp.example.com',
     'Clearing override must restore derived hostname');
+  const certButton=dialog.locator('[data-cv-publish-cert-inspect]');
+  await certButton.click();
+  const certPanel=dialog.locator('[data-cv-publish-cert-panel]');
+  await certPanel.waitFor({state:'visible',timeout:20000});
+  assert(certificateChecked?.host==='ftp.example.com','Certificate-only inspection must target derived FTPS host');
+  assert((await dialog.locator('[data-cv-publish-cert-fingerprint]').textContent()).includes('FF:FF'),
+    'Public SHA-256 fingerprint must be visible for out-of-band comparison');
+  await submit.click();
+  assert((await dialog.locator('[data-cv-publish-error]').textContent()).includes('fingerprint'),
+    'Submit must refuse unconfirmed certificate trust');
+  assert(published===null,'Unconfirmed fingerprint must never reach FTPS publisher');
+  await dialog.locator('[data-cv-publish-cert-confirm]').check();
   await submit.click();
   await dialog.locator('[data-cv-publish-finish]').waitFor({state:'visible',timeout:20000});
-  assert(issued===1,'Secure session must be fetched exactly once');
+  assert(issued===2,'One session for certificate inspection and one for publication');
   assert(published?.host==='ftp.example.com','Correct FTP host missing from payload');
+  assert(published.cert_fingerprint==='f'.repeat(64)&&published.cert_proof==='c'.repeat(64),
+    'Published payload must carry the explicitly confirmed fingerprint proof');
   assert(published?.username==='qa-user' && published?.password==='dummy-qa-secret-not-real',
     'Credentials must only go through the explicitly mocked publisher endpoint');
   assert(published?.root==='public_html'&&published?.slug==='cv-demo',

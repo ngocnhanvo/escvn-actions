@@ -10,3 +10,5 @@ Use dummy FTP credentials intercepted by Playwright; never connect to a third-pa
 2026-10-17: Rerun Chromium safe mock CV FTPS QA with credential-free error diagnostics; last #39002494910 timeout on success display. Source Astro master 1b91d9e88d86772612d4fd688a733c7ba0ba0d1b, no actual FTPS request.
 
 2026-10-17: Re-run Chromium mock-only FTPS publish UI after HTML content attribute false-positive fix. Astro production master dfcd2055e4cda72221b01d07ce6f52d72eb42f4d, deploy #39003159887 PASS; backend PHP #39002800500 PASS. Validate all earlier eye/overlay/checkbox/IP tests and mock success screen. No actual FTP connection or user credentials.
+
+2026-10-17: Chromium mock-only FTPS QA after CV single-domain form source Astro master 1c8d1bfe23f9b820bbf80282b847e50dfa4422cc, deploy #39005603102 PASS, backend publisher #39005275368 PASS. Test auto hostname from public domain, advanced override and clear restore, eye toggle, backdrop stay, checkbox gate, invalid IP rejected, and safe dummy FTPS success without real credentials/FTP transfer.

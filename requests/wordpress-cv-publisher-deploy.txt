@@ -46,3 +46,8 @@ reason=2026-10-17 strictly allowlisted temporary, anonymous-credential-free TCP 
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=9ba7557ebbc7dfdc2fd9c24c7a1f0453fa452a0c
+
+reason=2026-10-17 remove temporary limited WordPress TCP egress probe after evidence collected (#39011298750): ESC PHP refused target TCP 35704 and Cloudflare 8443 (socket errno111), github runner opens both. Restore hardened existing FTPS publisher exactly to source commit 41992171b9c04e746ebab7b9fb8da1d654203775; all normal FTPS/cert functionality unchanged. Await ESC hosting egress firewall adjustment.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=28350a542172f49249e155ddb42c65f499bf1269

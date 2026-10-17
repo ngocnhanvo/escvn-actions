@@ -7,7 +7,7 @@ on:
         type: boolean
         default: false
       with_build:
-        description: 'Run full Astro build, without deployment'
+        description: 'GitHub-hosted build only; public VPS runner is API-only'
         type: boolean
         default: false
   push:
@@ -95,37 +95,5 @@ jobs:
           name: esc-geo-api-vps
           path: esc-geo-api.json
           retention-days: 7
-      - name: Checkout Astro master for build
-        if: inputs.with_build
-        uses: actions/checkout@v4
-        with:
-          repository: ngocnhanvo/escvn-astro
-          ref: master
-          token: ${{ secrets.SOURCE_REPO_PAT }}
-          path: source
-          persist-credentials: false
-      - name: Prepare pnpm 9
-        if: inputs.with_build
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - name: Prepare Node 24
-        if: inputs.with_build
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Timed Astro build (no FTP)
-        if: inputs.with_build
-        shell: powershell
-        env:
-          BENCH_ENV: ${{ secrets.ENV_FILE }}
-          cachePage: 'false'
-          cacheTablePress: 'false'
-        run: .\control\scripts\esc-geo-build-benchmark.ps1 -OutputFile esc-geo-build.json
-      - name: Save build benchmark
-        if: inputs.with_build
-        uses: actions/upload-artifact@v4
-        with:
-          name: esc-geo-build-vps
-          path: esc-geo-build.json
-          retention-days: 7
+      # Deliberately API-only: private build credentials must never be
+      # passed to a self-hosted runner registered to a public repository.

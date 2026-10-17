@@ -1,0 +1,212 @@
+name: Deploy ESC Table Editor Badge
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-esc-table-badge-deploy.txt']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: escvn-wordpress-esc-table-editor-badge
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout deployment request
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Validate source commit and FTP target
+        id: preflight
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }
+          FTP_SERVER: ${{ secrets.FTP_SERVER }
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }
+        run: |
+          set -euo pipefail
+          for key in SOURCE_REPO_PAT FTP_SERVER FTP_USERNAME FTP_PASSWORD WP_ADMIN_URL; do
+            test -n "$(printenv "$key")"
+          done
+          sha="$(sed -n 's/^source_sha=//p' control/requests/wordpress-esc-table-badge-deploy.txt | tail -n1 | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid source SHA"; exit 1; }
+          host="$(python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          raw=os.environ['WP_ADMIN_URL'].strip()
+          host=urlsplit(raw if '://' in raw else 'https://'+raw).hostname
+          if host != 'admin.esc.vn':
+              raise SystemExit('Refusing deployment to unexpected WordPress hostname')
+          print(host)
+          PY
+          )"
+          echo "source_sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "remote_theme=/domains/$host/public_html/wp-content/themes/vibe-code-theme" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned ESC WordPress revision
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: ${{ steps.preflight.outputs.source_sha }
+          token: ${{ secrets.SOURCE_REPO_PAT }
+          path: source
+          persist-credentials: false
+
+      - name: Validate scope and syntax
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -f source/wp-content/themes/vibe-code-theme/functions.php
+          test -f source/wp-content/themes/vibe-code-theme/mce.css
+          php -l source/wp-content/themes/vibe-code-theme/functions.php
+          grep -Fq "add_filter( 'mce_css'" source/wp-content/themes/vibe-code-theme/functions.php
+          grep -Fq '.tablepress-preview-badge' source/wp-content/themes/vibe-code-theme/mce.css
+          echo "Deploying exactly functions.php and mce.css from $EXPECTED_SHA"
+
+      - name: Install FTP client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+
+      - name: Stage, back up, deploy and byte-verify two theme files
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }
+          REMOTE_THEME: ${{ steps.preflight.outputs.remote_theme }
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+        run: |
+          set -euo pipefail
+          protocol="$FTP_PROTOCOL"
+          test -n "$protocol" || protocol=ftp
+          case "$protocol" in ftp|ftps|sftp) ;; *) echo "::error::Unsupported FTP protocol"; exit 1;; esac
+          ftp() { lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$protocol://$FTP_SERVER" "$@"; }
+          remote="$REMOTE_THEME"
+          src="source/wp-content/themes/vibe-code-theme"
+          tmp="$(mktemp -d)"
+          stage_php="$remote/.esc-badge-functions-$GITHUB_RUN_ID.tmp"
+          stage_css="$remote/.esc-badge-mce-$GITHUB_RUN_ID.tmp"
+          had_css=0
+          started=0
+          completed=0
+          finish() {
+            if [ "$started" = 1 ] && [ "$completed" != 1 ]; then
+              echo "::warning::Deployment failed; restoring original theme files."
+              ftp <<LFTP || true
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          put "$tmp/functions.original.php" -o "$remote/functions.php"
+          bye
+          LFTP
+              if [ "$had_css" = 1 ]; then
+                ftp <<LFTP || true
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          put "$tmp/mce.original.css" -o "$remote/mce.css"
+          bye
+          LFTP
+              else
+                ftp <<LFTP || true
+          set cmd:fail-exit no
+          set net:timeout 25
+          set ssl:verify-certificate no
+          rm "$remote/mce.css"
+          bye
+          LFTP
+              fi
+            fi
+            ftp <<LFTP >/dev/null 2>&1 || true
+          set cmd:fail-exit no
+          set net:timeout 15
+          set ssl:verify-certificate no
+          rm "$stage_php"
+          rm "$stage_css"
+          bye
+          LFTP
+            rm -rf "$tmp"
+          }
+          trap finish EXIT
+          ftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          get "$remote/functions.php" -o "$tmp/functions.original.php"
+          bye
+          LFTP
+          if ftp <<LFTP >/dev/null 2>&1
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 25
+          set ssl:verify-certificate no
+          get "$remote/mce.css" -o "$tmp/mce.original.css"
+          bye
+          LFTP
+          then
+            had_css=1
+          fi
+          ftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          put "$src/functions.php" -o "$stage_php"
+          put "$src/mce.css" -o "$stage_css"
+          get "$stage_php" -o "$tmp/functions.staged.php"
+          get "$stage_css" -o "$tmp/mce.staged.css"
+          bye
+          LFTP
+          cmp "$src/functions.php" "$tmp/functions.staged.php"
+          cmp "$src/mce.css" "$tmp/mce.staged.css"
+          started=1
+          ftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 25
+          set ssl:verify-certificate no
+          put "$src/functions.php" -o "$remote/functions.php"
+          put "$src/mce.css" -o "$remote/mce.css"
+          get "$remote/functions.php" -o "$tmp/functions.live.php"
+          get "$remote/mce.css" -o "$tmp/mce.live.css"
+          bye
+          LFTP
+          cmp "$src/functions.php" "$tmp/functions.live.php"
+          cmp "$src/mce.css" "$tmp/mce.live.css"
+          completed=1
+          echo "ESC Table editor badge deployed and byte-verified."
+          echo "Target: admin.esc.vn, source: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified: wp-content/themes/vibe-code-theme/functions.php" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified: wp-content/themes/vibe-code-theme/mce.css" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check public CSS endpoint
+        shell: bash
+        env:
+          HOST: ${{ steps.preflight.outputs.host }
+          EXPECTED_SHA: ${{ steps.preflight.outputs.source_sha }
+        run: |
+          set -euo pipefail
+          url="https://$HOST/wp-content/themes/vibe-code-theme/mce.css?rev=$EXPECTED_SHA"
+          if curl -fsSL --connect-timeout 10 --max-time 25 "$url" | grep -Fq '.tablepress-preview-badge'; then
+            echo "Production CSS endpoint responds with shortcode badge styling."
+          else
+            echo "::warning::Public CSS endpoint unavailable or still cached; FTP read-back verification passed."
+          fi

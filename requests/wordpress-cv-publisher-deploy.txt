@@ -21,3 +21,8 @@ reason=2026-10-17 fix ESC CV publisher HTML validator false-positive: content= i
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=95ee25f88a153506f40c8b8d34084007ac1c58b4
+
+reason=2026-10-17 differentiate FTPS TLS cert, TLS mode, credentials, DNS, passive data, directory and rename errors without exposing secrets. Regression assertions included.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=5fc19420232d0bb4dd3abeb2054a7049e9e9c311

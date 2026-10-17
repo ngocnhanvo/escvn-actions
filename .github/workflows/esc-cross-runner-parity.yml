@@ -1,4 +1,4 @@
-name: ESC Cross-Runner Parity via Hosted - NO FTP
+name: ESC Hosted Cold Build Manifest - NO FTP
 on:
   push:
     branches: [main]
@@ -78,43 +78,3 @@ jobs:
         if: always()
         shell: bash
         run: rm -f source/.env
-
-  compare_to_vps:
-    name: Compare hosted vs private VPS artifact (No FTP)
-    needs: hosted_build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    env:
-      ESC_PINNED_SHA: be16a6060084265743061147532661abea6913ff
-    steps:
-      - name: Checkout pinned comparison tool
-        uses: actions/checkout@v4
-        with:
-          repository: ngocnhanvo/escvn-astro
-          ref: 8e49e525953a7bafac8a44bbb09288931a707250
-          token: ${{ secrets.SOURCE_REPO_PAT }}
-          path: control
-          persist-credentials: false
-      - name: Download this job's hosted manifest
-        uses: actions/download-artifact@v4
-        with:
-          name: esc-parity-hosted
-          path: reports/hosted
-      - name: Download VPS manifest from its private-run benchmark
-        uses: actions/download-artifact@v4
-        with:
-          name: esc-parity-vps
-          repository: ngocnhanvo/escvn-astro
-          run-id: 39059327338
-          github-token: ${{ secrets.SOURCE_REPO_PAT }}
-          path: reports/vps
-      - name: Compare data and generated output paths
-        run: node control/scripts/esc-hosted-vps-compare.mjs reports/hosted/manifest-hosted.json reports/vps/manifest-vps.json
-      - name: Upload final comparison result
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: esc-cross-runner-result
-          path: esc-hosted-vps-parity-result.json
-          if-no-files-found: ignore
-          retention-days: 7

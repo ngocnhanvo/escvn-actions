@@ -41,7 +41,7 @@ jobs:
           path: esc-geo-api.json
           retention-days: 7
       - name: Checkout Astro master for build
-        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        if: (github.event_name == 'workflow_dispatch' && inputs.with_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[geo-build]'))
         uses: actions/checkout@v4
         with:
           repository: ngocnhanvo/escvn-astro
@@ -50,17 +50,17 @@ jobs:
           path: source
           persist-credentials: false
       - name: Prepare pnpm 9
-        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        if: (github.event_name == 'workflow_dispatch' && inputs.with_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[geo-build]'))
         uses: pnpm/action-setup@v4
         with:
           version: 9
       - name: Prepare Node 24
-        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        if: (github.event_name == 'workflow_dispatch' && inputs.with_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[geo-build]'))
         uses: actions/setup-node@v4
         with:
           node-version: '24'
       - name: Timed Astro build (no FTP)
-        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        if: (github.event_name == 'workflow_dispatch' && inputs.with_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[geo-build]'))
         shell: pwsh
         env:
           BENCH_ENV: ${{ secrets.ENV_FILE }}
@@ -68,7 +68,7 @@ jobs:
           cacheTablePress: 'false'
         run: ./control/scripts/esc-geo-build-benchmark.ps1 -OutputFile esc-geo-build.json
       - name: Save build benchmark
-        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        if: (github.event_name == 'workflow_dispatch' && inputs.with_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[geo-build]'))
         uses: actions/upload-artifact@v4
         with:
           name: esc-geo-build-github

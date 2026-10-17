@@ -31,3 +31,8 @@ reason=2026-10-17 fix ESC CV FTPS HTTP 429 after repeated TLS troubleshooting: c
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=bd6a432f3671aad5fc7586abb4a4874c7d631a2d
+
+reason=2026-10-17 deploy opt-in trust-on-first-use FTPS certificate preflight helper with one-time confirmation and pinned per-request CA (no disabled peer verification); secure helper .inc deployed before PHP activation. Endpoint certificate probe read-only, no password; PHP unit/regression required.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=5517c52c32ca1283b6323608e96ee37a2647e339

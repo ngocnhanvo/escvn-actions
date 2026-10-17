@@ -1,3 +1,4 @@
 source_sha=51c5cc38d7ac75b5d1d2e9587e09698a95747282
 requested_for=admin.esc.vn
 scope=wp-content/themes/vibe-code-theme/functions.php,wp-content/themes/vibe-code-theme/mce.css
+retry_after_workflow_syntax_fix=1

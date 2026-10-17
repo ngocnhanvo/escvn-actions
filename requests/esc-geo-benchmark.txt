@@ -2,3 +2,4 @@ mode=baseline-api-only
 source=escvn-astro/master
 wp_api=https://admin.esc.vn
 production_deploy=false
+retry=fix-powershell-variable-casing

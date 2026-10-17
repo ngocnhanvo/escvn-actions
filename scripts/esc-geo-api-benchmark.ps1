@@ -28,13 +28,13 @@ function Measure([string]$url){
 $report=@()
 foreach($label in $targets.Keys){
   $warm=Measure $targets[$label]
-  $samples=@()
-  for($n=0;$n -lt $Samples;$n++){$samples+=Measure $targets[$label]}
-  $good=@($samples|Where-Object{$_.status -ge 200 -and $_.status -lt 400}|Sort-Object ms)
+  $readings=@()
+  for($n=0;$n -lt $Samples;$n++){$readings+=Measure $targets[$label]}
+  $good=@($readings|Where-Object{$_.status -ge 200 -and $_.status -lt 400}|Sort-Object ms)
   $median=$null
   if($good.Count -gt 0){$median=$good[[int][math]::Floor(($good.Count-1)/2)].ms}
-  $statuses=@($samples|ForEach-Object{$_.status})
-  $report += [pscustomobject]@{endpoint=$label;median_ms=$median;success=$good.Count;total=$Samples;warmup_ms=$warm.ms;statuses=$statuses;samples_ms=@($samples|ForEach-Object{$_.ms})}
+  $statuses=@($readings|ForEach-Object{$_.status})
+  $report += [pscustomobject]@{endpoint=$label;median_ms=$median;success=$good.Count;total=$Samples;warmup_ms=$warm.ms;statuses=$statuses;samples_ms=@($readings|ForEach-Object{$_.ms})}
   Write-Host "$label median=$median ms; success=$($good.Count)/$Samples; status=$($statuses -join ',')"
 }
 $http.Dispose()

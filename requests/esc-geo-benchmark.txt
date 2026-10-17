@@ -4,3 +4,4 @@ wp_api=https://admin.esc.vn
 production_deploy=false
 retry=fix-powershell-variable-casing
 retry=explicit-probe-samples
+retry=avoid-measure-alias

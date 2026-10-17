@@ -1,0 +1,50 @@
+name: ESC Request VPS Build - NO FTP
+on:
+  workflow_dispatch:
+    inputs:
+      cache_mode:
+        type: choice
+        description: WordPress cache policy
+        options: [fresh, warm]
+        default: fresh
+        required: true
+  repository_dispatch:
+    types: [wp_trigger_vps_build]
+permissions:
+  contents: read
+concurrency:
+  group: esc-actions-private-vps-request
+  cancel-in-progress: false
+jobs:
+  request_private_hub:
+    name: Dispatch ESC to private Hub
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch approved ESC source to private Hub only
+        shell: bash
+        env:
+          BUILD_HUB_DISPATCH_TOKEN: ${{ secrets.BUILD_HUB_DISPATCH_TOKEN }}
+          CACHE_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.cache_mode || 'fresh' }}
+        run: |
+          set -euo pipefail
+          test -n "$BUILD_HUB_DISPATCH_TOKEN" || { echo 'Missing BUILD_HUB_DISPATCH_TOKEN'; exit 1; }
+          case "$CACHE_MODE" in fresh|warm) ;; *) echo 'Invalid cache policy'; exit 1;; esac
+          python3 - <<'PY'
+          import json,os,urllib.request
+          url='https://api.github.com/repos/ngocnhanvo/esc-build-hub/actions/workflows/vps-build.yml/dispatches'
+          payload=json.dumps({'ref':'main','inputs':{'project':'esc','cache_mode':os.environ['CACHE_MODE']}}).encode()
+          req=urllib.request.Request(url,data=payload,method='POST',headers={
+            'Authorization':'Bearer '+os.environ['BUILD_HUB_DISPATCH_TOKEN'],
+            'Accept':'application/vnd.github+json',
+            'X-GitHub-Api-Version':'2022-11-28',
+            'Content-Type':'application/json',
+            'User-Agent':'ESC-Actions-Build-Hub'
+          })
+          try:
+            with urllib.request.urlopen(req,timeout=30) as response:
+              if response.status!=204: raise RuntimeError('Non-success HTTP response')
+          except Exception:
+            raise SystemExit('Private Hub dispatch failed. Check repo, token and workflow permissions. No FTP action was attempted.') from None
+          print('ESC build request accepted by private Hub. FTP untouched.')
+          PY

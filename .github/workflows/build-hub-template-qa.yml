@@ -1,0 +1,48 @@
+name: ESC Private Build Hub Template QA (No Deploy)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build-hub-template/**'
+      - '.github/workflows/build-hub-template-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  template_qa:
+    name: Verify persistent dependencies and secret/deploy boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout template only (public, never secret values)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax check persistent deps and tests
+        run: |
+          node --check build-hub-template/scripts/persistent-deps.mjs
+          node --check build-hub-template/tests/persistent-deps.test.mjs
+      - name: Exercise persistent dependencies twice without pnpm or live secrets
+        run: node build-hub-template/tests/persistent-deps.test.mjs
+      - name: Verify private template cannot deploy over FTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('build-hub-template')
+          workflow=(root/'.github/workflows/vps-build.yml').read_text()
+          worker=(root/'scripts/run-project-build.ps1').read_text()
+          assert 'workflow_dispatch:' in workflow
+          assert 'runs-on: [self-hosted, Windows, X64, esc-build-worker]' in workflow
+          assert 'secrets.ENV_FILE_ESC' in workflow and 'secrets.ENV_FILE_ANHSANG' in workflow
+          assert 'concurrency:' in workflow
+          assert 'pnpm run build-git' in worker
+          for bad in ('FTP_PASSWORD','FTP_SERVER','lftp','ftp://','scp ', 'repository_dispatch:'):
+            assert bad.lower() not in (workflow+worker).lower(), f'Deploy forbidden in private build-only template: {bad}'
+          print('Build Hub template safety contract PASSED')
+          PY

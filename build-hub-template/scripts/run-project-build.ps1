@@ -3,7 +3,7 @@
 param(
   [Parameter(Mandatory=$true)][ValidateSet('esc','anhsang')][string]$Project,
   [Parameter(Mandatory=$true)][string]$CheckoutRoot,
-  [string]$BasePath='C:\ESC-Build',
+  [string]$BasePath=(Join-Path $env:USERPROFILE 'ESC-Build'),
   [ValidateSet('fresh','warm')][string]$CacheMode='fresh',
   [string]$ExpectedCommit=''
 )

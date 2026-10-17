@@ -1,0 +1,39 @@
+name: ESC CV FTPS Certificate Diagnostic (No Credentials)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnose-cv-ftps-certificate.yml']
+permissions:
+  contents: read
+jobs:
+  tls-certificate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read-only explicit FTPS TLS inspection
+        shell: bash
+        run: |
+          set -uo pipefail
+          openssl version
+          for host in wphosting.io.vn ftp.wphosting.io.vn; do
+            echo "::group::Public FTPS TLS diagnosis for $host (no password or upload)"
+            getent ahostsv4 "$host" | awk '{print $1}' | sort -u | head -5 || true
+            output="$(mktemp)"
+            timeout 20 openssl s_client -starttls ftp -connect "$host:21" \
+              -servername "$host" -verify_hostname "$host" \
+              -showcerts </dev/null >"$output" 2>&1 || true
+            echo "Certificate summary:"
+            openssl x509 -in "$output" -noout -subject -issuer -dates -ext subjectAltName 2>&1 | head -30 || true
+            echo "Non-strict verification diagnostics:"
+            grep -E -i 'verify error|Verify return code|Verification error|hostname mismatch|self.signed|certificate chain|untrusted|no peer certificate|connect:errno|connection refused' "$output" | tail -20 || true
+            rm -f "$output"
+            strict="$(mktemp)"
+            timeout 20 openssl s_client -starttls ftp -connect "$host:21" \
+              -servername "$host" -verify_hostname "$host" \
+              -verify_return_error -brief </dev/null >"$strict" 2>&1 || true
+            echo "Strict TLS check (expected to reject untrusted certificates):"
+            grep -E -i 'Verification|verify error|verify return|certificate|error|CONNECTION|Protocol|Ciphersuite' "$strict" | tail -22 || true
+            rm -f "$strict"
+            echo "::endgroup::"
+          done

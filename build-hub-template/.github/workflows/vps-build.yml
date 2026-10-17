@@ -1,0 +1,134 @@
+name: Private ESC Build Hub - Multi Project (NO FTP)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Allowed project
+        type: choice
+        options: [esc, anhsang]
+        required: true
+      cache_mode:
+        description: WordPress data cache mode
+        type: choice
+        options: [fresh, warm]
+        default: fresh
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: private-hub-build-${{ inputs.project }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ inputs.project }} on Windows VPS (NO FTP)
+    runs-on: [self-hosted, Windows, X64, esc-build-worker]
+    timeout-minutes: 75
+    steps:
+      - name: Validate approved project and cache mode
+        shell: powershell
+        env:
+          TARGET_PROJECT: ${{ inputs.project }}
+          CACHE_MODE: ${{ inputs.cache_mode }}
+        run: |
+          if ($env:TARGET_PROJECT -notin @('esc','anhsang')) { throw 'Project not authorized' }
+          if ($env:CACHE_MODE -notin @('fresh','warm')) { throw 'Cache policy not authorized' }
+
+      - name: Prepare modern Git on Windows Server 2016
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
+          $git=Get-Command git.exe -ErrorAction SilentlyContinue
+          $gitPath=if($git){$git.Source}else{$null}
+          if(-not $gitPath){
+            foreach($p in @("$env:ProgramFiles\Git\cmd\git.exe","$env:USERPROFILE\esc-astro-private-tools\MinGit-2.56.0.2\cmd\git.exe")){
+              if(Test-Path $p){$gitPath=$p;break}
+            }
+          }
+          if(-not $gitPath){
+            $archive=Join-Path $env:RUNNER_TEMP 'MinGit-2.56.0.2.zip'
+            $dest=Join-Path $env:USERPROFILE 'esc-astro-private-tools\MinGit-2.56.0.2'
+            New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent)|Out-Null
+            Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.2/MinGit-2.56.0.2-64-bit.zip' -OutFile $archive -UseBasicParsing
+            $expected='da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be'
+            if((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected){throw 'MinGit SHA256 invalid'}
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            New-Item -ItemType Directory -Force -Path $dest|Out-Null
+            [IO.Compression.ZipFile]::ExtractToDirectory($archive,$dest)
+            Remove-Item $archive -Force
+            $gitPath=Join-Path $dest 'cmd\git.exe'
+          }
+          if(-not(Test-Path $gitPath)){throw 'Missing Git executable'}
+          $gitDir=Split-Path $gitPath -Parent
+          $version=(& $gitPath --version|Out-String).Trim()
+          if($LASTEXITCODE -ne 0){throw 'Git initialization failed'}
+          Add-Content -Path $env:GITHUB_PATH -Value $gitDir -Encoding Ascii
+          Write-Host "Git ready: $version"
+
+      - name: Checkout pinned trusted build controller
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-actions
+          ref: b126acc4d64ba5dbb06b257c242042173074822f
+          path: control
+          clean: true
+          persist-credentials: false
+
+      - name: Checkout approved Astro master
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.project == 'esc' && 'ngocnhanvo/escvn-astro' || 'ngocnhanvo/anhsangvacuocsong-astro' }}
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source-input
+          clean: true
+          persist-credentials: false
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate scripts before executing secrets
+        shell: powershell
+        run: |
+          & node --check .\control\build-hub-template\scripts\persistent-deps.mjs
+          if($LASTEXITCODE -ne 0){throw 'Persistent dependencies script invalid'}
+          $tokens=$null;$errors=$null
+          $file=Join-Path $env:GITHUB_WORKSPACE 'control/build-hub-template/scripts/run-project-build.ps1'
+          [System.Management.Automation.Language.Parser]::ParseFile($file,[ref]$tokens,[ref]$errors)|Out-Null
+          if($null -ne $errors -and $errors.Count -gt 0){throw 'Windows build script syntax invalid'}
+
+      - name: Build Astro with persistent local-style dependencies
+        shell: powershell
+        env:
+          TARGET_PROJECT: ${{ inputs.project }}
+          CACHE_MODE: ${{ inputs.cache_mode }}
+          HUB_ENV_FILE: ${{ inputs.project == 'esc' && secrets.ENV_FILE_ESC || secrets.ENV_FILE_ANHSANG }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $source=Join-Path $env:GITHUB_WORKSPACE 'source-input'
+          & .\control\build-hub-template\scripts\run-project-build.ps1 -Project $env:TARGET_PROJECT -CheckoutRoot $source -BasePath 'C:\ESC-Build' -CacheMode $env:CACHE_MODE
+          if($LASTEXITCODE -ne 0){throw 'Windows build script failed'}
+
+      - name: Archive build status only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-report-${{ inputs.project }}-${{ github.run_id }}
+          path: build-report.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Clean ephemeral env files
+        if: always()
+        shell: powershell
+        run: |
+          Remove-Item 'source-input\.env' -Force -ErrorAction SilentlyContinue

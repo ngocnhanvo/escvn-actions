@@ -1,0 +1,51 @@
+name: ESC CV Gateway Config Check (No FTP Credentials)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/check-esc-cv-gateway-config.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify live WordPress config and Windows Gateway HMAC with empty challenge
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://admin.esc.vn/wp-json/esc-cv/v1/publish'
+          user_agent='ESC-Gateway-Config-Verify/1.0'
+          token=$(curl --proto '=https' --tlsv1.2 -fsS --max-time 15 \
+             -H 'Origin: https://esc.vn' -H "User-Agent: $user_agent" \
+             -H 'Cache-Control: no-store' "$endpoint/session" |
+              python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+          response_code=$(curl --proto '=https' --tlsv1.2 -sS --max-time 35 \
+             -H 'Origin: https://esc.vn' -H "User-Agent: $user_agent" \
+             -H 'Content-Type: application/json' \
+             -H 'Accept: application/json' \
+             -H 'Cache-Control: no-store' \
+             --data "{\"token\":\"$token\"}" \
+             --output /tmp/esc-gateway-config-status.json \
+             --write-out '%{http_code}' "$endpoint/gateway-check")
+          python3 - "$response_code" <<'PY'
+          import json,sys
+          with open('/tmp/esc-gateway-config-status.json',encoding='utf-8') as f:
+              data=json.load(f)
+          code=int(sys.argv[1])
+          if code != 200:
+              raise SystemExit("Gateway-check API HTTP %d, code=%s"%(code,data.get('code')))
+          assert data.get('ftps_upload_attempted') is False
+          print("WordPress Gateway mode enabled:",data.get('gateway_enabled'))
+          print("WordPress HMAC key configured:",data.get('hmac_configured'))
+          print("Live HMAC handshake verified:",data.get('hmac_verified'))
+          print("Check status:",data.get('check'))
+          print("No FTP username, password, or CV file was sent.")
+          if not data.get('hmac_configured'):
+              raise SystemExit("Live wp-config.php HMAC key missing or invalid.")
+          if not data.get('hmac_verified'):
+              raise SystemExit("WordPress and Windows Gateway HMAC keys did not verify.")
+          print("WordPress Windows Gateway authentication: PASS")
+          PY

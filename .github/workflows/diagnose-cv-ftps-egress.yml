@@ -1,0 +1,29 @@
+name: ESC CV FTPS Egress Network Comparison (No Credentials)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/diagnose-cv-ftps-egress.yml']
+permissions:
+  contents: read
+jobs:
+  network:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Compare outbound FTP data ports from GitHub (no login)
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "Public remote TCP reachability from Github runner. No credentials or uploads."
+          for target in "portquiz.net 35704" "portquiz.net 40000" "portquiz.net 443" "wphosting.io.vn 21" "wphosting.io.vn 35704" "www.cloudflare.com 8443"; do
+            read -r host port <<< "$target"
+            resolved=$(getent ahostsv4 "$host" | awk 'NR==1{print $1}')
+            echo "Target $host:$port resolved $resolved"
+            start=$(date +%s)
+            if timeout 6 bash -c 'exec 3<>/dev/tcp/"$1"/"$2"; exec 3<&-; exec 3>&-' _ "$host" "$port" >/dev/null 2>&1; then
+              echo "RESULT $host:$port TCP_OPEN elapsed=$(( $(date +%s)-start ))s"
+            else
+              echo "RESULT $host:$port TCP_UNREACHABLE elapsed=$(( $(date +%s)-start ))s"
+            fi
+          done

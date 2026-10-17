@@ -86,6 +86,9 @@ try{
   await dialog.waitFor({state:'visible'});
   assert(await dialog.locator('[data-cv-publish-ftps-form]').isVisible(),
     'FTPS form must replace old demo Member login.');
+  const ownership=dialog.locator('[data-cv-publish-ownership]');
+  const submit=dialog.locator('[data-cv-publish-ftps-submit]');
+  assert(await submit.isDisabled(),'Publish button must be disabled before explicit ownership consent');
   assert(await dialog.locator('[data-cv-publish-login]').count()===0,
     'Old hard-coded demo credentials must never be used.');
   await dialog.locator('[data-cv-publish-choice="member"]').click();
@@ -96,14 +99,35 @@ try{
   await dialog.locator('[data-cv-publish-choice="ftps"]').click();
   const form=dialog.locator('[data-cv-publish-ftps-form]');
   assert(await form.isVisible(),'Switching back to FTPS must restore form');
-  await form.locator('input[name=host]').fill('ftp.example.com');
+  await form.locator('input[name=host]').fill('103.45.229.176');
   await form.locator('input[name=username]').fill('qa-user');
   await form.locator('input[name=password]').fill('dummy-qa-secret-not-real');
   await form.locator('input[name=root]').fill('public_html');
   await form.locator('input[name=domain]').fill('example.com');
   await form.locator('input[name=slug]').fill('cv-demo');
-  await form.locator('input[name=ownership]').check();
-  await form.locator('[data-cv-publish-ftps-submit]').click();
+  const passwordField=form.locator('[data-cv-publish-password]');
+  const passwordToggle=form.locator('[data-cv-publish-password-toggle]');
+  await passwordToggle.click();
+  assert((await passwordField.getAttribute('type'))==='text','Eye button must show FTP password');
+  assert((await passwordToggle.getAttribute('aria-pressed'))==='true','Eye button state must be accessible');
+  await passwordToggle.click();
+  assert((await passwordField.getAttribute('type'))==='password','Eye button must mask FTP password again');
+  // Clicking the dim backdrop must not dismiss or reset the populated form.
+  await page.mouse.click(8,8);
+  assert(await dialog.isVisible(),'Backdrop click unexpectedly dismissed FTPS publish dialog');
+  assert(await form.locator('input[name=username]').inputValue()==='qa-user',
+    'Backdrop click lost the FTPS form values');
+  assert(await submit.isDisabled(),'Consent still unchecked; publish must stay disabled');
+  await ownership.check();
+  assert(await submit.isEnabled(),'Consent should enable FTPS publish');
+  await submit.click();
+  assert((await dialog.locator('[data-cv-publish-error]').textContent()).includes('hostname'),
+    'An IP literal must produce a clear hostname error before calling the API');
+  assert(issued===0&&published===null,'Invalid host must never reach the FTPS API');
+  assert(await form.locator('input[name=password]').inputValue()==='dummy-qa-secret-not-real',
+    'Preflight error must preserve unsent password until dialog closes');
+  await form.locator('input[name=host]').fill('ftp.example.com');
+  await submit.click();
   await dialog.locator('[data-cv-publish-finish]').waitFor({state:'visible',timeout:20000});
   assert(issued===1,'Secure session must be fetched exactly once');
   assert(published?.host==='ftp.example.com','Correct FTP host missing from payload');

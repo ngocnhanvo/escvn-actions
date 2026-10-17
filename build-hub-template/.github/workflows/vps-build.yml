@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ngocnhanvo/escvn-actions
-          ref: dfad3eae94862c28854d0f4cff3fd6f4e3a2923a
+          ref: c782a22f1ce76e0b8f679b54282f6d01fb5299db
           path: control
           clean: true
           persist-credentials: false

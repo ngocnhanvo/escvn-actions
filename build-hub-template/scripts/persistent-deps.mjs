@@ -26,6 +26,7 @@ const fileHash = file => crypto.createHash('sha256').update(fs.readFileSync(file
 const fingerprint=crypto.createHash('sha256').update([
   fileHash(path.join(src,'pnpm-lock.yaml')),
   fileHash(path.join(src,'package.json')),
+  fs.existsSync(path.join(src,'.npmrc')) ? fileHash(path.join(src,'.npmrc')) : 'no-npmrc',
   process.version, pnpmVersion, process.platform, process.arch
 ].join('|')).digest('hex');
 const stampFile=path.join(dst,'.hub-install-stamp.json');

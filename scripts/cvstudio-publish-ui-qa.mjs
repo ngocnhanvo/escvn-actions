@@ -148,6 +148,18 @@ try{
   console.log('ESC CV FTPS PUBLISH UI WITH SAFE MOCKED API + MEMBER STATUS: PASS');
 }catch(e){
   console.error(e);
+  const safeText=async selector=>{
+    try{return (await page.locator(selector).first().textContent())?.slice(0,450)||'';}catch{return '';}
+  };
+  console.error('Safe QA diagnostics (no credentials):',JSON.stringify({
+    publishError:await safeText('[data-cv-publish-error]'),
+    publishStatus:await safeText('[data-cv-publish-status]'),
+    issued,
+    mockedPublishReceived:Boolean(published),
+    mockedHost:published?.host||null,
+    htmlBytes:typeof published?.html==='string'?Buffer.byteLength(published.html):null,
+    buttonDisabled:await page.locator('[data-cv-publish-ftps-submit]').isDisabled().catch(()=>null)
+  }));
   await page.screenshot({path:'cvstudio-publish-ui-failure.png',fullPage:true}).catch(()=>{});
   throw e;
 }finally{await browser.close();}

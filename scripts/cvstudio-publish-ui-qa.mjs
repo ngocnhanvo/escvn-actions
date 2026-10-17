@@ -103,9 +103,12 @@ try{
   await dialog.waitFor({state:'visible'});
   assert(await dialog.locator('[data-cv-publish-ftps-form]').isVisible(),
     'FTPS form must replace old demo Member login.');
-  const ownership=dialog.locator('[data-cv-publish-ownership]');
   const submit=dialog.locator('[data-cv-publish-ftps-submit]');
-  assert(await submit.isDisabled(),'Publish button must be disabled before explicit ownership consent');
+  const certButton=dialog.locator('[data-cv-publish-cert-inspect]');
+  assert(await submit.isDisabled(),'Publish button must be disabled before certificate confirmation');
+  assert(await certButton.isDisabled(),'Certificate inspection must be disabled without a public domain');
+  assert(await dialog.locator('[data-cv-publish-ownership]').count()===0,
+    'Redundant ownership checkbox must be removed');
   assert(await dialog.locator('[data-cv-publish-login]').count()===0,
     'Old hard-coded demo credentials must never be used.');
   await dialog.locator('[data-cv-publish-choice="member"]').click();
@@ -118,6 +121,7 @@ try{
   assert(await form.isVisible(),'Switching back to FTPS must restore form');
   // Only the publication domain is entered by default; FTPS host is derived.
   await form.locator('input[name=domain]').fill('example.com');
+  assert(await certButton.isEnabled(),'Valid domain must enable certificate-only inspection');
   const derivedHost=dialog.locator('[data-cv-publish-derived-host]');
   assert((await derivedHost.textContent())==='ftp.example.com',
     'Domain must derive ftp.example.com automatically');
@@ -144,33 +148,41 @@ try{
   assert(await dialog.isVisible(),'Backdrop click unexpectedly dismissed FTPS publish dialog');
   assert(await form.locator('input[name=username]').inputValue()==='qa-user',
     'Backdrop click lost the FTPS form values');
-  assert(await submit.isDisabled(),'Consent still unchecked; publish must stay disabled');
-  await ownership.check();
-  assert(await submit.isEnabled(),'Consent should enable FTPS publish');
-  await submit.click();
-  assert((await dialog.locator('[data-cv-publish-error]').textContent()).includes('hostname'),
-    'An IP literal must produce a clear hostname error before calling the API');
-  assert(issued===0&&published===null,'Invalid host must never reach the FTPS API');
+  assert(await certButton.isDisabled(),'Invalid advanced FTPS hostname must disable cert inspection');
+  assert(await submit.isDisabled(),'Without a verified fingerprint, publishing stays locked');
+  assert(issued===0&&published===null,'Invalid host must not reach certificate or FTP API');
   assert(await form.locator('input[name=password]').inputValue()==='dummy-qa-secret-not-real',
-    'Preflight error must preserve unsent password until dialog closes');
+    'Form editing must preserve unsent password');
   await override.fill('');
   assert((await derivedHost.textContent())==='ftp.example.com',
     'Clearing override must restore derived hostname');
-  const certButton=dialog.locator('[data-cv-publish-cert-inspect]');
+  assert(await certButton.isEnabled(),'Valid public domain and FTPS host must enable inspection');
   await certButton.click();
   const certPanel=dialog.locator('[data-cv-publish-cert-panel]');
   await certPanel.waitFor({state:'visible',timeout:20000});
-  assert(certificateChecked?.host==='ftp.example.com','Certificate-only inspection must target derived FTPS host');
+  assert(certificateChecked?.host==='ftp.example.com','Certificate-only inspection must use derived FTPS host');
   assert((await dialog.locator('[data-cv-publish-cert-fingerprint]').textContent()).includes('FF:FF'),
-    'Public SHA-256 fingerprint must be visible for out-of-band comparison');
-  await submit.click();
-  assert((await dialog.locator('[data-cv-publish-error]').textContent()).includes('fingerprint'),
-    'Submit must refuse unconfirmed certificate trust');
-  assert(published===null,'Unconfirmed fingerprint must never reach FTPS publisher');
-  await dialog.locator('[data-cv-publish-cert-confirm]').check();
+    'Public SHA-256 fingerprint must be visible to compare with FileZilla');
+  assert(await submit.isDisabled(),'Before fingerprint confirmation the publish button must remain disabled');
+  assert(published===null,'Unconfirmed fingerprint must never reach FTP publisher');
+  const certConfirm=dialog.locator('[data-cv-publish-cert-confirm]');
+  await certConfirm.check();
+  assert(await submit.isEnabled(),'Confirming fingerprint with complete FTP details enables publication');
+  // Editing the public domain invalidates both the certificate and explicit consent.
+  await form.locator('input[name=domain]').fill('');
+  assert(await certButton.isDisabled(),'Removing domain must lock certificate inspection');
+  assert(await submit.isDisabled(),'Removing domain must lock final publish');
+  assert(await certPanel.isHidden(),'Changing domain must invalidate the previous certificate');
+  await form.locator('input[name=domain]').fill('example.com');
+  assert(await certButton.isEnabled(),'Restoring a valid domain must reopen certificate inspection');
+  assert(await submit.isDisabled(),'Old consent must not be reused after domain change');
+  await certButton.click();
+  await certPanel.waitFor({state:'visible',timeout:20000});
+  await certConfirm.check();
+  assert(await submit.isEnabled(),'Reconfirmed fingerprint must enable publish');
   await submit.click();
   await dialog.locator('[data-cv-publish-finish]').waitFor({state:'visible',timeout:20000});
-  assert(issued===2,'One session for certificate inspection and one for publication');
+  assert(issued===3,'Two certificate inspections and one FTPS publish must each get a signed session');
   assert(published?.host==='ftp.example.com','Correct FTP host missing from payload');
   assert(published.cert_fingerprint==='f'.repeat(64)&&published.cert_proof==='c'.repeat(64),
     'Published payload must carry the explicitly confirmed fingerprint proof');

@@ -51,3 +51,8 @@ reason=2026-10-17 remove temporary limited WordPress TCP egress probe after evid
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=28350a542172f49249e155ddb42c65f499bf1269
+
+reason=2026-10-17 ESC CV Studio WordPress gateway integration staged: user-confirmed successful Windows VPS FTPS EPSV upload, b0cb339 gateway HTTPS HMAC transport implemented but feature disabled by default; direct FTPS remains unchanged. Regression uses dummy key and mocked HTTP without credentials or real host upload. New constants to enable only after Cloudflare 5080 /health verification and matching HMAC set in wp-config. No ASTRO edits or secrets in repo.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=b0cb33957c34056fe46532baa21b2e77d8f47096

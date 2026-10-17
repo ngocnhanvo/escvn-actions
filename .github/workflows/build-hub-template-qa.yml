@@ -46,9 +46,11 @@ jobs:
           assert 'workflow_dispatch:' in workflow
           assert 'runs-on: [self-hosted, Windows, X64, esc-build-worker]' in workflow
           assert 'secrets.ENV_FILE_ESC' in workflow and 'secrets.ENV_FILE_ANHSANG' in workflow
+          if 'repository_dispatch:' in workflow:
+            assert 'types: [esc-build-request, anhsang-build-request]' in workflow, 'Wrong Hub event types'
           assert 'concurrency:' in workflow
           assert 'pnpm run build-git' in worker
-          for bad in ('FTP_PASSWORD','FTP_SERVER','lftp','ftp://','scp ', 'repository_dispatch:'):
+          for bad in ('FTP_PASSWORD','FTP_SERVER','lftp','ftp://','scp ', 'wp_trigger_build'):
             assert bad.lower() not in (workflow+worker).lower(), f'Deploy forbidden in private build-only template: {bad}'
           print('Build Hub template safety contract PASSED')
           PY

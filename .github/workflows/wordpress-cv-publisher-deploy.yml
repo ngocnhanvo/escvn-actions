@@ -73,8 +73,18 @@ jobs:
           endpoint="$protocol://$FTP_SERVER"
           folder="/domains/admin.esc.vn/public_html/wp-content/mu-plugins"
           target="$folder/esc-cv-publish.php"
-          staged="$folder/.esc-cv-publish-stage-$GITHUB_RUN_ID.php"
-          backup="$folder/.esc-cv-publish-backup-$GITHUB_RUN_ID.php"
+          # WordPress loads every *.php directly inside mu-plugins, including dotfiles.
+          # Non-PHP extensions prevent duplicate plugin class fatal errors during deployment.
+          staged="$folder/.esc-cv-publish-stage-$GITHUB_RUN_ID.tmp"
+          backup="$folder/.esc-cv-publish-backup-$GITHUB_RUN_ID.bak"
+          # One-time recovery: previous workflow left a second executable MU plugin.
+          # Remove only the exact backup created by failed run 39001637220.
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          cd "$folder"
+          rm -f .esc-cv-publish-backup-39001637220.php
+          bye
+          LFTP
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
           set cmd:fail-exit yes
           set net:timeout 30

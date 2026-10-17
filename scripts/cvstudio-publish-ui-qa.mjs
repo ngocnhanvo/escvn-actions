@@ -136,6 +136,22 @@ try{
   await form.locator('input[name=password]').fill('dummy-qa-secret-not-real');
   await form.locator('input[name=root]').fill('public_html');
   await form.locator('input[name=slug]').fill('cv-demo');
+  const slugField=form.locator('[data-cv-publish-slug]');
+  const rootWarning=dialog.locator('[data-cv-publish-root-warning]');
+  const rootConfirm=dialog.locator('[data-cv-publish-root-confirm]');
+  assert(await rootWarning.isHidden(),'Nested CV folder must not display homepage overwrite warning');
+  await slugField.fill('');
+  await rootWarning.waitFor({state:'visible',timeout:5000});
+  assert((await rootWarning.textContent()).includes('index.html'),
+    'Empty slug must clearly warn about potential homepage index.html overwrite');
+  assert((await dialog.locator('[data-cv-publish-root-path]').textContent())==='public_html/index.html',
+    'Homepage warning must identify the exact target file');
+  assert(await submit.isDisabled(),'Blank slug without explicit root consent must keep publish disabled');
+  await rootConfirm.check();
+  assert(await submit.isDisabled(),'Root consent alone must not bypass certificate approval');
+  await slugField.fill('cv-demo');
+  assert(await rootWarning.isHidden(),'Entering a slug must dismiss root overwrite warning');
+  assert(await rootConfirm.isChecked()===false,'Returning to nested slug must clear stale root approval');
   const passwordField=form.locator('[data-cv-publish-password]');
   const passwordToggle=form.locator('[data-cv-publish-password-toggle]');
   await passwordToggle.click();
@@ -168,6 +184,14 @@ try{
   const certConfirm=dialog.locator('[data-cv-publish-cert-confirm]');
   await certConfirm.check();
   assert(await submit.isEnabled(),'Confirming fingerprint with complete FTP details enables publication');
+  await slugField.fill('');
+  assert(await rootWarning.isVisible(),'Empty slug after certification must display root warning');
+  assert(await submit.isDisabled(),'Even a verified cert may not publish homepage without root consent');
+  await rootConfirm.check();
+  assert(await submit.isEnabled(),'Explicit homepage consent enables root publish after FTPS certificate verification');
+  await slugField.fill('cv-demo');
+  assert(await rootConfirm.isChecked()===false,'Changing slug must reset root approval');
+  assert(await submit.isEnabled(),'Returning to nested destination keeps normal verified FTPS flow');
   // Editing the public domain invalidates both the certificate and explicit consent.
   await form.locator('input[name=domain]').fill('');
   assert(await certButton.isDisabled(),'Removing domain must lock certificate inspection');

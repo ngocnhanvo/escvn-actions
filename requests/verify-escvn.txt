@@ -44,3 +44,4 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 
 2026-10-17 CV FTPS form UX validation: verify ngocnhanvo/escvn-astro github 73af1e0c572a4961aed672a622f55b5c0e6bffec. Adds password visibility toggle, ignores backdrop clicks, ownership-gated submit, precise hostname and static HTML preflight; run unit, Astro check, full build and SSR smoke before production.
 2026-10-17 CV publish form QA rerun: corrected Lucide EyeOff hidden TS type in escvn-astro github becfa6548fabaf0e2d58a2860d7253bdd0d01f59. Prior #39001623947 passed unit but Astro guard rejected icon hidden prop; run full verify before merge.
+2026-10-17 rerun ESC FTPS form QA after WordPress MU backup incident recovery PASS #39001942485. Source escvn-astro github becfa6548fabaf0e2d58a2860d7253bdd0d01f59. Previous build failed because temporary admin.esc.vn WordPress critical error, not Astro compile. Recheck full build, unit and SSR.

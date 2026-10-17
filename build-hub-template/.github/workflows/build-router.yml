@@ -1,0 +1,43 @@
+name: ESC Build Hub Router (private repo only)
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Select customer project
+        required: true
+        type: choice
+        options: [esc, anhsang]
+      cache_mode:
+        description: WordPress cache strategy
+        required: true
+        type: choice
+        options: [fresh, warm]
+        default: fresh
+  repository_dispatch:
+    types: [esc-build-request, anhsang-build-request]
+permissions:
+  contents: read
+concurrency:
+  group: build-hub-${{ (github.event_name == 'workflow_dispatch' && inputs.project) || (github.event.action == 'esc-build-request' && 'esc') || 'anhsang' }}
+  cancel-in-progress: false
+jobs:
+  esc:
+    if: (github.event_name == 'workflow_dispatch' && inputs.project == 'esc') || github.event.action == 'esc-build-request'
+    uses: ./.github/workflows/build-worker.yml
+    with:
+      project: esc
+      repository: ngocnhanvo/escvn-astro
+      cache_mode: ${{ (github.event_name == 'workflow_dispatch' && inputs.cache_mode) || 'fresh' }}
+    secrets:
+      source_token: ${{ secrets.SOURCE_REPO_PAT }}
+      env_file: ${{ secrets.ESC_ENV_FILE }}
+  anhsang:
+    if: (github.event_name == 'workflow_dispatch' && inputs.project == 'anhsang') || github.event.action == 'anhsang-build-request'
+    uses: ./.github/workflows/build-worker.yml
+    with:
+      project: anhsang
+      repository: ngocnhanvo/anhsangvacuocsong-astro
+      cache_mode: ${{ (github.event_name == 'workflow_dispatch' && inputs.cache_mode) || 'fresh' }}
+    secrets:
+      source_token: ${{ secrets.SOURCE_REPO_PAT }}
+      env_file: ${{ secrets.ANHSANG_ENV_FILE }}

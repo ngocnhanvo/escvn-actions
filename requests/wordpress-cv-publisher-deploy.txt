@@ -56,3 +56,8 @@ reason=2026-10-17 ESC CV Studio WordPress gateway integration staged: user-confi
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=b0cb33957c34056fe46532baa21b2e77d8f47096
+
+reason=2026-10-17 read-only live check after user saved admin.esc.vn wp-config.php: add signed Gateway HMAC handshake to verify Windows VPS and WP agree without FTP credentials or CV upload, report sanitized gateway_enabled/hmac_configured/hmac_verified; rate-limited 5/hour. No actual FTPS transfer. Existing upload remains unchanged.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=f7e211537e556a5891cb7d43cb59aa93dfea7cc6

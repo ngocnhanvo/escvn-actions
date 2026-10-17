@@ -123,7 +123,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-report-${{ inputs.project }}-${{ github.run_id }}
-          path: build-report.json
+          path: |
+            build-report.json
+            esc-build-data-manifest.json
           if-no-files-found: ignore
           retention-days: 7
 

@@ -53,6 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C source rev-parse HEAD)" = "$EXPECTED"
+          php -l source/wp-content/mu-plugins/esc-cv-ftps-certificate.inc
           php -l source/wp-content/mu-plugins/esc-cv-publish.php
           php source/tests/esc-cv-publish-regression.php
       - name: Install lftp
@@ -93,6 +94,15 @@ jobs:
           get "$staged" -o /tmp/esc-cv-publish-staged.php
           bye
           LFTP
+          # Helper is .inc, never loaded as a standalone MU plugin. Stage and
+          # verify it before activating the PHP publisher referencing the helper.
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          put "source/wp-content/mu-plugins/esc-cv-ftps-certificate.inc" -o "$folder/esc-cv-ftps-certificate.inc"
+          get "$folder/esc-cv-ftps-certificate.inc" -o /tmp/esc-cv-cert-live.inc
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-cv-ftps-certificate.inc /tmp/esc-cv-cert-live.inc
           cmp source/wp-content/mu-plugins/esc-cv-publish.php /tmp/esc-cv-publish-staged.php
           if lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; cd \"$folder\"; mv esc-cv-publish.php \"$(basename "$backup")\"; bye" >/dev/null 2>&1; then
             echo 'Previous publisher backed up.'
@@ -126,3 +136,24 @@ jobs:
           unauth=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint" || true)
           case "$unauth" in 401|403) ;; *) echo "Unexpected unauthenticated status: $unauth"; exit 1;; esac
           echo 'FTPS publisher REST ready; unauthenticated cross-origin requests are refused.'
+
+      - name: Test FTPS certificate-only API without hosting credentials
+        run: |
+          set -euo pipefail
+          endpoint="https://admin.esc.vn/wp-json/esc-cv/v1/publish"
+          agent="ESC-CV-Cert-QA/1.0"
+          token=$(curl -fsS --max-time 15 -H "Origin: https://esc.vn" -H "User-Agent: $agent" "$endpoint/session" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+          code=$(curl -sS --max-time 25 -H "Origin: https://esc.vn" -H "User-Agent: $agent" -H "Content-Type: application/json" -o /tmp/ftps-cert-check.json -w '%{http_code}' -d "{\"token\":\"$token\",\"host\":\"wphosting.io.vn\"}" "$endpoint/certificate")
+          python3 - "$code" <<'PY'
+          import json,sys
+          code=int(sys.argv[1])
+          data=json.load(open('/tmp/ftps-cert-check.json'))
+          # No password, login or file upload was sent; only AUTH TLS and certificate.
+          if code!=200:
+            raise SystemExit("FTPS certificate-only request failed: status="+str(code)+", code="+str(data.get('code')))
+          assert data['host']=='wphosting.io.vn'
+          assert len(data['fingerprint'])==64
+          assert len(data['proof'])==64
+          assert data['expires_in']<=300
+          print('Credential-free FTPS certificate inspection on actual WordPress: PASS')
+          PY

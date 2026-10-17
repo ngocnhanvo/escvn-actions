@@ -84,9 +84,24 @@ try{
       foreach($name in @('sitemap.xml','robots.txt','llms.txt')){
         if(-not(Test-Path (Join-Path $workspace "dist/client/$name"))){throw "Missing SEO file $name"}
       }
+      $sitemap=Get-Content -LiteralPath (Join-Path $workspace 'dist/client/sitemap.xml') -Raw -Encoding UTF8
+      if($sitemap -notmatch 'https://anhsangvacuocsong[.]vn/'){throw 'Generated sitemap has wrong domain'}
+      foreach($name in @('sitemap.xml','robots.txt','llms.txt')){
+        $body=Get-Content -LiteralPath (Join-Path $workspace "dist/client/$name") -Raw -Encoding UTF8
+        if($body -match '(?i)xuongmunonbaohiem|blue-sea|[.]io[.]vn/'){throw "Cross-project SEO URL in $name"}
+      }
     }
     & node --check (Join-Path $workspace 'dist/server/entry.mjs')
     if($LASTEXITCODE -ne 0){throw 'Invalid Astro standalone server entry'}
+    if($Project -eq 'esc'){
+      $escAudit=Join-Path $workspace 'scripts/esc-cache-manifest.mjs'
+      if(Test-Path $escAudit){
+        & node $escAudit $workspace esc-hub (Join-Path $env:GITHUB_WORKSPACE 'esc-build-data-manifest.json')
+        if($LASTEXITCODE -ne 0){throw 'ESC WordPress cache and output audit failed'}
+      }else{
+        throw 'Missing ESC WordPress cache audit script in production source'
+      }
+    }
     $timer.Stop()
     $buildSeconds=[math]::Round($timer.Elapsed.TotalSeconds,2)
   }finally{Pop-Location}

@@ -37,6 +37,10 @@ try{
  state=JSON.parse(execute('prepare'));
  assert.equal(state.needsInstall,true,'changed lockfile requires install');
  execute('mark-installed');
+ wr('.npmrc','strict-peer-dependencies=false\n');
+ state=JSON.parse(execute('prepare'));
+ assert.equal(state.needsInstall,true,'changed .npmrc must invalidate dependencies');
+ execute('mark-installed');
  fs.rmSync(path.join(workspace,'node_modules','.bin',process.platform==='win32'?'astro.cmd':'astro'));
  state=JSON.parse(execute('prepare'));
  assert.equal(state.needsInstall,true,'damaged node_modules requires install');

@@ -36,3 +36,8 @@ reason=2026-10-17 deploy opt-in trust-on-first-use FTPS certificate preflight he
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=5517c52c32ca1283b6323608e96ee37a2647e339
+
+reason=2026-10-17 CV FTPS FileZilla parity phase 1: extract ONLY 227 PASV or 229 EPSV passive port from cURL FTP server response; after FTPS curl7 from real ESC self-host probe same DNS-pinned public IP port for 3s, display precise firewall and advertised-IP mismatch diagnostics; no credentials/transcript logs; peer verification, fingerprint pinning and SSRF guard unchanged. Run PHP lint/regression then deploy WordPress MU publisher.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=41992171b9c04e746ebab7b9fb8da1d654203775

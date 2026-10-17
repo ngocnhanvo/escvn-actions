@@ -28,6 +28,12 @@ jobs:
           node --check build-hub-template/tests/persistent-deps.test.mjs
       - name: Exercise persistent dependencies twice without pnpm or live secrets
         run: node build-hub-template/tests/persistent-deps.test.mjs
+      - name: Parse Windows PowerShell and private workflow YAML
+        shell: bash
+        run: |
+          set -euo pipefail
+          pwsh -NoProfile -File build-hub-template/tests/validate-powershell.ps1
+          ruby -e 'require "yaml"; YAML.parse_file("build-hub-template/.github/workflows/vps-build.yml"); puts "Private Hub YAML syntax PASS"'
       - name: Verify private template cannot deploy over FTP
         shell: bash
         run: |

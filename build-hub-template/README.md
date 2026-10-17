@@ -15,7 +15,7 @@ Mục tiêu:
    - SOURCE_REPO_PAT: token Contents:read trên cả hai repo private ngocnhanvo/escvn-astro và ngocnhanvo/anhsangvacuocsong-astro.
    - ENV_FILE_ESC: nội dung .env production của riêng ESC.
    - ENV_FILE_ANHSANG: nội dung .env production của riêng Ánh Sáng.
-4. Trong mỗi Actions Hub công khai, escvn-actions và anhsangvacuocsong-actions, cấu hình riêng secret BUILD_HUB_DISPATCH_TOKEN với quyền Actions:write chỉ đến repository private esc-build-hub.
+4. Trong mỗi Actions Hub công khai, escvn-actions và anhsangvacuocsong-actions, cấu hình riêng secret BUILD_HUB_DISPATCH_TOKEN với quyền Contents:write (bắt buộc cho API repository_dispatch) chỉ đến repository private esc-build-hub.
 5. Tuyệt đối không gửi giá trị token, mật khẩu hoặc ENV_FILE qua chat. Không đặt FTP secrets trong Build Hub.
 
 ## 2. Cài hai runner riêng trên VPS

@@ -1,0 +1,131 @@
+name: ESC Astro GEO Benchmark - No Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      with_vps:
+        description: 'Run VPS Windows benchmark (runner must be online)'
+        type: boolean
+        default: false
+      with_build:
+        description: 'Run full Astro build, without deployment'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ['requests/esc-geo-benchmark.txt']
+
+permissions:
+  contents: read
+concurrency:
+  group: esc-geo-benchmark
+  cancel-in-progress: false
+
+jobs:
+  github_hosted:
+    name: GitHub-hosted Ubuntu benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout benchmark scripts
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: WordPress API latency
+        shell: pwsh
+        run: ./control/scripts/esc-geo-api-benchmark.ps1 -OutputFile esc-geo-api.json
+      - name: Save API benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-geo-api-github
+          path: esc-geo-api.json
+          retention-days: 7
+      - name: Checkout Astro master for build
+        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Prepare pnpm 9
+        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Prepare Node 24
+        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Timed Astro build (no FTP)
+        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        shell: pwsh
+        env:
+          BENCH_ENV: ${{ secrets.ENV_FILE }}
+          cachePage: 'false'
+          cacheTablePress: 'false'
+        run: ./control/scripts/esc-geo-build-benchmark.ps1 -OutputFile esc-geo-build.json
+      - name: Save build benchmark
+        if: github.event_name == 'workflow_dispatch' && inputs.with_build
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-geo-build-github
+          path: esc-geo-build.json
+          retention-days: 7
+
+  windows_vps:
+    name: VPS Windows Server 2016 benchmark
+    if: github.event_name == 'workflow_dispatch' && inputs.with_vps
+    runs-on: [self-hosted, Windows, X64, esc-geo-bench-win2016]
+    timeout-minutes: 55
+    steps:
+      - name: Checkout benchmark scripts
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: WordPress API latency
+        shell: powershell
+        run: .\control\scripts\esc-geo-api-benchmark.ps1 -OutputFile esc-geo-api.json
+      - name: Save API benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-geo-api-vps
+          path: esc-geo-api.json
+          retention-days: 7
+      - name: Checkout Astro master for build
+        if: inputs.with_build
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Prepare pnpm 9
+        if: inputs.with_build
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Prepare Node 24
+        if: inputs.with_build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Timed Astro build (no FTP)
+        if: inputs.with_build
+        shell: powershell
+        env:
+          BENCH_ENV: ${{ secrets.ENV_FILE }}
+          cachePage: 'false'
+          cacheTablePress: 'false'
+        run: .\control\scripts\esc-geo-build-benchmark.ps1 -OutputFile esc-geo-build.json
+      - name: Save build benchmark
+        if: inputs.with_build
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-geo-build-vps
+          path: esc-geo-build.json
+          retention-days: 7

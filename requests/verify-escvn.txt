@@ -47,3 +47,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-17 rerun ESC FTPS form QA after WordPress MU backup incident recovery PASS #39001942485. Source escvn-astro github becfa6548fabaf0e2d58a2860d7253bdd0d01f59. Previous build failed because temporary admin.esc.vn WordPress critical error, not Astro compile. Recheck full build, unit and SSR.
 
 2026-10-17 ESC CV FTPS publish HTML static validation fix QA: verify escvn-astro github 29e4666781e77c2a0093d64b15247391ad57de62. Mocked Chromium QA #39002610736 found content= attribute was incorrectly classified as on* JavaScript handler. Update regex word boundary; run unit, Astro check, full build and SSR smoke. Backend php source 95ee25f88a153506f40c8b8d34084007ac1c58b4.
+
+2026-10-17 FTPS one-domain auto-host QA: verify escvn-astro github 5acf360ac51a35ca0f7407d6bbe78e10a17198c7. Auto derive ftp.<domain>, optional advanced hostname override, don't send duplicate domain, preserve secure checks; unit test, Astro diagnostics, full build and SSR smoke. PHP backend classifier master 5fc19420232d0bb4dd3abeb2054a7049e9e9c311.

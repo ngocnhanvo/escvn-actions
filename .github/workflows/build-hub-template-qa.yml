@@ -34,6 +34,21 @@ jobs:
           set -euo pipefail
           pwsh -NoProfile -File build-hub-template/tests/validate-powershell.ps1
           ruby -e 'require "yaml"; YAML.parse_file("build-hub-template/.github/workflows/vps-build.yml"); puts "Private Hub YAML syntax PASS"'
+      - name: Package private Build Hub bootstrap files
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -r -q esc-build-hub-bootstrap.zip build-hub-template/
+          unzip -t esc-build-hub-bootstrap.zip | tail -1
+          test -s esc-build-hub-bootstrap.zip
+      - name: Publish bootstrap ZIP without credentials
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-build-hub-bootstrap
+          path: esc-build-hub-bootstrap.zip
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Verify private template cannot deploy over FTP
         shell: bash
         run: |

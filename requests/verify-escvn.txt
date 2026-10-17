@@ -41,3 +41,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-17: CV Studio new FTPS publish UI, remove mock Member login; Astro github 6060da7444ad84d2610d1112dc6db1f076b74597. PHP backend c39660ae56 QA SUCCESS 38981001021. Verify unit/check/build with updated FTPS page contract before merge.
 
 2026-10-17 ESC CV Studio AI prompt copy QA: escvn-astro github SHA 6b21abb4e6ac28a508ba734d07719f298537feb0. Verify full uploaded ESC CV v1 11-section prompt, copy button, clipboard handler, unit tests, Astro check and build before master merge.
+
+2026-10-17 CV FTPS form UX validation: verify ngocnhanvo/escvn-astro github 73af1e0c572a4961aed672a622f55b5c0e6bffec. Adds password visibility toggle, ignores backdrop clicks, ownership-gated submit, precise hostname and static HTML preflight; run unit, Astro check, full build and SSR smoke before production.

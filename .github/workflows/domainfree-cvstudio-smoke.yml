@@ -32,6 +32,9 @@ jobs:
           assert 'data-tablepress-preview="domainfree_05"' in html[max(0,start-500):end], 'ESC Table marker missing'
           assert 'href="/tao-cv-truc-tuyen"' in section, 'CTA destination missing'
           assert 'Tạo CV miễn phí ngay' in section, 'CTA text missing'
+          assert 'ESC CV STUDIO · HỒ SƠ SỐ' not in section, 'Old badge still visible'
+          faq=html.find('id="df03-faq-container"')
+          assert faq>=0 and faq<start, 'CV Studio section is not after the last domain-free FAQ section'
           assert 'domainfree' in html.lower(), 'Page unexpectedly changed'
           print('Production ESC CV Studio section + CTA verified')
           PY

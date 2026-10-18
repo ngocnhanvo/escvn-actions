@@ -51,3 +51,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-18: Deploy ESC CV Studio FTP support form (immediate support delivery; no email verification). Astro master c75bc2eb821e47c451b9891e8f05b3bbad9d82dc, PHP master 6d8ddc3f77bb3dbfde0f29d057ee9036f01fd409.
 
 2026-10-18: Release ESC Table domainfree_05 spotlight for /ten-mien-mien-phi linking to /tao-cv-truc-tuyen. Provision WP PASS #39103581775. Astro master 9c107ea0add112d31165e4016aed3a90943cbc89, merge PR #137. Verify on esc.vn after deploy.
+
+2026-10-18: Rebuild Astro master 9c107ea0add112d31165e4016aed3a90943cbc89 to move domainfree_05 to the last WordPress content section and hide CV Studio badge. WordPress edit PASS #39104402850; no frontend code changes.

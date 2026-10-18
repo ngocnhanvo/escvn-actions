@@ -1,0 +1,4 @@
+source_sha=61972c2914632ae452a8eb50d0e5f85994afcab8
+page=ten-mien-mien-phi
+table=domainfree_01
+target=#esc-domainfree-cvstudio

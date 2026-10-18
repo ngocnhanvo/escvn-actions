@@ -54,6 +54,7 @@ jobs:
           for path in \
             backend/wp-content/mu-plugins/esc-seo-files.php \
             backend/wp-content/mu-plugins/esc-marketing-settings.php \
+            backend/wp-content/mu-plugins/esc-cv-ftp-support.php \
             backend/wp-content/mu-plugins/esc-multilingual-delete-sync.php \
             backend/wp-content/mu-plugins/esc-multilingual-admin.php \
             backend/wp-content/plugins/esc-visual-builder/esc-visual-builder.php \
@@ -72,6 +73,7 @@ jobs:
             php -l "$path"
           done
           php backend/wp-content/plugins/esc-visual-builder/tests/key-value-content.php
+          php backend/tests/esc-cv-ftp-support-regression.php
 
       - name: Show source revision
         working-directory: source
@@ -126,6 +128,8 @@ jobs:
               'src/astro/pages/CVStudioPage.astro',
               'src/pages/tao-cv-truc-tuyen/builder.astro',
               'src/lib/cvstudio/renderer.ts',
+              'src/lib/cvstudio/cvFtpSupportForm.ts',
+              'src/lib/cvstudio/cvFtpSupportForm.test.ts',
               'src/lib/cvstudio/cvExport.ts',
               'src/lib/cvstudio/cvExport.test.ts',
               'src/lib/cvstudio/renderer.test.ts',

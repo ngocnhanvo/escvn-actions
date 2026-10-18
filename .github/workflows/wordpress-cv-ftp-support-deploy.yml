@@ -1,0 +1,98 @@
+name: Deploy ESC CV FTP Support MU Plugin
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-cv-ftp-support-deploy.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-wordpress-cv-ftp-support
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Validate source and destination
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          for key in SOURCE_REPO_PAT FTP_SERVER FTP_USERNAME FTP_PASSWORD WP_ADMIN_URL; do test -n "${!key}"; done
+          test "$(python3 -c 'import os,urllib.parse;print(urllib.parse.urlparse(os.environ["WP_ADMIN_URL"]).hostname)')" = 'admin.esc.vn'
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          tools: none
+      - name: Confirm exact PHP commit and lint
+        run: |
+          set -euo pipefail
+          expected="$(sed -n 's/^source_sha=//p' control/requests/wordpress-cv-ftp-support-deploy.txt | tail -1 | tr -d '\r')"
+          test "$(git -C source rev-parse HEAD)" = "$expected"
+          php -l source/wp-content/mu-plugins/esc-cv-ftp-support.php
+      - name: Install FTP client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+      - name: Stage, verify and activate MU plugin
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          protocol="${FTP_PROTOCOL:-ftp}"
+          case "$protocol" in ftp|ftps|sftp) ;; *) exit 1;; esac
+          dir="/domains/admin.esc.vn/public_html/wp-content/mu-plugins"
+          file="esc-cv-ftp-support.php"
+          stage=".esc-cv-ftp-support-$GITHUB_RUN_ID.tmp"
+          backup=".esc-cv-ftp-support-$GITHUB_RUN_ID.bak"
+          local="source/wp-content/mu-plugins/$file"
+          endpoint="$protocol://$FTP_SERVER"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 5
+          set net:timeout 45
+          set ssl:verify-certificate no
+          cd "$dir"
+          put "$local" -o "$stage"
+          get "$stage" -o /tmp/esc-cv-ftp-support-stage.php
+          bye
+          LFTP
+          cmp "$local" /tmp/esc-cv-ftp-support-stage.php
+          if lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; cd \"$dir\"; mv \"$file\" \"$backup\"; bye" >/dev/null 2>&1; then
+            echo "Existing support plugin backed up"
+          fi
+          if ! lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; cd \"$dir\"; mv \"$stage\" \"$file\"; bye"; then
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "cd \"$dir\"; mv \"$backup\" \"$file\"; bye" || true
+            exit 1
+          fi
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" -e "set cmd:fail-exit yes; cd \"$dir\"; get \"$file\" -o /tmp/esc-cv-ftp-support-live.php; bye"
+          cmp "$local" /tmp/esc-cv-ftp-support-live.php
+      - name: REST configuration smoke test
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 4 --retry-delay 4 --max-time 30 'https://admin.esc.vn/wp-json/esc-cv/v1/support/config' -o /tmp/esc-cv-ftp-support.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/esc-cv-ftp-support.json'))
+          assert isinstance(data,dict) and 'support_email' in data, data
+          print('FTP support REST config verified')
+          PY

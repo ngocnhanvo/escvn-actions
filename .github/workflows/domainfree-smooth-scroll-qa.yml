@@ -1,0 +1,66 @@
+name: Verify Smooth CV Scroll on ESC Domain Free
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/domainfree-smooth-scroll-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-domainfree-scroll-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify real smooth scroll in Chromium
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          try {
+            const context=await browser.newContext({viewport:{width:1365,height:850},reducedMotion:'no-preference'});
+            const page=await context.newPage();
+            await page.goto('https://esc.vn/ten-mien-mien-phi',{waitUntil:'domcontentloaded',timeout:45000});
+            const result=await page.evaluate(async ()=>{
+              const anchor=document.querySelector('a[href="#esc-domainfree-cvstudio"]');
+              const target=document.querySelector('#esc-domainfree-cvstudio');
+              if(!anchor||!target)throw new Error('CV anchor or target missing');
+              const behavior=getComputedStyle(document.documentElement).scrollBehavior;
+              if(behavior!=='smooth')throw new Error('Root scrolling is '+behavior+', expected smooth');
+              if(!('scrollMarginTop' in target.style))throw new Error('scroll margin CSS not supported');
+              window.scrollTo({top:0,behavior:'instant'});
+              await new Promise(resolve=>requestAnimationFrame(resolve));
+              anchor.click();
+              const samples=[];
+              for(let i=0;i<75;i++){
+                await new Promise(resolve=>requestAnimationFrame(resolve));
+                samples.push(window.scrollY);
+              }
+              const first=samples[0]||0, last=samples.at(-1)||0;
+              const moving=samples.filter((value,i)=>i>0&&value>first+3&&value<last-3).length;
+              if(last<200)throw new Error('Anchor click did not reach lower CV section: '+last);
+              if(moving<3)throw new Error('No intermediate animated scroll frames: '+JSON.stringify(samples.slice(0,15)));
+              return {behavior,frames:moving,first,last,hash:location.hash,margin:getComputedStyle(target).scrollMarginTop};
+            });
+            if(result.hash!=='#esc-domainfree-cvstudio')throw new Error('URL fragment not updated');
+            console.log('PASS real smooth scroll',JSON.stringify(result));
+            await context.close();
+            const reduced=await browser.newContext({viewport:{width:1365,height:850},reducedMotion:'reduce'});
+            const pageReduce=await reduced.newPage();
+            await pageReduce.goto('https://esc.vn/ten-mien-mien-phi',{waitUntil:'domcontentloaded',timeout:45000});
+            const reducedBehavior=await pageReduce.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior);
+            if(reducedBehavior==='smooth')throw new Error('Reduced motion preference must not animate');
+            console.log('PASS reduced-motion preference:',reducedBehavior);
+          } finally {
+            await browser.close();
+          }
+          NODE

@@ -53,3 +53,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-18: Release ESC Table domainfree_05 spotlight for /ten-mien-mien-phi linking to /tao-cv-truc-tuyen. Provision WP PASS #39103581775. Astro master 9c107ea0add112d31165e4016aed3a90943cbc89, merge PR #137. Verify on esc.vn after deploy.
 
 2026-10-18: Rebuild Astro master 9c107ea0add112d31165e4016aed3a90943cbc89 to move domainfree_05 to the last WordPress content section and hide CV Studio badge. WordPress edit PASS #39104402850; no frontend code changes.
+
+2026-10-18: Rebuild after ESC Table domainfree_01 link update. Replace 25 CV offer with 'Tạo CV online, website giới thiệu cá nhân miễn phí tại đây' linking to #esc-domainfree-cvstudio. WP edit PASS #39105082992; Astro master 9c107ea0add112d31165e4016aed3a90943cbc89 unchanged.

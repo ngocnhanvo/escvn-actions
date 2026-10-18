@@ -33,6 +33,11 @@ jobs:
           assert 'href="/tao-cv-truc-tuyen"' in section, 'CTA destination missing'
           assert 'Tạo CV miễn phí ngay' in section, 'CTA text missing'
           assert 'ESC CV STUDIO · HỒ SƠ SỐ' not in section, 'Old badge still visible'
+          new_text='Tạo CV online, website giới thiệu cá nhân miễn phí tại đây'
+          old_offer=html.find('25 mẫu CV online')
+          offer=html.find('href="#esc-domainfree-cvstudio">'+new_text+'</a>')
+          assert offer >= 0 and offer < start, 'New CV offer link must appear before the final CV Studio section'
+          assert old_offer == -1 or old_offer > start, 'Old CV offer link still visible above the final section'
           faq=html.find('id="df03-faq-container"')
           assert faq>=0 and faq<start, 'CV Studio section is not after the last domain-free FAQ section'
           assert 'domainfree' in html.lower(), 'Page unexpectedly changed'

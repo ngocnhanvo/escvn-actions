@@ -1,0 +1,44 @@
+name: ESC Domain Free CV Studio Production QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/domainfree-cvstudio-smoke.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-domainfree-cvstudio-smoke
+  cancel-in-progress: false
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify live Domain Free CV Studio spotlight and destination
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if curl -fsSL --compressed -H 'Cache-Control: no-cache' --max-time 30 \
+              'https://esc.vn/ten-mien-mien-phi' -o /tmp/esc-domainfree.html; then
+              if python3 - <<'PY'
+          from pathlib import Path
+          html=Path('/tmp/esc-domainfree.html').read_text(encoding='utf-8')
+          start=html.find('id="esc-domainfree-cvstudio"')
+          assert start >= 0, 'CV Studio section not rendered'
+          end=html.find('</section>',start)
+          assert end > start, 'CV Studio section not closed'
+          section=html[start:end]
+          assert 'data-tablepress-preview="domainfree_05"' in html[max(0,start-500):end], 'ESC Table marker missing'
+          assert 'href="/tao-cv-truc-tuyen"' in section, 'CTA destination missing'
+          assert 'Tạo CV miễn phí ngay' in section, 'CTA text missing'
+          assert 'domainfree' in html.lower(), 'Page unexpectedly changed'
+          print('Production ESC CV Studio section + CTA verified')
+          PY
+              then exit 0; fi
+            fi
+            echo "Attempt $attempt: waiting for production HTML to update..."
+            sleep 10
+          done
+          echo '::error::Domain Free CV Studio live smoke test failed'
+          exit 1

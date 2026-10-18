@@ -219,7 +219,9 @@ jobs:
               !builder.includes('data-cv-export-menu') ||
               !builder.includes('data-cv-publish-dialog') ||
               !builder.includes('data-cv-publish-ftps-form') ||
-              !builder.includes('data-cv-publish-member') ||
+              !builder.includes('data-cv-support-form') ||
+              !builder.includes('data-cv-support-open') ||
+              builder.includes('data-cv-publish-member') ||
               builder.includes('data-cv-publish-login')) {
             throw new Error('CV Builder missing editor/export or real FTPS publishing form');
           }

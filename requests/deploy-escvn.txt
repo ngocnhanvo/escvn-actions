@@ -49,3 +49,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-10-17: deploy CV Studio optional blank path to domain root; source escvn-astro master 7e61b0a3312084624dc88d91e5a2957a385f0ec8, PR #129 merged, dev github synchronized. Dev verify PASS #39037046583. UI warns root homepage index.html overwrite, requires separate confirmation and sends strict JSON true root_confirmed only when slug empty. PHP backend guard deployed PASS #39036808466. Windows VPS gateway.exe v0.2 upgrade is USER-ACTION PENDING; real homepage upload MUST NOT be attempted until updated executable installed on VPS. Chromium mocked QA pending. All FTP credentials omitted.
 
 2026-10-18: Deploy ESC CV Studio FTP support form (immediate support delivery; no email verification). Astro master c75bc2eb821e47c451b9891e8f05b3bbad9d82dc, PHP master 6d8ddc3f77bb3dbfde0f29d057ee9036f01fd409.
+
+2026-10-18: Release ESC Table domainfree_05 spotlight for /ten-mien-mien-phi linking to /tao-cv-truc-tuyen. Provision WP PASS #39103581775. Astro master 9c107ea0add112d31165e4016aed3a90943cbc89, merge PR #137. Verify on esc.vn after deploy.

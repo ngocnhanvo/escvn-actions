@@ -1,0 +1,2 @@
+source_sha=6d8ddc3f77bb3dbfde0f29d057ee9036f01fd409
+release=2026-10-18-direct-email-support

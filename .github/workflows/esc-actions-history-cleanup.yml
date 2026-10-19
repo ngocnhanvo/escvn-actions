@@ -1,0 +1,124 @@
+name: ESC Actions Cleanup Completed Run History
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/esc-actions-history-cleanup-20261019.txt'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: esc-actions-history-cleanup
+  cancel-in-progress: false
+jobs:
+  remove-finished-runs:
+    if: github.repository == 'ngocnhanvo/escvn-actions' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Delete only completed historical runs, protect all pending and running
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_API: ${{ github.api_url }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys, time, urllib.error, urllib.parse, urllib.request
+
+          repo = os.environ["GH_REPO"]
+          if repo != "ngocnhanvo/escvn-actions" or os.environ.get("GITHUB_REF") != "refs/heads/main":
+              raise SystemExit("Wrong repository or branch: refuse deletion")
+          api = os.environ["GH_API"].rstrip("/")
+          token = os.environ["GH_TOKEN"]
+          if not token:
+              raise SystemExit("Missing GitHub Actions write token")
+          prefix = api + "/repos/" + repo
+
+          # Runs queued at the time the user requested the cleanup are protected
+          # even if they become completed during this job.
+          explicitly_protected = {39279265894, 39279235322}
+          allowed_conclusions = {
+              "success", "failure", "cancelled", "timed_out", "neutral", "skipped", "startup_failure"
+          }
+          # action_required means human approval is outstanding: never delete.
+          deferred_statuses = {"queued", "pending", "waiting", "requested", "in_progress", "action_required"}
+
+          def request(method, path, expected=(200,)):
+              url = prefix + path
+              for attempt in range(7):
+                  req = urllib.request.Request(url, method=method, headers={
+                      "Authorization": "Bearer " + token,
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "User-Agent": "ESC-Completed-Runs-Only-Cleanup"
+                  })
+                  try:
+                      with urllib.request.urlopen(req, timeout=35) as response:
+                          code = response.status
+                          if code not in expected:
+                              raise RuntimeError("Unexpected GitHub API response " + str(code))
+                          data = response.read()
+                          return json.loads(data) if data else None
+                  except urllib.error.HTTPError as e:
+                      if e.code in (403, 429, 500, 502, 503, 504) and attempt < 6:
+                          pause = min(50, 2 ** attempt + 1)
+                          print("API temporary status %d, retrying in %ds" % (e.code, pause), flush=True)
+                          time.sleep(pause)
+                          continue
+                      if method == "DELETE" and e.code == 404:
+                          return None # Another maintenance job already deleted this run.
+                      raise RuntimeError("GitHub API returned HTTP " + str(e.code) + " for " + method)
+
+          page = 1
+          snapshot = []
+          while True:
+              result = request("GET", "/actions/runs?per_page=100&page=" + str(page))
+              data = result.get("workflow_runs", [])
+              snapshot.extend(data)
+              print("Scanned page %d: %d runs" % (page, len(data)), flush=True)
+              if len(data) < 100:
+                  break
+              page += 1
+              if page > 100:
+                  raise RuntimeError("Unexpectedly large history: halt to avoid unbounded deletes")
+
+          # Protect all runs that were not completed when the scan began.
+          protected = explicitly_protected | {
+              int(run["id"]) for run in snapshot
+              if run.get("status") != "completed"
+              or run.get("conclusion") not in allowed_conclusions
+          }
+          protected.add(int(os.environ["GITHUB_RUN_ID"]))
+          candidates = [int(run["id"]) for run in snapshot
+              if run.get("status") == "completed"
+              and run.get("conclusion") in allowed_conclusions
+              and int(run["id"]) not in protected]
+
+          print("History snapshot: total=%d, eligible=%d, protected=%d"
+                % (len(snapshot), len(candidates), len(protected)), flush=True)
+          print("Protected initial queued M77 run 39279265894 and CI run 39279235322", flush=True)
+          removed = 0
+          skipped = 0
+          for run_id in candidates:
+              if run_id in protected:
+                  skipped += 1
+                  continue
+              # Double-check GitHub's CURRENT run status immediately before deleting.
+              fresh = request("GET", "/actions/runs/" + str(run_id))
+              if fresh.get("status") != "completed" or fresh.get("conclusion") not in allowed_conclusions:
+                  print("KEEP changed-state run", run_id, flush=True)
+                  skipped += 1
+                  continue
+              request("DELETE", "/actions/runs/" + str(run_id), expected=(204,))
+              removed += 1
+              if removed % 25 == 0:
+                  print("Removed %d/%d completed historical runs" % (removed, len(candidates)), flush=True)
+              time.sleep(0.3)
+
+          print("CLEANUP COMPLETE deleted=%d skipped=%d protected=%d"
+                % (removed, skipped, len(protected)), flush=True)
+          print("Queued, waiting, pending, requested, in-progress and action_required runs were never targeted.", flush=True)
+          PY

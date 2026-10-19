@@ -9,3 +9,9 @@ astro_master_sha=b96bf3df03c947dbaa540af903b30680961332f2
 deploy_run=39269328505
 expect=M80 pixel mean RGB below 7, title-border band below 9, PDF page ratio matches PNG
 no_customer_ftp_upload=true
+
+check=2026-10-19 PDF and PNG open as browser-native viewer tabs on esc.vn; no forced downloads; original M80 PDF ratio
+astro_master_sha=cab06f1754a3c17ef7c0315d70b41634b9d6ed11
+deploy_run=39276119775
+reference_dev_browser_qa=39275346388
+expect=native-PDF-blob-popup,image-PNG-blob-popup,zero-auto-downloads,PDF-single-page-aspect-pass

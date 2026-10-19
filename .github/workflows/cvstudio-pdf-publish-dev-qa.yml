@@ -1,0 +1,88 @@
+name: ESC CV PDF FTPS Release Gate
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-pdf-publish-dev-qa.txt']
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Validate repo source revisions
+        id: version
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          sha_front="$(sed -n 's/^astro_github_sha=//p' control/requests/cvstudio-pdf-publish-dev-qa.txt | tail -1 | tr -d '\r')"
+          sha_back="$(sed -n 's/^php_master_sha=//p' control/requests/cvstudio-pdf-publish-dev-qa.txt | tail -1 | tr -d '\r')"
+          [[ "$sha_front" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$sha_back" =~ ^[a-f0-9]{40}$ ]]
+          echo "front=$sha_front" >> "$GITHUB_OUTPUT"
+          echo "back=$sha_back" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: github
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: frontend
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: backend
+      - name: Enforce checked revisions and safety boundaries
+        env:
+          FRONT: ${{ steps.version.outputs.front }}
+          BACK: ${{ steps.version.outputs.back }}
+        run: |
+          set -euo pipefail
+          test "$(git -C frontend rev-parse HEAD)" = "$FRONT"
+          test "$(git -C backend rev-parse HEAD)" = "$BACK"
+          python3 - <<'PY'
+          from pathlib import Path
+          front=Path('frontend/src/pages/tao-cv-truc-tuyen/builder.astro').read_text()
+          back=Path('backend/wp-content/mu-plugins/esc-cv-publish.php').read_text()
+          assert "format:isPublishablePdf()?'pdf':'html'" in front
+          assert "pdf_base64:pdfBase64" in front
+          assert "if (self::gateway_enabled())" in back
+          assert "'esc_cv_publish_pdf_gateway_unsupported'" in back
+          assert "'cv.pdf'" in back and "RNTO ' . $file_name" in back
+          assert "'cv.pdf');" in back
+          print('Verified PDF FTPS security gates; Gateway mode is fail-closed')
+          PY
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl
+          tools: none
+      - name: PHP syntax and publisher offline regression
+        run: |
+          php -l backend/wp-content/mu-plugins/esc-cv-publish.php
+          php -l backend/tests/esc-cv-publish-regression.php
+          php backend/tests/esc-cv-publish-regression.php
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install Astro dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Frontend publish and CV upload guards
+        working-directory: frontend
+        run: pnpm exec vitest run src/lib/cvstudio/cvPublishForm.test.ts src/lib/cvstudio/cvUserUpload.test.ts

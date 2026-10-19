@@ -81,3 +81,8 @@ reason=2026-10-19 user confirmed successful real FTPS PDF upload but published C
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=54c23175a577fb49e01f9f3816c0e34009678aab
+
+reason=2026-10-19 ESC CV Studio multi-format publisher: validate and publish one true PNG, JPG/JPEG or WebP image <=4MiB, generate responsive index.html without nested scroll/footer; support PDF and HTML as before. Signed Gateway routes image_base64 and image_mime, pins FTPS cert and HMAC unchanged. PHP regression includes PNG JPEG WEBP sample images. NOTE: New Windows combined Gateway installer must be installed by owner BEFORE live image publishing; this workflow never publishes files to any customer FTPS host.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=9d7432f2cef632851e9133ef1abd23b3e5fc6ce5

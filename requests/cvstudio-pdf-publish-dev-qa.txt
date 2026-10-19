@@ -2,3 +2,4 @@ astro_github_sha=da26ee92ba565cc81dc03a822365ef8b639ebc8b
 php_master_sha=9d7432f2cef632851e9133ef1abd23b3e5fc6ce5
 scope=pdf-png-jpeg-webp-publishing-no-production-deploy
 reason=2026-10-19 Combined Gateway will accept image/png image/jpeg image/webp and PDF, keep signed HMAC and pinned TLS, one image CV, 4MiB. Verify new file content and FTPS UI guards before deployment. No credentials/customer FTP sent.
+rerun=2026-10-19 unified image/pdf signed relay release gate updated to test new image format assertions

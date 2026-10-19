@@ -1,4 +1,4 @@
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
-source_sha=c017d7e1893109ad1cd145e1c2ed4f9451899d13
-reason=Deploy backwards-compatible public CV gallery pagination with regression coverage
+source_sha=d83a69359fea1d3eb6067a516734cff3867c21a3
+reason=Sort ESC CV gallery and Manager by numeric CV ID descending (M100 before M99) before pagination; regression tested. M27-M76 batch prior deployment SUCCESS #39296137272. Do not alter active template versions.

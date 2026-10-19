@@ -65,7 +65,7 @@ jobs:
             if curl -fsS --connect-timeout 2 --max-time 5 'http://127.0.0.1:4321/tao-cv-truc-tuyen/builder/' -o /dev/null; then break; fi
             sleep 1
           done
-          node scripts/cvstudio-m80-export-parity-qa.mjs || {
+          xvfb-run -a env ESC_QA_HEADFUL=1 node scripts/cvstudio-m80-export-parity-qa.mjs || {
             tail -120 /tmp/esc-m80-ssr.log
             exit 1
           }

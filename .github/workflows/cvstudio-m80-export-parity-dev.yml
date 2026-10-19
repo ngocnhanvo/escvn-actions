@@ -41,6 +41,8 @@ jobs:
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: printf '%s' "$ENV_FILE" > source/.env
+      - name: Lint browser QA before expensive build
+        run: node --check control/scripts/cvstudio-m80-export-parity-qa.mjs
       - name: Build Astro github dev
         working-directory: source
         run: pnpm run build-git

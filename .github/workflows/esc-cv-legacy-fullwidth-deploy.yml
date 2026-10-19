@@ -1,0 +1,72 @@
+name: ESC CV Original Templates Full Width (49)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/esc-cv-legacy-fullwidth.txt'
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-original-normalization-49
+  cancel-in-progress: false
+jobs:
+  normalize:
+    if: github.repository == 'ngocnhanvo/escvn-actions' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify request strictly scopes 49 originals
+        run: |
+          set -euo pipefail
+          grep -Fqx 'scope=M27..M76-except-M48' requests/esc-cv-legacy-fullwidth.txt
+          grep -Fqx 'approved_change=root-800px-to-100-percent-only' requests/esc-cv-legacy-fullwidth.txt
+          grep -Fqx 'preserve=M26,M48,M77,M78,M79,M80-plus' requests/esc-cv-legacy-fullwidth.txt
+          python -m py_compile scripts/esc_cv_legacy_batch.py
+          node --check scripts/esc_cv_legacy_thumbnails.mjs
+          node --check scripts/esc_cv_legacy_live_verify.mjs
+      - name: Install template validator and screenshot browser
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check requests==2.32.3 beautifulsoup4==4.13.3
+          npm install --no-save playwright@1.55.0 handlebars@4.7.8 sharp@0.34.3
+          npx playwright install --with-deps chromium
+      - name: Prepare 49 exact CSS patches from live original versioned ZIPs
+        env:
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          LEGACY_MODE: prepare
+        run: python scripts/esc_cv_legacy_batch.py
+      - name: Generate and validate new preview thumbnail for each template
+        run: node scripts/esc_cv_legacy_thumbnails.mjs
+      - name: Upload new immutable versions and activate only approved originals
+        env:
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          LEGACY_MODE: publish
+        run: python scripts/esc_cv_legacy_batch.py
+      - name: Browser QA of all 49 live Builder template layouts
+        run: node scripts/esc_cv_legacy_live_verify.mjs
+      - name: Archive the pre-change ZIPs and final QA reports for rollback
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: esc-cv-49-legacy-versioned-backup-and-qa
+          path: |
+            qa-legacy-batch/batch.json
+            qa-legacy-batch/deploy-report.json
+            qa-legacy-batch/live-report.json
+            qa-legacy-batch/thumbnail-report.json
+            qa-legacy-batch/*/original.zip
+            qa-legacy-batch/M*-live.png
+          retention-days: 14
+          if-no-files-found: ignore

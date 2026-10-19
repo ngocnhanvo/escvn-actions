@@ -1,0 +1,29 @@
+name: ESC CV PNG JPEG WebP Production Browser QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-image-publish-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-image-browser-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Chromium
+        run: |
+          node --check scripts/cvstudio-image-publish-qa.mjs
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Validate image CV publication using intercepted mock endpoint
+        run: node scripts/cvstudio-image-publish-qa.mjs

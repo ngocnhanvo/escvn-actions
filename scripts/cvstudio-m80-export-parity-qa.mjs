@@ -1,0 +1,92 @@
+import {chromium} from 'playwright';
+import {PNG} from 'pngjs';
+import {readFile,writeFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+
+const base=process.env.ESC_QA_BASE||'http://127.0.0.1:4321';
+const browser=await chromium.launch({headless:true});
+try{
+  const page=await browser.newPage({viewport:{width:1540,height:990},deviceScaleFactor:1,acceptDownloads:true});
+  const dataUrl='https://admin.esc.vn/wp-json/esc-cv/v1/templates/M80/builder';
+  const response=await page.request.get(dataUrl,{timeout:25000});
+  assert(response.ok(),'M80 source registry unavailable (HTTP '+response.status()+')');
+  const template=await response.json();
+  assert.equal(template.id,'M80','Unexpected template ID');
+  assert(/^\d+\.\d+\.\d+$/.test(template.version),'M80 version invalid');
+  await page.route(dataUrl,route=>route.fulfill({
+    status:200,headers:{'Content-Type':'application/json',
+      'Access-Control-Allow-Origin':new URL(base).origin},body:JSON.stringify(template)
+  }));
+  const start=await page.goto(base+'/tao-cv-truc-tuyen/builder/',{waitUntil:'domcontentloaded',timeout:60000});
+  assert(start?.ok(),'CV Builder failed on development SSR');
+  await page.evaluate(version=>sessionStorage.setItem('esc-cvstudio:demo:selection',
+    JSON.stringify({id:'M80',version,source:'registry',at:Date.now()})),template.version);
+  await page.reload({waitUntil:'domcontentloaded',timeout:60000});
+  await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});
+  const frame=page.locator('[data-cv-live-frame]');
+  await frame.waitFor({state:'visible'});
+  const frameDoc=page.frameLocator('[data-cv-live-frame]');
+  await frameDoc.locator('body').waitFor({state:'visible',timeout:20000});
+  await page.waitForTimeout(1700);
+  await frameDoc.locator('body').screenshot({path:'m80-preview.png'});
+  const preview=PNG.sync.read(await readFile('m80-preview.png'));
+  const width=await frame.evaluate(el=>el.contentWindow?.innerWidth||el.clientWidth);
+  await page.locator('[data-cv-export-summary]').click();
+  const exporting=page.waitForEvent('download',{timeout:45000});
+  await page.locator('[data-cv-export-format="png"]').click();
+  const file=await exporting;
+  const blob=await readFile(await file.path());
+  const raster=PNG.sync.read(blob);
+  await writeFile('m80-export.png',blob);
+  const scale=raster.width/width;
+  assert(scale>=0.95&&scale<=2.05,'Unexpected raster scale '+scale);
+  const screenshotScale=preview.width/width;
+  let count=0,sum=0,sumSolid=0,flatCount=0;
+  // Compare same logical locations. Ignore a tiny edge/border offset and
+  // text anti-aliasing only; large shifted blocks should still be caught.
+  const logicalWidth=Math.min(width,preview.width/screenshotScale,raster.width/scale);
+  const logicalHeight=Math.min(preview.height/screenshotScale,raster.height/scale);
+  for(let y=16;y<logicalHeight-16;y+=5){
+    for(let x=16;x<logicalWidth-16;x+=5){
+      const ax=Math.min(preview.width-1,Math.floor(x*screenshotScale));
+      const ay=Math.min(preview.height-1,Math.floor(y*screenshotScale));
+      const bx=Math.min(raster.width-1,Math.floor(x*scale));
+      const by=Math.min(raster.height-1,Math.floor(y*scale));
+      const a=(ay*preview.width+ax)*4,b=(by*raster.width+bx)*4;
+      const delta=(Math.abs(preview.data[a]-raster.data[b])+
+        Math.abs(preview.data[a+1]-raster.data[b+1])+
+        Math.abs(preview.data[a+2]-raster.data[b+2]))/3;
+      count++;sum+=delta;
+      if(Math.max(preview.data[a],preview.data[a+1],preview.data[a+2])-
+         Math.min(preview.data[a],preview.data[a+1],preview.data[a+2])<15){
+        flatCount++;sumSolid+=delta;
+      }
+    }
+  }
+  assert(count>10000,'Too few compared pixels');
+  const mean=sum/count,solidMean=sumSolid/Math.max(1,flatCount);
+  console.log('M80 live Builder vs PNG',JSON.stringify({
+    logicalWidth:width,previewWidth:preview.width,previewHeight:preview.height,
+    exportedWidth:raster.width,exportedHeight:raster.height,scale,
+    meanRGBDifference:+mean.toFixed(2),flatRGBDifference:+solidMean.toFixed(2),
+    comparisonPoints:count
+  }));
+  // Layout mismatch must not quietly pass just because a PNG was generated.
+  assert(mean<40,'M80 layout differs too much between Builder and PNG (mean RGB '+mean.toFixed(2)+')');
+  await page.locator('[data-cv-export-summary]').click();
+  const downloading=page.waitForEvent('download',{timeout:45000});
+  await page.locator('[data-cv-export-format="pdf"]').click();
+  const pdfDownload=await downloading;
+  const pdf=await readFile(await pdfDownload.path());
+  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+  const source=pdf.toString('latin1');
+  const page=source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
+  assert(page,'PDF page bounds missing');
+  const countMatch=source.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/);
+  assert.equal(+countMatch?.[1],1,'M80 must have exactly one PDF page');
+  const physicalRatio=Number(page[2])/Number(page[1]);
+  const canvasRatio=raster.height/raster.width;
+  assert(Math.abs(physicalRatio-canvasRatio)<0.008,
+    'PDF aspect '+physicalRatio+' differs from PNG '+canvasRatio);
+  console.log('PASS M80: Builder/PNG layout and original-ratio PDF from same canvas');
+}finally{await browser.close();}

@@ -12,7 +12,7 @@ function validPdf(){
     '<< /Length '+Buffer.byteLength(content)+' >>\nstream\n'+content+'endstream',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
   ];
-  const chunks=['%PDF-1.4\n'],offsets=[0],length=Buffer.byteLength(chunks[0]);
+  const chunks=['%PDF-1.4\n'],offsets=[0];let length=Buffer.byteLength(chunks[0]);
   for(let i=0;i<objects.length;i++){
     offsets.push(length);
     const o=(i+1)+' 0 obj\n'+objects[i]+'\nendobj\n';

@@ -2,3 +2,4 @@ date=2026-10-19
 astro_branch=github
 astro_sha=3382c1749cc2b078b81739f6bae892ac1e516030
 intent=compare M80 live Builder screenshot vs exported PNG pixels and exported PDF aspect without modifying production or customer FTP
+retry=2026-10-19 syntax-fixed-browser-check-after-initial-script-failure

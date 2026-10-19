@@ -1,0 +1,126 @@
+name: ESC CV PDF Shell Layout QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cvstudio-pdf-shell-qa.yml', 'requests/cvstudio-pdf-shell-qa.txt']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: curl
+          tools: none
+      - name: Generate exactly the production PDF wrapper and run PHP regression
+        run: |
+          set -euo pipefail
+          php -l source/wp-content/mu-plugins/esc-cv-publish.php
+          php source/tests/esc-cv-publish-regression.php
+          mkdir -p qa-public
+          php -r 'ob_start(); require "source/tests/esc-cv-publish-regression.php"; ob_end_clean(); file_put_contents("qa-public/index.html", ESC_CV_Publish::pdf_index_html());'
+          python3 - <<'PY'
+          from pathlib import Path
+          body=b'BT /F1 30 Tf 72 730 Td (ESC PDF shell QA) Tj ET\n'
+          objects=[b'<< /Type /Catalog /Pages 2 0 R >>',b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+          b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+          b'<< /Length '+str(len(body)).encode()+b' >>\nstream\n'+body+b'endstream',
+          b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+          pdf=bytearray(b'%PDF-1.4\n'); offset=[0]
+          for i,obj in enumerate(objects,1):
+            offset.append(len(pdf))
+            pdf+=str(i).encode()+b' 0 obj\n'+obj+b'\nendobj\n'
+          pos=len(pdf);pdf+=b'xref\n0 6\n0000000000 65535 f \n'
+          for n in offset[1:]:pdf+=('%010d 00000 n \n'%n).encode()
+          pdf+=b'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+str(pos).encode()+b'\n%%EOF\n'
+          Path('qa-public/cv.pdf').write_bytes(pdf)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Chromium
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Browser check - PDF iframe only and outer document not scrollable
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd control
+          node --input-type=module <<'NODE'
+          import {chromium} from 'playwright';
+          import {spawn} from 'node:child_process';
+          import assert from 'node:assert/strict';
+          const server=spawn('python3',['-m','http.server','18080','--bind','127.0.0.1','--directory','../qa-public'],{stdio:'ignore'});
+          let browser;
+          try {
+            browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1366,height:768}});
+            let loaded=false;
+            for(let n=0;n<20;n++){
+              try {const r=await page.goto('http://127.0.0.1:18080/',{waitUntil:'domcontentloaded',timeout:3000});if(r?.ok()){loaded=true;break;}}catch{}
+              await new Promise(resolve=>setTimeout(resolve,300));
+            }
+            assert(loaded,'PDF shell server unavailable');
+            await page.waitForTimeout(1500);
+            const metrics=await page.evaluate(()=>{
+              const rect=document.querySelector('iframe')?.getBoundingClientRect();
+              return {iframes:document.querySelectorAll('iframe').length,
+                links:document.querySelectorAll('a,.fallback').length,
+                outerHeight:document.documentElement.scrollHeight,
+                viewportHeight:document.documentElement.clientHeight,
+                bodyHeight:document.body.scrollHeight,
+                bodyClient:document.body.clientHeight,
+                overflow:getComputedStyle(document.documentElement).overflow,
+                width:Math.round(rect?.width||0),height:Math.round(rect?.height||0),
+                viewportWidth:innerWidth,viewportPxHeight:innerHeight,
+                src:document.querySelector('iframe')?.getAttribute('src')};
+            });
+            console.log('Generated PDF HTML shell:',metrics);
+            assert.equal(metrics.iframes,1);
+            assert.equal(metrics.links,0);
+            assert.equal(metrics.outerHeight,metrics.viewportHeight);
+            assert.equal(metrics.bodyHeight,metrics.bodyClient);
+            assert.equal(metrics.overflow,'hidden');
+            assert.equal(metrics.width,metrics.viewportWidth);
+            assert.equal(metrics.height,metrics.viewportPxHeight);
+            assert.equal(metrics.src,'./cv.pdf');
+            console.log('PASS PDF iframe occupies viewport without outer scrollbar or footer');
+          }finally{await browser?.close();server.kill();}
+          NODE
+      - name: Read-only customer HTML freshness check (never uploads)
+        shell: bash
+        run: |
+          set +e
+          code=$(curl --proto '=https' -k -L -sS --max-time 25 -H 'Cache-Control: no-cache' \
+            -o /tmp/pdf-customer-index.html -w '%{http_code}' \
+            'https://wphosting.io.vn/cv-cua-toi/?esc_pdf_shell_qa=20261019')
+          if [ "$code" != 200 ]; then
+            echo "Customer public page not readable from runner (HTTP $code). This is not a deployment failure."
+            exit 0
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          h=Path('/tmp/pdf-customer-index.html').read_text(errors='replace')
+          old='Xem hoặc tải CV dạng PDF' in h
+          new='overflow:hidden' in h and '.fallback' not in h
+          print('Customer public static index has obsolete download footer:',old)
+          print('Customer public static index has current wrapper:',new)
+          print('Customer needs to republish PDF to update static index:',old or not new)
+          PY

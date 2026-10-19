@@ -1,0 +1,106 @@
+name: ESC Admin Root Apache Fast Redirect (Safe Deploy)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/esc-admin-root-fast-redirect-deploy.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-admin-root-redirect-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Check out ESC Actions control scripts
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Require approved source commit and official target
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$WP_ADMIN_URL"
+          test -n "$FTP_SERVER"
+          test -n "$FTP_USERNAME"
+          test -n "$FTP_PASSWORD"
+          test -n "$SOURCE_REPO_PAT"
+          test -f control/requests/esc-admin-root-fast-redirect-deploy.txt
+          grep -Fqx 'source_sha=6235af066848594db5332ef9378b61a762dcbccd' \
+            control/requests/esc-admin-root-fast-redirect-deploy.txt
+          python3 - <<'PY'
+          import os,urllib.parse
+          u=urllib.parse.urlparse(os.environ['WP_ADMIN_URL'])
+          if u.hostname != 'admin.esc.vn':
+              raise SystemExit('Unexpected ESC WP hostname; no changes allowed')
+          print('PASS official ESC WordPress target')
+          PY
+      - name: Check out pinned ESC PHP source
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: 6235af066848594db5332ef9378b61a762dcbccd
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Validate theme fallback, standalone Apache rule and script
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = '6235af066848594db5332ef9378b61a762dcbccd'
+          php -l source/wp-content/themes/vibe-code-theme/inc/page/index.php
+          grep -Fq 'wp_safe_redirect( admin_url(), 302 );' source/wp-content/themes/vibe-code-theme/inc/page/index.php
+          grep -Fq 'ESC ADMIN ROOT FAST REDIRECT' source/.htaccess
+          grep -Fq 'RewriteCond %{QUERY_STRING} ^$' source/.htaccess
+          python3 -m py_compile control/scripts/esc-admin-root-fast-redirect-deploy.py
+          echo 'PASS pinned PHP source, Apache path/query guards, and deploy syntax'
+      - name: Install FTP client
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+      - name: Safely patch LIVE .htaccess with verified backup and rollback
+        shell: bash
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: python3 control/scripts/esc-admin-root-fast-redirect-deploy.py
+      - name: Independent HTTP timing and REST integrity confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess,json,statistics
+          host='https://admin.esc.vn'
+          cases=[('/',302,'/wp-admin/'),('/wp-admin/',302,None),
+                 ('/wp-json/',200,None),('/?rest_route=%2F',200,None)]
+          for path,expected,redirect in cases:
+              samples=[]
+              for _ in range(3):
+                  p=subprocess.run(['curl','--http1.1','--silent','--show-error',
+                      '--connect-timeout','10','--max-time','30','-D','-', '-o','/dev/null',
+                      '-w','\nESC_STATS:%{http_code}|%{time_total}\n',host+path],
+                      capture_output=True,text=True,timeout=38)
+                  if p.returncode:raise SystemExit('HTTP probe failed: '+path)
+                  bits=p.stdout.split('ESC_STATS:')[-1].strip().split('|')
+                  if int(bits[0])!=expected:raise SystemExit('HTTP status changed: '+path)
+                  hdr=p.stdout.split('ESC_STATS:')[0].lower()
+                  if redirect and ('location: https://admin.esc.vn'+redirect).lower() not in hdr:
+                      raise SystemExit('Root redirect target changed')
+                  if path=='/' and 'x-redirect-by: wordpress' in hdr:
+                      raise SystemExit('Apache did not handle root fast redirect')
+                  samples.append(round(float(bits[1]),3))
+              print(json.dumps({'path':path,'http':expected,'avg_s':round(statistics.mean(samples),3),'times_s':samples}))
+          PY

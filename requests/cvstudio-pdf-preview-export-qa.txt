@@ -2,3 +2,5 @@ date=2026-10-19
 source_sha=bd5eff0edc228b2b00dac8df62cf510982d816b2
 deploy_run=39203594231
 checks=valid-pdf-native-blob-iframe-and-cv-html-to-pdf-png-export
+
+retry=correct-synthetic-PDF-fixture-2026-10-19

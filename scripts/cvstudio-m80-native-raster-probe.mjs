@@ -40,13 +40,13 @@ try{
  const maxW=Math.min(screenshot.width,rendered.width),maxH=Math.min(screenshot.height,rendered.height);
  for(let y=100;y<maxH-10;y+=3){
    for(let x=30;x<maxW-20;x+=3){
-     let a=(y*screenshot.width+x)*4,b=(y*rendered.width+x)*4;
+     let a=(y*screenshot.width+x)*4,b=((y+8)*rendered.width+(x+8))*4;
      const d=(Math.abs(screenshot.data[a]-rendered.data[b])+Math.abs(screenshot.data[a+1]-rendered.data[b+1])+Math.abs(screenshot.data[a+2]-rendered.data[b+2]))/3;
      total+=d;count++;
      if(rendered.data[b]<240||rendered.data[b+1]<240||rendered.data[b+2]<240)nonwhite++;
    }
  }
- console.log('Native raster comparison',JSON.stringify({width:rendered.width,height:rendered.height,meanRGB:total/count,nonwhitePixels:nonwhite,points:count,preview:[screenshot.width,screenshot.height]}));
+ console.log('Native raster comparison',JSON.stringify({width:rendered.width,height:rendered.height,alignedMeanRGB:total/count,nonwhitePixels:nonwhite,points:count,preview:[screenshot.width,screenshot.height]}));
  assert(nonwhite>3000,'ForeignObject raster unexpectedly blank');
  console.log('PASS native SVG foreignObject M80 raster is readable');
 }finally{await browser.close();}

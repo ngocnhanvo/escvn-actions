@@ -1,0 +1,5 @@
+mode=read-only
+scope=M20..M79-except-M77
+purpose=selective-fix-extra-side-whitespace-and-unwanted-outside-border-only
+keep_M77=1.0.1
+exclude_user_uploaded_templates=true

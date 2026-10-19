@@ -1,0 +1,3 @@
+source_sha=b24e061c32d29dd3684cc0c371b003d8d748f307
+branch=github
+scope=cvstudio-pdf-blob-preview-and-pdf-png-export-viewport

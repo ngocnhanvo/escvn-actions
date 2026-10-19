@@ -1,0 +1,26 @@
+name: ESC CV M80 Native Raster Read-only Probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-m80-native-raster-probe.txt']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser
+        run: |
+          node --check scripts/cvstudio-m80-native-raster-probe.mjs
+          npm install --no-save playwright@1.55.0 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+      - name: Compare Browser-native foreignObject PNG vs actual Builder
+        run: node scripts/cvstudio-m80-native-raster-probe.mjs

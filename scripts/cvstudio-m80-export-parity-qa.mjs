@@ -36,12 +36,29 @@ try{
   const preview=PNG.sync.read(await readFile('m80-preview.png'));
   const width=await frame.evaluate(el=>el.contentWindow?.innerWidth||el.clientWidth);
   await page.locator('[data-cv-export-summary]').click();
-  const exporting=page.waitForEvent('download',{timeout:45000});
+  const unexpectedDownloads=[];
+  page.on('download',download=>unexpectedDownloads.push(download.suggestedFilename()));
+  const imageTabOpened=page.waitForEvent('popup',{timeout:30000});
   await page.locator('[data-cv-export-format="png"]').click();
-  const file=await exporting;
-  const blob=await readFile(await file.path());
+  const imageTab=await imageTabOpened;
+  await imageTab.waitForURL(/^blob:/,{timeout:45000});
+  const pngResult=await page.evaluate(async url=>{
+    const response=await fetch(url);
+    const data=await response.blob();
+    const reader=new FileReader();
+    const base64=await new Promise((resolve,reject)=>{
+      reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+      reader.onerror=()=>reject(reader.error);
+      reader.readAsDataURL(data);
+    });
+    return {type:data.type,base64};
+  },imageTab.url());
+  assert.equal(pngResult.type,'image/png');
+  const blob=Buffer.from(pngResult.base64,'base64');
   const raster=PNG.sync.read(blob);
   await writeFile('m80-export.png',blob);
+  assert.deepEqual(unexpectedDownloads,[],'M80 image must open, not auto-download');
+  await imageTab.close();
   const scale=raster.width/width;
   assert(scale>=0.95&&scale<=2.05,'Unexpected raster scale '+scale);
   // The Builder body has its default 8px horizontal and 16px vertical
@@ -108,19 +125,31 @@ try{
   assert(titleBandPixels>1000&&titleBandMean<9,
     'M80 PNG draws a title/summary border differently from the Builder');
   await page.locator('[data-cv-export-summary]').click();
-  const downloading=page.waitForEvent('download',{timeout:45000});
+  const pdfTabOpened=page.waitForEvent('popup',{timeout:30000});
   await page.locator('[data-cv-export-format="pdf"]').click();
-  const pdfDownload=await downloading;
-  const pdf=await readFile(await pdfDownload.path());
-  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
-  const source=pdf.toString('latin1');
-  const pdfPage=source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
-  assert(pdfPage,'PDF page bounds missing');
-  const countMatch=source.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/);
-  assert.equal(+countMatch?.[1],1,'M80 must have exactly one PDF page');
-  const physicalRatio=Number(pdfPage[2])/Number(pdfPage[1]);
+  const pdfTab=await pdfTabOpened;
+  await pdfTab.waitForURL(/^blob:/,{timeout:45000});
+  const pdfInfo=await page.evaluate(async url=>{
+    const result=await fetch(url);
+    const data=await result.arrayBuffer();
+    const bytes=new Uint8Array(data);
+    // PDF contains raster JPEG; the page dictionary is plain ASCII.
+    const source=new TextDecoder('latin1').decode(bytes);
+    return {type:result.headers.get('content-type'),length:data.byteLength,
+      header:source.slice(0,8),
+      page:source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/)?.slice(1),
+      count:source.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/)?.[1]};
+  },pdfTab.url());
+  assert.equal(pdfInfo.type,'application/pdf');
+  assert(pdfInfo.length>1000,'PDF blob is empty');
+  assert(pdfInfo.header.startsWith('%PDF-'),'Incorrect PDF header');
+  assert(pdfInfo.page,'PDF page bounds missing');
+  assert.equal(+pdfInfo.count,1,'M80 must have exactly one PDF page');
+  const physicalRatio=Number(pdfInfo.page[1])/Number(pdfInfo.page[0]);
   const canvasRatio=raster.height/raster.width;
   assert(Math.abs(physicalRatio-canvasRatio)<0.008,
     'PDF aspect '+physicalRatio+' differs from PNG '+canvasRatio);
-  console.log('PASS M80: Builder/PNG layout and original-ratio PDF from same canvas');
+  assert.deepEqual(unexpectedDownloads,[],'PDF/image must open in tabs, not auto-download');
+  await pdfTab.close();
+  console.log('PASS M80: Builder/PNG parity, native image/PDF tabs, no forced downloads, and original PDF ratio');
 }finally{await browser.close();}

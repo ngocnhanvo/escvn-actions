@@ -56,11 +56,16 @@ jobs:
           back=Path('backend/wp-content/mu-plugins/esc-cv-publish.php').read_text()
           assert "format:isPublishablePdf()?'pdf':'html'" in front
           assert "pdf_base64:pdfBase64" in front
-          assert "if (self::gateway_enabled())" in back
-          assert "'esc_cv_publish_pdf_gateway_unsupported'" in back
+          assert "if ($format === 'pdf' && self::gateway_enabled())" in back
+          assert "'esc_cv_publish_pdf_gateway_unsupported'" not in back
+          assert "'pdf_base64'] = $pdf_base64" in back
+          assert "'cert_fingerprint' => $fingerprint" in back
+          assert "hash_hmac('sha256', $timestamp . '.' . $nonce . '.' . $body, $key)" in back
+          assert "'sslverify' => true" in back
           assert "'cv.pdf'" in back and "RNTO ' . $file_name" in back
           assert "'cv.pdf');" in back
-          print('Verified PDF FTPS security gates; Gateway mode is fail-closed')
+          assert "// Never downgrade from the configured, verified Windows Gateway" not in back
+          print('Verified PDF routes through signed Windows Gateway; direct FTPS is not a fallback')
           PY
       - uses: shivammathur/setup-php@v2
         with:

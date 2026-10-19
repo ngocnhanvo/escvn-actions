@@ -1,0 +1,50 @@
+name: ESC CV Numeric Descending Code Live QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/esc-cv-numeric-order-live-qa.txt'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify live WordPress CV numeric order across pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,urllib.request,urllib.parse,re,time
+          BASE='https://admin.esc.vn/wp-json/esc-cv/v1/templates'
+          headers={'Accept':'application/json','Cache-Control':'no-cache','User-Agent':'ESC-CV-Numeric-Sort-QA/1.0'}
+          def fetch(page,per_page=12):
+              params=urllib.parse.urlencode({'page':page,'per_page':per_page,'_qa':str(time.time_ns())})
+              with urllib.request.urlopen(urllib.request.Request(BASE+'?'+params,headers=headers),timeout=45) as response:
+                  if response.status!=200:raise RuntimeError('WordPress HTTP '+str(response.status))
+                  data=json.load(response)
+              assert data['page']==page and data['per_page']==per_page,(page,data)
+              return data
+          all_ids=[]
+          first=fetch(1)
+          count=first['total']
+          pages=first['total_pages']
+          assert pages>=1 and count>15, 'Unexpected empty CV gallery'
+          for page in range(1,pages+1):
+              data=first if page==1 else fetch(page)
+              ids=[item['id'] for item in data['templates']]
+              print('LIVE PAGE',page,'of',pages,':',','.join(ids),flush=True)
+              assert len(ids)==data['count']
+              assert len(ids)<=12
+              all_ids+=ids
+          assert len(all_ids)==count,(len(all_ids),count)
+          assert len(all_ids)==len(set(all_ids)),'Duplicate CV across gallery pages'
+          numbered=[int(m.group(1)) for id in all_ids if (m:=re.fullmatch(r'M([0-9]+)',id))]
+          assert numbered==sorted(numbered,reverse=True),'CV M codes are not numerically descending'
+          numbered_ids=[id for id in all_ids if re.fullmatch(r'M[0-9]+',id)]
+          assert all_ids[:len(numbered_ids)]==numbered_ids,'Non-M templates interspersed with M codes'
+          assert all_ids[0] == numbered_ids[0], 'Largest numbered CV must be first'
+          print('PASS CV numeric descending order, pages=',pages,'total=',count,'first=',all_ids[:5],'last=',all_ids[-5:],flush=True)
+          PY

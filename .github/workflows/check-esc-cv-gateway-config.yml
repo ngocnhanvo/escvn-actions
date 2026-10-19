@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/check-esc-cv-gateway-config.yml
+      - requests/check-esc-cv-gateway-config.txt
 permissions:
   contents: read
 jobs:

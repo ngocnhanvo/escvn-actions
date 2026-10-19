@@ -1,0 +1,3 @@
+date=2026-10-19
+scope=read-only-M80-title-borders-CSS
+purpose=fix-output-PNG-PDF-keep-Builder-canonical

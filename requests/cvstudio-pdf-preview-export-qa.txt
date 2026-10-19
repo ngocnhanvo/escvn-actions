@@ -8,3 +8,7 @@ retry=correct-synthetic-PDF-fixture-2026-10-19
 retry=full-chromium-and-first-available-template
 
 verify=pixel-alignment-preview-vs-exported-png
+
+verify=2026-10-19-production-merge-7fca5526-pdf-publish-entry-certificate-submit-gate-and-existing-pdf-preview-export
+source_sha=7fca55261920b760f0bb432415ffd82512a0c6e8
+deploy_run=39220901433

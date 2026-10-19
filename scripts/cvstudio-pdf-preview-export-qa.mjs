@@ -61,6 +61,21 @@ try{
   if(ratio>=.9999)console.warn('PDF plugin screenshot is entirely white in headless Chromium; browser-only paint cannot be proven');
   assert(ratio>.08,'PDF viewer appeared blank or broken (white page ratio '+ratio.toFixed(3)+')');
   console.log('PASS real PDF blob viewer',JSON.stringify({srcPrefix:src.slice(0,16),whitePageFraction:+ratio.toFixed(3),consoleErrors:errors.slice(-4)}));
+  // Confirm the deployed PDF-only Builder offers secure publishing, not just preview.
+  const publish=page.locator('[data-cv-publish]');
+  await publish.waitFor({state:'visible',timeout:10000});
+  assert(await publish.isEnabled(),'Readonly PDF publish button must be enabled');
+  assert((await publish.textContent()).includes('Công khai PDF qua FTPS'),
+    'Expected PDF-only FTPS publication action is not present in deployed Astro');
+  await publish.click();
+  const dialog=page.locator('[data-cv-publish-dialog]');
+  await dialog.waitFor({state:'visible',timeout:10000});
+  assert(await dialog.locator('[data-cv-publish-ftps-form]').isVisible(),
+    'PDF publishing must show the real FTPS form');
+  assert(await dialog.locator('[data-cv-publish-ftps-submit]').isDisabled(),
+    'PDF FTPS submit must require certificate verification and consent');
+  await dialog.locator('[data-cv-publish-close]').click();
+  console.log('PASS live PDF-only publishing entry, certificate gate; no real FTP');
   await page.goto(base+'/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   const card=page.locator('[data-cv-gallery] article:not([data-cv-gallery-skeleton])').first();
   await card.waitFor({state:'visible',timeout:30000});

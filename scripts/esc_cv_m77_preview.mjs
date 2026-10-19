@@ -10,6 +10,11 @@ const folder=resolve('qa-m77-source/package-work');
 const html=await readFile(folder+'/index.html','utf8');
 const css=await readFile(folder+'/style.css','utf8');
 const demo=JSON.parse(await readFile(folder+'/sample-data.json','utf8'));
+// The sample JSON may reference a legacy preview URL. Use the ZIP's bundled
+// original portrait only for thumbnail rendering; the public CV data is intact.
+const portrait=await readFile(folder+'/assets/sample-portrait.webp');
+if(!demo.profile||typeof demo.profile!=='object')throw Error('M77 sample profile missing');
+demo.profile.avatarUrl='data:image/webp;base64,'+portrait.toString('base64');
 assert(css.includes('width:100%;min-width:800px;min-height:1130px'));
 assert(css.includes('.cv.top{border:0;min-height:1125px}'));
 let compiled=Handlebars.compile(html,{noEscape:true})(demo);

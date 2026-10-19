@@ -1,4 +1,4 @@
-astro_github_sha=24b6b26b058db63d9c6b51ea1fa066ad9dc5d097
+astro_github_sha=d1f0a836d2809bbb54bb57a5b39af8f63013d3dd
 php_master_sha=6363dc8d3cb39424740f416d7867ed00d2da850c
-scope=pdf-publication-feature-no-deployment
-reason=2026-10-19 PDF relay on installed Gateway uses HMAC SHA256, pinned FTPS TLS, PDF first then generated index; verify updated PHP mock regression + Astro CV tests before merge.
+scope=pdf-publication-filename-regression-no-deployment
+reason=2026-10-19 Frontend PDF FTPS rejected normal Vietnamese filenames due to incorrectly escaped regex; validate Unicode 1.7 MB PDF and 4MB boundary, then QA source and backend relay. Test only; no real FTPS upload.

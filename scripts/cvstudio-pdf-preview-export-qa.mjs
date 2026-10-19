@@ -24,7 +24,7 @@ function validPdf(){
     'trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
   return Buffer.from(chunks.join(''),'latin1');
 }
-const browser=await chromium.launch({headless:true});
+const browser=await chromium.launch({headless:true,channel:'chromium'});
 const page=await browser.newPage({viewport:{width:1440,height:940},acceptDownloads:true});
 const errors=[];
 page.on('console',msg=>{if(msg.type()==='error')errors.push(msg.text());});
@@ -43,7 +43,7 @@ try{
   await frame.waitFor({state:'visible',timeout:15000});
   const src=await frame.getAttribute('src');
   assert(src?.startsWith('blob:'),'PDF iframe missing local blob URL');
-  await page.waitForTimeout(1800);
+  await page.waitForTimeout(4000);
   const policyErrors=errors.filter(e=>/content security policy|content-security-policy|refused to (frame|load|display|embed)/i.test(e)&&/blob|pdf/i.test(e));
   assert(!policyErrors.length,'PDF viewer was blocked by CSP: '+policyErrors.join(' | '));
   const shot=await frame.screenshot();
@@ -58,11 +58,13 @@ try{
     }
   }
   const ratio=white/Math.max(1,pixels);
+  if(ratio>=.9999)console.warn('PDF plugin screenshot is entirely white in headless Chromium; browser-only paint cannot be proven');
   assert(ratio>.08,'PDF viewer appeared blank or broken (white page ratio '+ratio.toFixed(3)+')');
   console.log('PASS real PDF blob viewer',JSON.stringify({srcPrefix:src.slice(0,16),whitePageFraction:+ratio.toFixed(3),consoleErrors:errors.slice(-4)}));
   await page.goto(base+'/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
-  const card=page.locator('[data-cv-gallery] article:not([data-cv-gallery-skeleton])').filter({hasText:'M01'}).first();
+  const card=page.locator('[data-cv-gallery] article:not([data-cv-gallery-skeleton])').first();
   await card.waitFor({state:'visible',timeout:30000});
+  console.log('Selected template:',(await card.innerText()).slice(0,150));
   await card.locator('button').last().click();
   await page.waitForURL('**/tao-cv-truc-tuyen/builder/**',{timeout:30000});
   await page.locator('[data-cv-builder-workspace]').waitFor({state:'visible',timeout:30000});

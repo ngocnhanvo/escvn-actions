@@ -3,3 +3,5 @@ astro_branch=github
 astro_sha=3382c1749cc2b078b81739f6bae892ac1e516030
 intent=compare M80 live Builder screenshot vs exported PNG pixels and exported PDF aspect without modifying production or customer FTP
 retry=2026-10-19 syntax-fixed-browser-check-after-initial-script-failure
+probe=2026-10-19-M80-compare-html2canvas-clone-vs-builder-heading-border
+astro_github_sha=a14037cd1cab3d1c544d4b7e47a71f1e91249867

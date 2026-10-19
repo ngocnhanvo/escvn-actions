@@ -66,3 +66,8 @@ reason=2026-10-17 allow optional CV blank slug with explicit homepage index.html
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=0c1188d06b53b9d5226c1b3d2e0324f033ef6b30
+
+reason=2026-10-19 deploy 4MB PDF publishing through signed upgraded Windows FTPS Gateway. VPS gateway.exe health verified by owner after installer. Preserve pinned TLS SHA-256, HMAC, original HTML path, stage cv.pdf before server-owned index.html. PHP regression must PASS; no actual customer FTPS transfer.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=6363dc8d3cb39424740f416d7867ed00d2da850c

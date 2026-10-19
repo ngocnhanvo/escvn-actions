@@ -63,6 +63,12 @@ jobs:
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
         run: M77_MODE=publish python scripts/esc_cv_m77_wp.py
+      - name: Verify published M77 appearance directly on esc.vn
+        if: ${{ hashFiles('qa-m77-source/next-version.txt') != '' }}
+        run: |
+          set -euo pipefail
+          node --check scripts/esc_cv_m77_live_verify.mjs
+          node scripts/esc_cv_m77_live_verify.mjs
       - name: Archive source snapshot for rollback
         uses: actions/upload-artifact@v4
         if: always()

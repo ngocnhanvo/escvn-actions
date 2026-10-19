@@ -71,3 +71,8 @@ reason=2026-10-19 deploy 4MB PDF publishing through signed upgraded Windows FTPS
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=6363dc8d3cb39424740f416d7867ed00d2da850c
+
+reason=2026-10-19 fix 2 scrollbars in public PDF iframe. The generated index.html formerly sized the iframe to 100dvh and placed a normal-flow fallback underneath; fix locks outer overflow, keeps native PDF viewer scroll, fixes download link position. PDF bytes, FTPS, Gateway HMAC and certificate policy are unchanged. Publisher PHP regression verifies viewport shell. Does not modify already published customer-host static index.html; those must be republished intentionally.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=ebf6aa34404c3934d5bbd06ff55775d4a1e09055

@@ -51,7 +51,7 @@ try{
   const logicalWidth=Math.min(preview.width,raster.width/scale);
   const logicalHeight=Math.min(preview.height,raster.height/scale);
   const xOffset=Math.round((raster.width/scale-preview.width)/2);
-  const yOffset=Math.round(raster.height/scale-preview.height);
+  const yOffset=Math.round((raster.height/scale-preview.height)/2);
   let count=0,sum=0,sumSolid=0,flatCount=0;
   for(let y=120;y<logicalHeight-16;y+=5){
     for(let x=16;x<logicalWidth-16;x+=5){
@@ -79,7 +79,34 @@ try{
     comparisonPoints:count
   }));
   // Layout mismatch must not quietly pass just because a PNG was generated.
-  assert(mean<20,'M80 layout differs too much between Builder and PNG (mean RGB '+mean.toFixed(2)+')');
+  assert(mean<7,'M80 PNG differs from Builder (mean RGB '+mean.toFixed(2)+')');
+  // Explicit regression for the user's screenshot: border immediately below
+  // the two-line "Hoàng Tú Quỳnh" heading must not paint through the letters.
+  const border=await frameDoc.locator('.cv-summary').evaluate(el=>{
+    const body=el.ownerDocument.body.getBoundingClientRect();
+    const intro=el.parentElement.getBoundingClientRect();
+    const rect=el.getBoundingClientRect();
+    return {y:rect.top-body.top,x:intro.left-body.left,width:intro.width};
+  });
+  let titleBandSum=0,titleBandPixels=0;
+  const bandStart=Math.max(0,Math.floor(border.y-78));
+  const bandEnd=Math.min(logicalHeight-1,Math.ceil(border.y+33));
+  for(let y=bandStart;y<=bandEnd;y+=2){
+    for(let x=Math.max(0,Math.floor(border.x+14));x<Math.min(logicalWidth-1,Math.floor(border.x+border.width-12));x+=2){
+      const ai=(y*preview.width+x)*4;
+      const bx=Math.min(raster.width-1,Math.floor((x+xOffset)*scale));
+      const by=Math.min(raster.height-1,Math.floor((y+yOffset)*scale));
+      const bi=(by*raster.width+bx)*4;
+      titleBandSum+=(Math.abs(preview.data[ai]-raster.data[bi])+
+        Math.abs(preview.data[ai+1]-raster.data[bi+1])+
+        Math.abs(preview.data[ai+2]-raster.data[bi+2]))/3;
+      titleBandPixels++;
+    }
+  }
+  const titleBandMean=titleBandSum/Math.max(1,titleBandPixels);
+  console.log('M80 heading and underline parity',JSON.stringify({titleBandMean:+titleBandMean.toFixed(2),border,comparedPixels:titleBandPixels}));
+  assert(titleBandPixels>1000&&titleBandMean<9,
+    'M80 PNG draws a title/summary border differently from the Builder');
   await page.locator('[data-cv-export-summary]').click();
   const downloading=page.waitForEvent('download',{timeout:45000});
   await page.locator('[data-cv-export-format="pdf"]').click();

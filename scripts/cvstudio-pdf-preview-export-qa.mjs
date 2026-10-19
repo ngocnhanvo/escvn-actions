@@ -33,7 +33,7 @@ try{
   const loaded=await page.goto(base+'/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   assert(loaded?.ok(),'CV Studio gallery unavailable');
   await page.locator('[data-cv-user-upload-input]').setInputFiles({
-    name:'esc-pdf-preview-test.pdf',mimeType:'application/pdf',buffer:validPdf()
+    name:'Đen Xanh Ngọc Sáng Tạo Graphic Designer Mẫu CV Xin Việc Sơ Yếu Lý Lịch.pdf',mimeType:'application/pdf',buffer:validPdf()
   });
   await page.locator('[data-cv-upload-report]').waitFor({state:'visible',timeout:20000});
   await page.locator('[data-cv-upload-report-view]').click();
@@ -74,8 +74,63 @@ try{
     'PDF publishing must show the real FTPS form');
   assert(await dialog.locator('[data-cv-publish-ftps-submit]').isDisabled(),
     'PDF FTPS submit must require certificate verification and consent');
-  await dialog.locator('[data-cv-publish-close]').click();
-  console.log('PASS live PDF-only publishing entry, certificate gate; no real FTP');
+  // Intercept every signed publisher request; never contact any FTPS host or
+  // send real passwords. This guards the final submit path that preview QA missed.
+  let mockRequest=null;
+  await page.route('https://admin.esc.vn/wp-json/esc-cv/v1/publish/**',async route=>{
+    const req=route.request();
+    const headers={'Access-Control-Allow-Origin':'https://esc.vn',
+      'Access-Control-Allow-Methods':'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers':'Content-Type, Accept',
+      'Content-Type':'application/json'};
+    if(req.method()==='OPTIONS')
+      return route.fulfill({status:204,headers,body:''});
+    if(req.url().endsWith('/session'))
+      return route.fulfill({status:200,headers,body:JSON.stringify({
+        token:'1700000000.'+'a'.repeat(64),expires_in:600,protocol:'FTPS'
+      })});
+    if(req.url().endsWith('/certificate')){
+      const sent=req.postDataJSON();
+      assert(Object.keys(sent).sort().join(',')==='host,token',
+        'Certificate inspection must never send FTP credentials');
+      return route.fulfill({status:200,headers,body:JSON.stringify({
+        host:sent.host,subject:'QA mock',issuer:'QA mock',expires:'2035-04-14',
+        self_signed:true,fingerprint:'f'.repeat(64),
+        fingerprint_sha256:'FF:'.repeat(31)+'FF',
+        epoch:Math.floor(Date.now()/1000),
+        proof:'c'.repeat(64),expires_in:300
+      })});
+    }
+    if(req.url().endsWith('/ftps')){
+      mockRequest=req.postDataJSON();
+      return route.fulfill({status:200,headers,body:JSON.stringify({
+        ok:true,url:'https://example.com/test-cv-pdf/',note:'Mock only, no FTPS'
+      })});
+    }
+    return route.abort();
+  });
+  const form=dialog.locator('[data-cv-publish-ftps-form]');
+  await form.locator('input[name=domain]').fill('example.com');
+  await form.locator('input[name=username]').fill('qa-user');
+  await form.locator('input[name=password]').fill('dummy-qa-password-not-real');
+  await form.locator('input[name=root]').fill('public_html');
+  await form.locator('input[name=slug]').fill('test-cv-pdf');
+  await dialog.locator('[data-cv-publish-cert-inspect]').click();
+  await dialog.locator('[data-cv-publish-cert-panel]').waitFor({state:'visible',timeout:20000});
+  await dialog.locator('[data-cv-publish-cert-confirm]').check();
+  const submit=dialog.locator('[data-cv-publish-ftps-submit]');
+  assert(await submit.isEnabled(),'Valid mock certificate must enable PDF publish');
+  await submit.click();
+  await dialog.locator('[data-cv-publish-finish]').waitFor({state:'visible',timeout:20000});
+  assert(mockRequest?.format==='pdf','PDF FTPS payload must identify PDF format');
+  assert(typeof mockRequest?.pdf_base64==='string','PDF FTPS request missing file bytes');
+  assert(Buffer.from(mockRequest.pdf_base64,'base64').subarray(0,5).toString()==='%PDF-',
+    'PDF FTPS base64 must contain original PDF');
+  assert(!mockRequest?.html,'User-supplied HTML must not accompany PDF publication');
+  assert(mockRequest?.slug==='test-cv-pdf','Safety testing may not target hosting root');
+  console.log('PASS Unicode PDF filename actual mocked publish request; no real FTPS');
+  await dialog.locator('[data-cv-publish-done]').click();
+  await page.unrouteAll({behavior:'wait'});
   await page.goto(base+'/tao-cv-truc-tuyen/',{waitUntil:'domcontentloaded',timeout:60000});
   const card=page.locator('[data-cv-gallery] article:not([data-cv-gallery-skeleton])').first();
   await card.waitFor({state:'visible',timeout:30000});

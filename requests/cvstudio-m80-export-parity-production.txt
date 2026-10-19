@@ -1,0 +1,5 @@
+check=2026-10-19 M80 layout parity after Astro production deploy
+astro_master_sha=fa13cc44cadbba981a9d3471164b20afd608b5f0
+deploy_run=39245639492
+expect=M80 Builder cropped-header-adjusted pixel difference under 20 and PDF aspect matches PNG
+no_ftp_upload=true

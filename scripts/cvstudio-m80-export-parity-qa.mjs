@@ -4,7 +4,8 @@ import {readFile,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const base=process.env.ESC_QA_BASE||'http://127.0.0.1:4321';
-const browser=await chromium.launch({headless:true});
+// Native PDF browser plugin is not available in Chromium headless-shell.
+const browser=await chromium.launch({headless:process.env.ESC_QA_HEADFUL!=='1'});
 try{
   const page=await browser.newPage({viewport:{width:1540,height:990},deviceScaleFactor:1,acceptDownloads:true});
   page.on('console',message=>{

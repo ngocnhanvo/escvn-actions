@@ -1,0 +1,3 @@
+astro_github_sha=24b6b26b058db63d9c6b51ea1fa066ad9dc5d097
+php_master_sha=934554f726c740f8734aea98e5922665ba4598c1
+scope=pdf-publication-feature-no-deployment

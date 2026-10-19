@@ -5,3 +5,4 @@ approved_change=width-100-percent-and-outer-border-zero
 keep_existing_version_for_rollback=true
 update_thumbnail_from_original_sample_data=true
 only_target=esc-cv-manager/M77
+retry=2026-10-19-embed-original-bundled-portrait-only-for-M77-thumbnail

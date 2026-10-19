@@ -28,7 +28,7 @@ jobs:
       - name: Verify public Builder M80 vs PNG and PDF
         env:
           ESC_QA_BASE: https://esc.vn
-        run: node scripts/cvstudio-m80-export-parity-qa.mjs
+        run: xvfb-run -a env ESC_QA_HEADFUL=1 node scripts/cvstudio-m80-export-parity-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

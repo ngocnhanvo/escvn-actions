@@ -1,0 +1,70 @@
+name: ESC CV PDF Preview and Export DEV QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-pdf-export-dev-qa.txt']
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - name: Source revision and credential boundaries
+        id: rev
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          sha="$(sed -n 's/^source_sha=//p' control/requests/cvstudio-pdf-export-dev-qa.txt | tail -1 | tr -d '\r')"
+          [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: github
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - name: Enforce Astro github development branch and expected revision
+        working-directory: source
+        env:
+          EXPECTED: ${{ steps.rev.outputs.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED"
+          git status --short
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+      - name: CV export and upload unit tests
+        working-directory: source
+        run: pnpm exec vitest run src/lib/cvstudio/cvExport.test.ts src/lib/cvstudio/cvUserUpload.test.ts
+      - name: Validate CSP scope and source code
+        working-directory: source
+        run: |
+          node --check scripts/inject-handler.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const csp=fs.readFileSync('scripts/inject-handler.js','utf8');
+          const builder=fs.readFileSync('src/pages/tao-cv-truc-tuyen/builder.astro','utf8');
+          const exporter=fs.readFileSync('src/lib/cvstudio/cvExport.ts','utf8');
+          if(!csp.includes("const isCvBuilder =") || !csp.includes("isCvBuilder ? 'blob:' : ''") ||
+            !csp.includes("isCvBuilder ? 'blob:' : \"'none'\"")) throw Error('CSP not scoped to Builder');
+          if(!builder.includes("exportCv(template,draft,format,frame)"))throw Error('Builder does not pass CV viewport');
+          if(!exporter.includes("cvExportViewportWidth(preview)"))throw Error('Exporter viewport not sourced from Builder');
+          console.log('PASS scoped PDF blob CSP and layout-preserving export');
+          NODE

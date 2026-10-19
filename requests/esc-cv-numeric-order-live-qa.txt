@@ -1,0 +1,6 @@
+target=https://admin.esc.vn/wp-json/esc-cv/v1/templates
+mode=GET-only
+sort=numeric-M-code-descending
+check=all-pages-no-duplicates
+php_source_sha=d83a69359fea1d3eb6067a516734cff3867c21a3
+deployment_run=39300494717

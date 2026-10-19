@@ -80,11 +80,11 @@ try{
   const pdf=await readFile(await pdfDownload.path());
   assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
   const source=pdf.toString('latin1');
-  const page=source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
-  assert(page,'PDF page bounds missing');
+  const pdfPage=source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
+  assert(pdfPage,'PDF page bounds missing');
   const countMatch=source.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/);
   assert.equal(+countMatch?.[1],1,'M80 must have exactly one PDF page');
-  const physicalRatio=Number(page[2])/Number(page[1]);
+  const physicalRatio=Number(pdfPage[2])/Number(pdfPage[1]);
   const canvasRatio=raster.height/raster.width;
   assert(Math.abs(physicalRatio-canvasRatio)<0.008,
     'PDF aspect '+physicalRatio+' differs from PNG '+canvasRatio);

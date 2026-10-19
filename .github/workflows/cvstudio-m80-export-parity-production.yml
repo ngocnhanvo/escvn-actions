@@ -1,0 +1,40 @@
+name: ESC CV M80 Production Export Parity QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-m80-export-parity-production.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-m80-production-parity
+  cancel-in-progress: true
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Browser QA prerequisites
+        run: |
+          node --check scripts/cvstudio-m80-export-parity-qa.mjs
+          npm install --no-save playwright@1.55.0 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+      - name: Verify public Builder M80 vs PNG and PDF
+        env:
+          ESC_QA_BASE: https://esc.vn
+        run: node scripts/cvstudio-m80-export-parity-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cvstudio-m80-production-parity
+          path: |
+            m80-preview.png
+            m80-export.png
+          retention-days: 3
+          if-no-files-found: ignore

@@ -1,3 +1,5 @@
 date=2026-10-19
 purpose=experiment-browser-native-foreignObject-raster-for-M80
 no-code-changes-in-production=true
+
+retry=compare-aligned-body-plus-8px

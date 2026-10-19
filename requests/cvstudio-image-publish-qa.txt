@@ -1,0 +1,4 @@
+run=2026-10-19-after-production-deploy-39237862290
+astro_master_sha=f9f3f0d851e8af77776c82f14d97d854d9ff719e
+checks=PNG-JPEG-WEBP-readonly-upload-button-certificate-and-mocked-FTPS-publish
+no_real_ftp_credentials=true

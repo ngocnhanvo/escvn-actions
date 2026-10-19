@@ -54,7 +54,14 @@ jobs:
           from pathlib import Path
           front=Path('frontend/src/pages/tao-cv-truc-tuyen/builder.astro').read_text()
           back=Path('backend/wp-content/mu-plugins/esc-cv-publish.php').read_text()
-          assert "format:isPublishablePdf()?'pdf':'html'" in front
+          assert "format:isPublishablePdf()?'pdf':isPublishableImage()?'image':'html'" in front
+          assert "image_base64:imageBase64,image_mime:imageMime" in front
+          assert "cvPublishImageFileError(file,imageMime)" in front
+          assert "image_base64'] = $image_base64" in back
+          assert "image_mime'] = $image_mime" in back
+          assert "if ($format === 'image' && self::gateway_enabled())" in back
+          assert "'cv.' . $image_info['extension']" in back
+          assert "image_index_html($image_info['extension'])" in back
           assert "pdf_base64:pdfBase64" in front
           assert "if ($format === 'pdf' && self::gateway_enabled())" in back
           assert "'esc_cv_publish_pdf_gateway_unsupported'" not in back
@@ -65,7 +72,7 @@ jobs:
           assert "'cv.pdf'" in back and "RNTO ' . $file_name" in back
           assert "'cv.pdf');" in back
           assert "// Never downgrade from the configured, verified Windows Gateway" not in back
-          print('Verified PDF routes through signed Windows Gateway; direct FTPS is not a fallback')
+          print('Verified PDF and PNG/JPEG/WebP routes through signed Windows Gateway; no insecure fallback')
           PY
       - uses: shivammathur/setup-php@v2
         with:

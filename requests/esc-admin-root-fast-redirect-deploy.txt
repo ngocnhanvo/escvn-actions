@@ -1,0 +1,8 @@
+site=admin.esc.vn
+scope=only-root-request-without-query
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=6235af066848594db5332ef9378b61a762dcbccd
+mode=backup-live-htaccess-apply-single-host-scoped-302-verify-rest-rollback-on-failure
+preserve_live_theme=true
+no_astro_deploy=true

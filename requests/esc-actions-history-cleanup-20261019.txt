@@ -1,0 +1,6 @@
+requested_at=2026-10-19
+repository=ngocnhanvo/escvn-actions
+operation=delete-completed-workflow-run-history-only
+preserve_explicit_run_ids=39279265894,39279235322
+preserve_all_queued_pending_waiting_requested_in_progress_action_required=true
+preserve_workflow_definitions_trigger_files_and_secrets=true

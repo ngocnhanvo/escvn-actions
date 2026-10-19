@@ -1,0 +1,49 @@
+name: ESC CV M77 Template Update (Only M77)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/esc-cv-m77-live-template.txt'
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-m77-live-update
+  cancel-in-progress: false
+jobs:
+  m77:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install requests and HTML parser
+        run: pip install --disable-pip-version-check requests==2.32.3 beautifulsoup4==4.13.3
+      - name: Validate read-only or publish mode request
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fx 'template=M77' requests/esc-cv-m77-live-template.txt
+          grep -Eq '^mode=(probe|publish)$' requests/esc-cv-m77-live-template.txt
+          python -m py_compile scripts/esc_cv_m77_wp.py
+      - name: Backup and patch M77 via WordPress CV Manager (no other templates)
+        env:
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export M77_MODE=$(sed -n 's/^mode=//p' requests/esc-cv-m77-live-template.txt | tail -1)
+          python scripts/esc_cv_m77_wp.py
+      - name: Archive source snapshot for rollback
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m77-original-source-${{ github.run_id }}
+          path: qa-m77-source/
+          retention-days: 14
+          if-no-files-found: ignore

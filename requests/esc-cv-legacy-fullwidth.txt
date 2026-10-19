@@ -1,6 +1,8 @@
-mode=prepare
+mode=publish
 scope=M27..M76-except-M48
 approved_change=root-800px-to-100-percent-only
 preserve=M26,M48,M77,M78,M79,M80-plus
 preserve_versioned_original_ZIPs=true
 regenerate_preview_from_sample=true
+
+preflight_success_run=39295567842

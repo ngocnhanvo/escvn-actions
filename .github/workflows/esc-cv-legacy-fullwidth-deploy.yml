@@ -26,8 +26,12 @@ jobs:
         with:
           node-version: '24'
       - name: Verify request strictly scopes 49 originals
+        id: request
         run: |
           set -euo pipefail
+          mode=$(sed -n 's/^mode=//p' requests/esc-cv-legacy-fullwidth.txt | tail -1)
+          case "$mode" in prepare|publish) ;; *) exit 1;; esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
           grep -Fqx 'scope=M27..M76-except-M48' requests/esc-cv-legacy-fullwidth.txt
           grep -Fqx 'approved_change=root-800px-to-100-percent-only' requests/esc-cv-legacy-fullwidth.txt
           grep -Fqx 'preserve=M26,M48,M77,M78,M79,M80-plus' requests/esc-cv-legacy-fullwidth.txt
@@ -49,12 +53,14 @@ jobs:
       - name: Generate and validate new preview thumbnail for each template
         run: node scripts/esc_cv_legacy_thumbnails.mjs
       - name: Upload new immutable versions and activate only approved originals
+        if: steps.request.outputs.mode == 'publish'
         env:
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
           LEGACY_MODE: publish
         run: python scripts/esc_cv_legacy_batch.py
       - name: Browser QA of all 49 live Builder template layouts
+        if: steps.request.outputs.mode == 'publish'
         run: node scripts/esc_cv_legacy_live_verify.mjs
       - name: Archive the pre-change ZIPs and final QA reports for rollback
         uses: actions/upload-artifact@v4

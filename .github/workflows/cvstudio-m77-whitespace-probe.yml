@@ -1,0 +1,34 @@
+name: ESC CV M77 Whitespace Source Probe
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/cvstudio-m77-whitespace-probe.txt'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser and assert syntax
+        run: |
+          node --check scripts/cvstudio-m77-whitespace-probe.mjs
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Read live M77 (no mutations)
+        run: node scripts/cvstudio-m77-whitespace-probe.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m77-source-and-original-screenshot
+          path: qa-m77/
+          retention-days: 3
+          if-no-files-found: ignore

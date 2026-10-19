@@ -7,6 +7,9 @@ const base=process.env.ESC_QA_BASE||'http://127.0.0.1:4321';
 const browser=await chromium.launch({headless:true});
 try{
   const page=await browser.newPage({viewport:{width:1540,height:990},deviceScaleFactor:1,acceptDownloads:true});
+  page.on('console',message=>{
+    if(message.text().includes('ESC_M80_EXPORT_GEOMETRY'))console.log(message.text());
+  });
   const dataUrl='https://admin.esc.vn/wp-json/esc-cv/v1/templates/M80/builder';
   const response=await page.request.get(dataUrl,{timeout:25000});
   assert(response.ok(),'M80 source registry unavailable (HTTP '+response.status()+')');
@@ -28,6 +31,7 @@ try{
   const frameDoc=page.frameLocator('[data-cv-live-frame]');
   await frameDoc.locator('body').waitFor({state:'visible',timeout:20000});
   await page.waitForTimeout(1700);
+  await frameDoc.locator('html').evaluate(el=>{el.dataset.cvExportDiagnostics='1'});
   await frameDoc.locator('body').screenshot({path:'m80-preview.png'});
   const preview=PNG.sync.read(await readFile('m80-preview.png'));
   const width=await frame.evaluate(el=>el.contentWindow?.innerWidth||el.clientWidth);

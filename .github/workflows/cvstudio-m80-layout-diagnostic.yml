@@ -1,0 +1,54 @@
+name: ESC CV M80 Browser Layout Diagnostics
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-m80-layout-diagnostic.txt']
+permissions:
+  contents: read
+jobs:
+  read-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Inspect exact M80 template title and horizontal borders
+        run: |
+          node --input-type=module <<'NODE'
+          import {chromium} from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          try{
+            const page=await browser.newPage({viewport:{width:1540,height:990}});
+            const source=await page.request.get('https://admin.esc.vn/wp-json/esc-cv/v1/templates/M80/builder',{timeout:25000});
+            if(!source.ok())throw Error('Template M80 unavailable: '+source.status());
+            const template=await source.json();
+            console.log('M80 template',JSON.stringify({id:template.id,version:template.version,cssBytes:template.css?.length,htmlBytes:template.html?.length}));
+            console.log('M80 CSS',String(template.css).slice(0,17000));
+            console.log('M80 HTML',String(template.html).replace(/{{[^}]+}}/g,'[BIND]').slice(0,7000));
+            const url='https://esc.vn/tao-cv-truc-tuyen/builder/';
+            await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+            await page.evaluate(version=>sessionStorage.setItem('esc-cvstudio:demo:selection',JSON.stringify({id:'M80',version,source:'registry',at:Date.now()})),template.version);
+            await page.reload({waitUntil:'domcontentloaded'});
+            const frame=page.frameLocator('[data-cv-live-frame]');
+            await frame.locator('body').waitFor({state:'visible',timeout:30000});
+            await page.waitForTimeout(1200);
+            const data=await frame.locator('body').evaluate(body=>{
+              const rect=e=>{const r=e.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height),bottom:Math.round(r.bottom)};};
+              const matches=[...body.querySelectorAll('*')].filter(e=>/Quỳnh/i.test(e.textContent||'') && (e.children.length===0 || [...e.children].every(c=>!(c.textContent||'').includes('Quỳnh')))).slice(0,4);
+              return matches.map(e=>{
+                let current=e;
+                return Array.from({length:5},(_,i)=>{if(!current)return null;const x=current;current=x.parentElement;const cs=getComputedStyle(x);return {depth:i,tag:x.tagName,cls:String(x.className).slice(0,130),text:(x.textContent||'').slice(0,90),rect:rect(x),style:{font:cs.font,fontFamily:cs.fontFamily,fontSize:cs.fontSize,lineHeight:cs.lineHeight,margin:cs.margin,padding:cs.padding,height:cs.height,minHeight:cs.minHeight,overflow:cs.overflow,display:cs.display,borderBottom:cs.borderBottom,borderTop:cs.borderTop},children:[...x.children].slice(0,5).map(y=>({tag:y.tagName,cls:String(y.className).slice(0,60),rect:rect(y)}))};});
+              });
+            });
+            console.log('M80 live heading ancestry',JSON.stringify(data,null,2));
+          }finally{await browser.close();}
+          NODE

@@ -6,3 +6,5 @@ checks=valid-pdf-native-blob-iframe-and-cv-html-to-pdf-png-export
 retry=correct-synthetic-PDF-fixture-2026-10-19
 
 retry=full-chromium-and-first-available-template
+
+verify=pixel-alignment-preview-vs-exported-png

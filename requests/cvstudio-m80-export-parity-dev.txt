@@ -9,3 +9,4 @@ retry=2026-10-19-native-browser-svg-raster-for-M80
 astro_github_sha=6ba4f4bbe6d45658cfee8021b466f5e34b9eddb3
 2026-10-19 CV open-in-new-tab QA on Astro github ead8d4005d483ec31a672b14c0fc64ce3d0a8777: PNG and PDF blob viewers, no automatic downloads, M80 pixel parity, PDF original page ratio.
 retry=2026-10-19-pdf-png-viewer-tabs-with-origin-local-blob-capture
+retry=2026-10-19-Xvfb-headful-Chromium-native-PDF-plugin-and-image-viewer

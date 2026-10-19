@@ -142,7 +142,7 @@ try{
   const pdfTabOpened=page.waitForEvent('popup',{timeout:30000});
   await page.locator('[data-cv-export-format="pdf"]').click();
   const pdfTab=await pdfTabOpened;
-  await pdfTab.waitForURL(/^blob:/,{timeout:45000});
+  await pdfTab.waitForURL(/^blob:/,{timeout:45000,waitUntil:'commit'});
   const pdfInfo=await page.evaluate(async url=>{
     const entry=window.__escQaCvBlobs.find(x=>x.url===url);
     if(!entry)throw Error('PDF preview URL did not match generated Blob: '+url);

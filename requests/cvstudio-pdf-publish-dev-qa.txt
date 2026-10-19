@@ -1,3 +1,4 @@
 astro_github_sha=24b6b26b058db63d9c6b51ea1fa066ad9dc5d097
-php_master_sha=934554f726c740f8734aea98e5922665ba4598c1
+php_master_sha=6363dc8d3cb39424740f416d7867ed00d2da850c
 scope=pdf-publication-feature-no-deployment
+reason=2026-10-19 PDF relay on installed Gateway uses HMAC SHA256, pinned FTPS TLS, PDF first then generated index; verify updated PHP mock regression + Astro CV tests before merge.

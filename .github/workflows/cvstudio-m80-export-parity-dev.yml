@@ -1,0 +1,78 @@
+name: ESC CV M80 Builder PNG PDF Parity QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/cvstudio-m80-export-parity-dev.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-m80-parity-dev
+  cancel-in-progress: true
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: github
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+      - name: Configure live WordPress data for build
+        shell: bash
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: printf '%s' "$ENV_FILE" > source/.env
+      - name: Build Astro github dev
+        working-directory: source
+        run: pnpm run build-git
+      - name: Setup Chromium renderer
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0 pngjs@7.0.0
+          npx playwright install --with-deps chromium
+      - name: Verify M80 live frame vs exported PNG and PDF
+        shell: bash
+        working-directory: control
+        run: |
+          set -euo pipefail
+          cd ../source
+          HOST=127.0.0.1 PORT=4321 node dist/server/entry.mjs > /tmp/esc-m80-ssr.log 2>&1 &
+          server_pid=$!
+          cd ../control
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS --connect-timeout 2 --max-time 5 'http://127.0.0.1:4321/tao-cv-truc-tuyen/builder/' -o /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/cvstudio-m80-export-parity-qa.mjs || {
+            tail -120 /tmp/esc-m80-ssr.log
+            exit 1
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cvstudio-m80-parity-proof
+          path: |
+            control/m80-preview.png
+            control/m80-export.png
+          retention-days: 3
+          if-no-files-found: ignore

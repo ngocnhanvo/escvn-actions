@@ -30,15 +30,39 @@ jobs:
           grep -Fx 'template=M77' requests/esc-cv-m77-live-template.txt
           grep -Eq '^mode=(probe|publish)$' requests/esc-cv-m77-live-template.txt
           python -m py_compile scripts/esc_cv_m77_wp.py
-      - name: Backup and patch M77 via WordPress CV Manager (no other templates)
+      - name: Read current M77 ZIP and prepare next immutable version
         env:
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          export M77_MODE=$(sed -n 's/^mode=//p' requests/esc-cv-m77-live-template.txt | tail -1)
-          python scripts/esc_cv_m77_wp.py
+          mode=$(sed -n 's/^mode=//p' requests/esc-cv-m77-live-template.txt | tail -1)
+          if [ "$mode" = "probe" ]; then
+            M77_MODE=probe python scripts/esc_cv_m77_wp.py
+          else
+            M77_MODE=prepare python scripts/esc_cv_m77_wp.py
+          fi
+      - name: Setup browser preview dependencies for M77 publish
+        if: ${{ contains(github.event.head_commit.message, 'M77') || github.event_name == 'workflow_dispatch' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Re-render M77 preview using original demo data
+        if: ${{ hashFiles('qa-m77-source/next-version.txt') != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/esc_cv_m77_preview.mjs
+          npm install --no-save playwright@1.55.0 handlebars@4.7.8 sharp@0.34.3
+          npx playwright install --with-deps chromium
+          node scripts/esc_cv_m77_preview.mjs
+      - name: Publish M77 new version and activate via official WordPress admin actions
+        if: ${{ hashFiles('qa-m77-source/next-version.txt') != '' }}
+        env:
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: M77_MODE=publish python scripts/esc_cv_m77_wp.py
       - name: Archive source snapshot for rollback
         uses: actions/upload-artifact@v4
         if: always()

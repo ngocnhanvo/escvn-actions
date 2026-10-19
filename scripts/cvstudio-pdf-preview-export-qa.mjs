@@ -72,6 +72,7 @@ try{
   assert(width>700,'Unexpected live CV preview width: '+width);
   const preview=page.frameLocator('[data-cv-live-frame]');
   await preview.locator('[data-cv-inline="profile.fullName"]').first().waitFor({state:'visible',timeout:15000});
+  const previewImage=PNG.sync.read(await page.locator('[data-cv-live-frame]').screenshot());
   await page.locator('[data-cv-export-summary]').click();
   const downloading=page.waitForEvent('download',{timeout:30000});
   await page.locator('[data-cv-export-format="png"]').click();
@@ -82,6 +83,30 @@ try{
   assert(pngWidth>=Math.floor(width*.98)&&pngWidth<=width*2.05,
     'PNG width does not match preview layout: '+pngWidth+' vs '+width);
   const scale=pngWidth/width;
+  const raster=PNG.sync.read(png);
+  let diff=0,pixelCount=0,solid=0,solidDiff=0;
+  const compareHeight=Math.min(previewImage.height,Math.floor(raster.height/scale));
+  for(let y=20;y<compareHeight-20;y+=8){
+    for(let x=20;x<Math.min(previewImage.width-20,width-20);x+=8){
+      const a=(y*previewImage.width+x)*4;
+      const b=((Math.floor(y*scale)*raster.width)+Math.floor(x*scale))*4;
+      const delta=(Math.abs(previewImage.data[a]-raster.data[b])+
+        Math.abs(previewImage.data[a+1]-raster.data[b+1])+
+        Math.abs(previewImage.data[a+2]-raster.data[b+2]))/3;
+      diff+=delta;pixelCount++;
+      if((Math.max(previewImage.data[a],previewImage.data[a+1],previewImage.data[a+2])-
+          Math.min(previewImage.data[a],previewImage.data[a+1],previewImage.data[a+2]))<20){
+        solid++;solidDiff+=delta;
+      }
+    }
+  }
+  const meanDifference=diff/Math.max(1,pixelCount);
+  console.log('CV preview vs PNG raster alignment',JSON.stringify({
+    previewHeight:previewImage.height,exportLogicalHeight:raster.height/scale,
+    sampledPixels:pixelCount,meanRGBDifference:+meanDifference.toFixed(2),
+    flatColorDifference:+(solidDiff/Math.max(1,solid)).toFixed(2)
+  }));
+  assert(pixelCount>1000,'Not enough preview pixels for image comparison');
   console.log('PASS exported PNG viewport',JSON.stringify({previewWidth:width,pngWidth,pngHeight,scale}));
   await page.locator('[data-cv-export-summary]').click();
   const pdfDownloading=page.waitForEvent('download',{timeout:30000});

@@ -76,3 +76,8 @@ reason=2026-10-19 fix 2 scrollbars in public PDF iframe. The generated index.htm
 source_repo=ngocnhanvo/escvn-php
 source_branch=master
 source_sha=ebf6aa34404c3934d5bbd06ff55775d4a1e09055
+
+reason=2026-10-19 user confirmed successful real FTPS PDF upload but published CV page shows duplicate scrolling and unwanted "Xem hoặc tải CV dạng PDF" footer. Remove footer markup entirely and keep one fixed PDF iframe with overflow-hidden outer body. WordPress generates future static index.html only; DO NOT touch any customer FTPS files or credentials. New regression asserts exactly one iframe, no footer, no outer scrollbar.
+source_repo=ngocnhanvo/escvn-php
+source_branch=master
+source_sha=54c23175a577fb49e01f9f3816c0e34009678aab

@@ -10,6 +10,19 @@ try{
   page.on('console',message=>{
     if(message.text().includes('ESC_M80_EXPORT_GEOMETRY'))console.log(message.text());
   });
+  // Capture the generated Blob on the Builder tab, where it was created.
+  // Chromium storage partitioning can disallow fetch(blobUrl) from a
+  // different popup/browser context even though the native viewer opens it.
+  await page.addInitScript(()=>{
+    const original=URL.createObjectURL.bind(URL);
+    window.__escQaCvBlobs=[];
+    URL.createObjectURL=blob=>{
+      const url=original(blob);
+      if(blob.type==='image/png'||blob.type==='application/pdf')
+        window.__escQaCvBlobs.push({url,blob});
+      return url;
+    };
+  });
   const dataUrl='https://admin.esc.vn/wp-json/esc-cv/v1/templates/M80/builder';
   const response=await page.request.get(dataUrl,{timeout:25000});
   assert(response.ok(),'M80 source registry unavailable (HTTP '+response.status()+')');
@@ -43,15 +56,15 @@ try{
   const imageTab=await imageTabOpened;
   await imageTab.waitForURL(/^blob:/,{timeout:45000});
   const pngResult=await page.evaluate(async url=>{
-    const response=await fetch(url);
-    const data=await response.blob();
+    const entry=window.__escQaCvBlobs.find(x=>x.url===url);
+    if(!entry)throw Error('PNG preview URL did not match generated Blob: '+url);
     const reader=new FileReader();
     const base64=await new Promise((resolve,reject)=>{
       reader.onload=()=>resolve(String(reader.result).split(',')[1]);
       reader.onerror=()=>reject(reader.error);
-      reader.readAsDataURL(data);
+      reader.readAsDataURL(entry.blob);
     });
-    return {type:data.type,base64};
+    return {type:entry.blob.type,base64};
   },imageTab.url());
   assert.equal(pngResult.type,'image/png');
   const blob=Buffer.from(pngResult.base64,'base64');
@@ -130,12 +143,13 @@ try{
   const pdfTab=await pdfTabOpened;
   await pdfTab.waitForURL(/^blob:/,{timeout:45000});
   const pdfInfo=await page.evaluate(async url=>{
-    const result=await fetch(url);
-    const data=await result.arrayBuffer();
+    const entry=window.__escQaCvBlobs.find(x=>x.url===url);
+    if(!entry)throw Error('PDF preview URL did not match generated Blob: '+url);
+    const data=await entry.blob.arrayBuffer();
     const bytes=new Uint8Array(data);
     // PDF contains raster JPEG; the page dictionary is plain ASCII.
     const source=new TextDecoder('latin1').decode(bytes);
-    return {type:result.headers.get('content-type'),length:data.byteLength,
+    return {type:entry.blob.type,length:data.byteLength,
       header:source.slice(0,8),
       page:source.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/)?.slice(1),
       count:source.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/)?.[1]};

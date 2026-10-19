@@ -1,3 +1,4 @@
-check=pdf-publish-gateway-compatibility
-as_of=2026-10-19
+check=pdf-publish-gateway-compatibility-post-vps-upgrade
+as_of=2026-10-19T15:00+07:00
 no_ftp_credentials=true
+php_master_sha=6363dc8d3cb39424740f416d7867ed00d2da850c

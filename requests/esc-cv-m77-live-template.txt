@@ -1,0 +1,4 @@
+template=M77
+mode=probe
+scope=read-only-backup-and-inspection-before-activate
+approved_change=width-100-percent-and-outer-border-zero

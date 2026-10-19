@@ -40,18 +40,20 @@ try{
   await writeFile('m80-export.png',blob);
   const scale=raster.width/width;
   assert(scale>=0.95&&scale<=2.05,'Unexpected raster scale '+scale);
-  const screenshotScale=preview.width/width;
+  // The Builder body has its default 8px horizontal and 16px vertical
+  // margin inside the iframe. The screenshot is BODY-only while the export
+  // raster covers the entire frame. Align their content origins before
+  // measuring; also exclude the fixed site header covering the top on scroll.
+  const logicalWidth=Math.min(preview.width,raster.width/scale);
+  const logicalHeight=Math.min(preview.height,raster.height/scale);
+  const xOffset=Math.round((raster.width/scale-preview.width)/2);
+  const yOffset=Math.round(raster.height/scale-preview.height);
   let count=0,sum=0,sumSolid=0,flatCount=0;
-  // Compare same logical locations. Ignore a tiny edge/border offset and
-  // text anti-aliasing only; large shifted blocks should still be caught.
-  const logicalWidth=Math.min(width,preview.width/screenshotScale,raster.width/scale);
-  const logicalHeight=Math.min(preview.height/screenshotScale,raster.height/scale);
-  for(let y=16;y<logicalHeight-16;y+=5){
+  for(let y=120;y<logicalHeight-16;y+=5){
     for(let x=16;x<logicalWidth-16;x+=5){
-      const ax=Math.min(preview.width-1,Math.floor(x*screenshotScale));
-      const ay=Math.min(preview.height-1,Math.floor(y*screenshotScale));
-      const bx=Math.min(raster.width-1,Math.floor(x*scale));
-      const by=Math.min(raster.height-1,Math.floor(y*scale));
+      const ax=x,ay=y;
+      const bx=Math.min(raster.width-1,Math.floor((x+xOffset)*scale));
+      const by=Math.min(raster.height-1,Math.floor((y+yOffset)*scale));
       const a=(ay*preview.width+ax)*4,b=(by*raster.width+bx)*4;
       const delta=(Math.abs(preview.data[a]-raster.data[b])+
         Math.abs(preview.data[a+1]-raster.data[b+1])+
@@ -69,10 +71,11 @@ try{
     logicalWidth:width,previewWidth:preview.width,previewHeight:preview.height,
     exportedWidth:raster.width,exportedHeight:raster.height,scale,
     meanRGBDifference:+mean.toFixed(2),flatRGBDifference:+solidMean.toFixed(2),
+    xOffset,yOffset,
     comparisonPoints:count
   }));
   // Layout mismatch must not quietly pass just because a PNG was generated.
-  assert(mean<40,'M80 layout differs too much between Builder and PNG (mean RGB '+mean.toFixed(2)+')');
+  assert(mean<20,'M80 layout differs too much between Builder and PNG (mean RGB '+mean.toFixed(2)+')');
   await page.locator('[data-cv-export-summary]').click();
   const downloading=page.waitForEvent('download',{timeout:45000});
   await page.locator('[data-cv-export-format="pdf"]').click();

@@ -1,0 +1,39 @@
+name: ESC CV Original Templates Whitespace Audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'requests/esc-cv-legacy-audit.txt'
+permissions:
+  contents: read
+concurrency:
+  group: esc-cv-legacy-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install parser and validate script
+        run: |
+          python -m py_compile scripts/esc_cv_legacy_audit.py
+          pip install --disable-pip-version-check requests==2.32.3 beautifulsoup4==4.13.3
+      - name: Inspect active original CV templates (no writes)
+        env:
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: python scripts/esc_cv_legacy_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: esc-cv-original-whitespace-audit
+          path: qa-legacy-cv/
+          retention-days: 7
+          if-no-files-found: ignore

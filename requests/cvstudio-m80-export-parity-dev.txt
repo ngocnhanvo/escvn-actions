@@ -5,3 +5,5 @@ intent=compare M80 live Builder screenshot vs exported PNG pixels and exported P
 retry=2026-10-19 syntax-fixed-browser-check-after-initial-script-failure
 probe=2026-10-19-M80-compare-html2canvas-clone-vs-builder-heading-border
 astro_github_sha=a14037cd1cab3d1c544d4b7e47a71f1e91249867
+retry=2026-10-19-native-browser-svg-raster-for-M80
+astro_github_sha=6ba4f4bbe6d45658cfee8021b466f5e34b9eddb3

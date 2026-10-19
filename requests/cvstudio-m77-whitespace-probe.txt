@@ -1,0 +1,4 @@
+date=2026-10-19
+scope=M77 only
+phase=read-only geometry diagnostics
+note=Do not publish changed M77 or affect other templates until user approves preview

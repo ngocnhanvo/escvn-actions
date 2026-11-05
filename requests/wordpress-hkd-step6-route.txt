@@ -3,3 +3,4 @@ scope=wordpress_hkd_route
 attempt=2
 attempt=3-audit
 attempt=4-cache-audit
+attempt=5-log-sync

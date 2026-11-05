@@ -1,0 +1,35 @@
+name: ESC HKD Step 6 Route
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step6-route.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-hkd-step6-route
+  cancel-in-progress: false
+jobs:
+  setup-route:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate action request
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fqx 'step=6' requests/wordpress-hkd-step6-route.txt
+          grep -Fqx 'scope=wordpress_hkd_route' requests/wordpress-hkd-step6-route.txt
+      - name: Install browser
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Create precise HKD internal rewrite in WordPress
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-hkd-step6-route.mjs

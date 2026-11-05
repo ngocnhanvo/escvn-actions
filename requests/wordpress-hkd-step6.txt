@@ -1,4 +1,4 @@
 step=6
 scope=frontend_qa
-astro_sha=d25601b4114eae399ca796c403685c6666e35a24
-attempt=2
+astro_sha=0b3accee44904857282039881f45fe9bb72ea24d
+attempt=3

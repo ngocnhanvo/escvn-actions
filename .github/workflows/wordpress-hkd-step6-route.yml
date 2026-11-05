@@ -27,9 +27,9 @@ jobs:
           grep -Fqx 'scope=wordpress_hkd_route' requests/wordpress-hkd-step6-route.txt
       - name: Install browser
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
-      - name: Audit precise HKD internal rewrite in WordPress
+      - name: Resave verified HKD route and confirm redirect sync
         env:
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
-        run: node scripts/wordpress-hkd-step6-route-audit.mjs
+        run: node scripts/wordpress-hkd-step6-route-sync.mjs

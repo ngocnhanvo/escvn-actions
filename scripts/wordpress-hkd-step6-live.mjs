@@ -8,7 +8,17 @@ try{
   const errors=[];
   page.on('pageerror',e=>errors.push(String(e).slice(0,220)));
   const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  if(response?.status()!==200)throw Error('HKD route HTTP '+response?.status());
+  if(response?.status()!==200) {
+    const probe=['/ban-do-ho-kinh-doanh','/ban-do-ho-kinh-doanh/','/ban-do-ho-kinh-doanh/index.html','/client/ban-do-ho-kinh-doanh/index.html','/tao-cv-truc-tuyen/builder/','/tao-cv-truc-tuyen/builder/index.html','/'];
+    for(const candidate of probe) {
+      try {
+        const r=await ctx.request.get('https://esc.vn'+candidate,{timeout:20000,maxRedirects:3});
+        const body=await r.text();
+        console.log('HKD ROUTE PROBE',candidate,r.status(),r.url(),body.includes('data-hkd-map-page')?'HKD_CONTENT':'',body.slice(0,60).replace(/\\s+/g,' '));
+      }catch(e){console.log('HKD ROUTE PROBE ERROR',candidate,String(e).slice(0,110));}
+    }
+    throw Error('HKD route HTTP '+response?.status());
+  }
   await page.locator('[data-hkd-map-page]').waitFor({timeout:12000});
   await page.getByRole('heading',{name:'Bản đồ số hộ kinh doanh'}).waitFor({timeout:12000});
   await page.waitForFunction(()=>document.getElementById('hkd-total')?.textContent?.trim()==='0',{timeout:30000});

@@ -2,3 +2,4 @@ step=6
 scope=wordpress_hkd_route
 attempt=2
 attempt=3-audit
+attempt=4-cache-audit

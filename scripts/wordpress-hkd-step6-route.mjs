@@ -33,7 +33,7 @@ try{
   const routes=await listing.json();
   if(Array.isArray(routes)&&routes.some(r=>r?.redirect?.from_link===source||r?.acf?.from_link===source)){
    console.log('HKD URL route already exists; no duplicate will be created');
-   return;
+   process.exit(0);
   }
  }
  await page.goto(origin+'/wp-admin/post-new.php?post_type=chuyen-huong-link',{waitUntil:'domcontentloaded',timeout:60000});

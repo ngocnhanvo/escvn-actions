@@ -1,0 +1,114 @@
+name: ESC HKD Step 2 — Create Tables
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step2.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-wordpress-hkd-step2
+  cancel-in-progress: false
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout control
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Validate request and environment
+        id: gate
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          test -n "$WP_ADMIN_URL" && test -n "$WP_ADMIN_USERNAME" && test -n "$WP_ADMIN_PASSWORD"
+          test -n "$SOURCE_REPO_PAT"
+          request=control/requests/wordpress-hkd-step2.txt
+          grep -Fqx 'step=2' "$request"
+          grep -Fqx 'owner_backup_confirmed=yes' "$request"
+          sha="$(sed -n 's/^source_sha=//p' "$request" | head -n 1 | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          url=os.environ['WP_ADMIN_URL']
+          host=urlparse(url if '://' in url else 'https://'+url).hostname
+          if host != 'admin.esc.vn':
+              raise SystemExit('WordPress target host mismatch')
+          PY
+
+      - name: Checkout PHP source
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: source
+
+      - name: Verify source and lint PHP
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
+          php -l source/wp-content/mu-plugins/esc-hkd-db-inventory.php
+          php -l source/wp-content/mu-plugins/esc-hkd-schema.php
+
+      - name: Deploy only two HKD admin tools over FTP
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y -qq >/dev/null
+          sudo apt-get install -y -qq lftp >/dev/null
+          protocol="${FTP_PROTOCOL:-ftp}"
+          root=/domains/admin.esc.vn/public_html/wp-content/mu-plugins
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$protocol://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ftp:ssl-force yes
+          set ssl:verify-certificate yes
+          put "source/wp-content/mu-plugins/esc-hkd-db-inventory.php" -o "$root/esc-hkd-db-inventory.php"
+          put "source/wp-content/mu-plugins/esc-hkd-schema.php" -o "$root/esc-hkd-schema.php"
+          get "$root/esc-hkd-db-inventory.php" -o "/tmp/esc-hkd-db-inventory.php"
+          get "$root/esc-hkd-schema.php" -o "/tmp/esc-hkd-schema.php"
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-hkd-db-inventory.php /tmp/esc-hkd-db-inventory.php
+          cmp source/wp-content/mu-plugins/esc-hkd-schema.php /tmp/esc-hkd-schema.php
+          rm -f /tmp/esc-hkd-db-inventory.php /tmp/esc-hkd-schema.php
+          echo "PHP deployment verified byte-for-byte"
+
+      - name: Install Playwright
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Create HKD tables through authenticated WordPress Admin
+        working-directory: control
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-hkd-step2.mjs

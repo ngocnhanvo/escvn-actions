@@ -110,10 +110,12 @@ try {
     timeout: 30000,
   });
 
-  const result = await page.evaluate(async () => {
+  const forceBuild = process.env.WP_BUILD_FORCE === '1';
+  const result = await page.evaluate(async (forceBuild) => {
     const body = new URLSearchParams({
       action: 'vcs_trigger_build',
       nonce: globalThis.vcsBuild.nonce,
+      ...(forceBuild ? {force_build: '1'} : {}),
     });
 
     const response = await fetch(globalThis.vcsBuild.ajax_url, {
@@ -132,7 +134,7 @@ try {
     }
 
     return { status: response.status, payload };
-  });
+  }, forceBuild);
 
   if (result.status !== 200 || result.payload?.success !== true) {
     const message = result.payload?.data?.message || result.payload?.raw || JSON.stringify(result.payload);

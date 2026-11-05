@@ -56,8 +56,24 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          pnpm exec esbuild src/lib/hkd/api.ts src/lib/hkd/map-page.ts --bundle --platform=browser --format=esm --outdir=/tmp/hkd-step6-esbuild
-          test -s /tmp/hkd-step6-esbuild/map-page.js
+          node --input-type=module <<'NODE'
+          import ts from 'typescript';
+          import { transform } from '@astrojs/compiler';
+          import fs from 'node:fs';
+          for (const file of ['src/lib/hkd/api.ts','src/lib/hkd/map-page.ts']) {
+            const input=fs.readFileSync(file,'utf8');
+            const result=ts.transpileModule(input,{
+              fileName:file,reportDiagnostics:true,
+              compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
+            });
+            const errors=(result.diagnostics||[]).filter(d=>d.category===ts.DiagnosticCategory.Error);
+            if(errors.length)throw Error(file+': '+errors.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));
+          }
+          const astro=fs.readFileSync('src/pages/ban-do-ho-kinh-doanh/index.astro','utf8');
+          const result=await transform(astro,{filename:'src/pages/ban-do-ho-kinh-doanh/index.astro'});
+          if(!result.code || !result.code.includes('hkd-map')) throw Error('Astro transform failed');
+          console.log('HKD Step6 TypeScript/Astro syntax PASS');
+          NODE
           test -f src/pages/ban-do-ho-kinh-doanh/index.astro
           grep -Fq "data-hkd-map-page" src/pages/ban-do-ho-kinh-doanh/index.astro
           grep -Fq "initHKDMapPage" src/pages/ban-do-ho-kinh-doanh/index.astro

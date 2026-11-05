@@ -1,4 +1,4 @@
 step=6
 trigger=wordpress_build_website
 astro_sha=a1a28ca820c9f732710321b4c99f94597a3b57c3
-attempt=3-route-refresh
+attempt=4-synced-route

@@ -1,0 +1,110 @@
+name: ESC HKD Step 4 API
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step4.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-wordpress-hkd-step4
+  cancel-in-progress: false
+jobs:
+  deploy-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout control
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Validate scope and secrets
+        id: gate
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT" && test -n "$WP_ADMIN_URL"
+          test -n "$WP_ADMIN_USERNAME" && test -n "$WP_ADMIN_PASSWORD"
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          request=control/requests/wordpress-hkd-step4.txt
+          grep -Fqx 'step=4' "$request"
+          grep -Fqx 'scope=read_only_api' "$request"
+          sha="$(sed -n 's/^source_sha=//p' "$request" | head -n 1 | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          u=os.environ['WP_ADMIN_URL']
+          if urlparse(u if '://' in u else 'https://'+u).hostname != 'admin.esc.vn':
+              raise SystemExit('Wrong WordPress host')
+          PY
+
+      - name: Checkout PHP application
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Lint and verify PHP source
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
+          php -l source/wp-content/plugins/esc-hkd/esc-hkd.php
+          node --check control/scripts/wordpress-hkd-step4.mjs
+
+      - name: Deploy only HKD REST plugin
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y -qq >/dev/null
+          sudo apt-get install -y -qq lftp >/dev/null
+          root=/domains/admin.esc.vn/public_html/wp-content/plugins/esc-hkd
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "${FTP_PROTOCOL:-ftp}://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ftp:ssl-force yes
+          set ssl:verify-certificate yes
+          mkdir -p "$root"
+          put "source/wp-content/plugins/esc-hkd/esc-hkd.php" -o "$root/esc-hkd.php"
+          get "$root/esc-hkd.php" -o "/tmp/esc-hkd.php"
+          bye
+          LFTP
+          cmp source/wp-content/plugins/esc-hkd/esc-hkd.php /tmp/esc-hkd.php
+          rm -f /tmp/esc-hkd.php
+          echo 'HKD REST plugin deployed and verified'
+
+      - name: Install Playwright
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Activate plugin and test anonymous REST API
+        working-directory: control
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-hkd-step4.mjs

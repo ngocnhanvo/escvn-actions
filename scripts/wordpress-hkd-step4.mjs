@@ -35,9 +35,9 @@ try {
     await Promise.all([page.waitForLoadState('domcontentloaded'),page.locator('#wp-submit').click()]);
   }
   if (page.url().includes('wp-login.php') || await visible('#login_error')) throw new Error('WordPress login failed');
-  await page.goto(origin+'/wp-admin/plugins.php',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto(origin+'/wp-admin/plugins.php?plugin_status=inactive',{waitUntil:'commit',timeout:90000});
   const row=page.locator('tr[data-slug="esc-hkd"]');
-  await row.waitFor({timeout:20000});
+  await row.waitFor({timeout:60000});
   const activate=row.locator('a:has-text("Activate"), a:has-text("Kích hoạt")').first();
   if (await activate.count() && await activate.isVisible()) {
     await Promise.all([page.waitForLoadState('domcontentloaded'),activate.click()]);

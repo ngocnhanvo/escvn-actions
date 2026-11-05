@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
           php -l source/wp-content/plugins/esc-hkd/esc-hkd.php
+          php -l source/wp-content/mu-plugins/esc-hkd-rest-loader.php
           node --check control/scripts/wordpress-hkd-step4.mjs
 
       - name: Deploy only HKD REST plugin
@@ -80,6 +81,7 @@ jobs:
           sudo apt-get update -y -qq >/dev/null
           sudo apt-get install -y -qq lftp >/dev/null
           root=/domains/admin.esc.vn/public_html/wp-content/plugins/esc-hkd
+          mu=/domains/admin.esc.vn/public_html/wp-content/mu-plugins
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "${FTP_PROTOCOL:-ftp}://$FTP_SERVER" <<LFTP
           set cmd:fail-exit yes
           set net:max-retries 2
@@ -87,11 +89,14 @@ jobs:
           set ftp:ssl-force yes
           set ssl:verify-certificate yes
           put "source/wp-content/plugins/esc-hkd/esc-hkd.php" -o "$root/esc-hkd.php"
+          put "source/wp-content/mu-plugins/esc-hkd-rest-loader.php" -o "$mu/esc-hkd-rest-loader.php"
           get "$root/esc-hkd.php" -o "/tmp/esc-hkd.php"
+          get "$mu/esc-hkd-rest-loader.php" -o "/tmp/esc-hkd-rest-loader.php"
           bye
           LFTP
           cmp source/wp-content/plugins/esc-hkd/esc-hkd.php /tmp/esc-hkd.php
-          rm -f /tmp/esc-hkd.php
+          cmp source/wp-content/mu-plugins/esc-hkd-rest-loader.php /tmp/esc-hkd-rest-loader.php
+          rm -f /tmp/esc-hkd.php /tmp/esc-hkd-rest-loader.php
           echo 'HKD REST plugin deployed and verified'
 
       - name: Install Playwright
@@ -100,10 +105,8 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Activate plugin and test anonymous REST API
+      - name: Test anonymous REST API
         working-directory: control
         env:
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
-          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
-          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
         run: node scripts/wordpress-hkd-step4.mjs

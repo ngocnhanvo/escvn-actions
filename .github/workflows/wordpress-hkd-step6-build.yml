@@ -22,6 +22,7 @@ jobs:
           persist-credentials: false
       - name: Verify explicit request and source SHA
         id: gate
+        shell: bash
         env:
           SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
         run: |
@@ -41,6 +42,7 @@ jobs:
           persist-credentials: false
           path: astro
       - name: Verify exact Astro commit
+        shell: bash
         env:
           EXPECTED_SHA: ${{ steps.gate.outputs.sha }}
         run: |

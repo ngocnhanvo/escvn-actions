@@ -1,0 +1,77 @@
+name: ESC HKD Step 6 Frontend QA
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step6.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-hkd-step6-qa
+  cancel-in-progress: true
+jobs:
+  source-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate source SHA
+        id: gate
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          grep -Fqx 'step=6' requests/wordpress-hkd-step6.txt
+          grep -Fqx 'scope=frontend_qa' requests/wordpress-hkd-step6.txt
+          sha="$(sed -n 's/^astro_sha=//p' requests/wordpress-hkd-step6.txt | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Checkout Astro master
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: astro
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: astro/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: astro
+        run: pnpm install --frozen-lockfile
+      - name: Validate new HKD route and browser modules
+        working-directory: astro
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          pnpm exec esbuild src/lib/hkd/api.ts src/lib/hkd/map-page.ts --bundle --platform=browser --format=esm --outdir=/tmp/hkd-step6-esbuild
+          test -s /tmp/hkd-step6-esbuild/map-page.js
+          test -f src/pages/ban-do-ho-kinh-doanh/index.astro
+          grep -Fq "data-hkd-map-page" src/pages/ban-do-ho-kinh-doanh/index.astro
+          grep -Fq "initHKDMapPage" src/pages/ban-do-ho-kinh-doanh/index.astro
+          echo "HKD Step6 frontend source bundle PASS"
+  browser-cors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Check browser CORS and WordPress REST contract
+        run: node scripts/wordpress-hkd-step6-cors.mjs

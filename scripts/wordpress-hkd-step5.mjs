@@ -24,14 +24,14 @@ try{
   if(guestBiz.status()!==302&&guestBiz.status()!==301&&guestBiz.status()!==403)
     throw new Error('Anonymous HKD admin access was not denied: '+guestBiz.status());
   const guestPost=await guest.request.post(path('/wp-admin/admin-post.php'),{
-    form:{action:'esc_hkd_review',id:'bad',decision:'approve'},timeout:45000
+    form:{action:'esc_hkd_review',id:'bad',decision:'approve'},timeout:45000,maxRedirects:0
   });
   if(guestPost.status()!==400 && guestPost.status()!==403 && guestPost.status()!==404 && guestPost.status()!==302)
     throw new Error('Anonymous approval response unexpected: '+guestPost.status());
   await guest.close();
   console.log('HKD Step5 anonymous restriction PASS');
 
-  await page.goto(path('/wp-admin/'),{waitUntil:'commit',timeout:60000});
+  await page.goto(path('/wp-admin/'),{waitUntil:'domcontentloaded',timeout:60000});
   if(await visible('#user_login')){
     await page.locator('#user_login').fill(user);
     await page.locator('#user_pass').fill(password);

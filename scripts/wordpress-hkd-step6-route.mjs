@@ -45,7 +45,7 @@ try{
   to:'input[name="acf[field_esc_route_to_link]"]',
   type:'select[name="acf[field_esc_route_type]"]',
   match:'select[name="acf[field_esc_route_match_type]"]',
-  enable:'input[name="acf[field_esc_route_enable]"]'
+  enable:'input[type="checkbox"][name="acf[field_esc_route_enable]"]'
  };
  const from=page.locator(fields.from);
  await from.waitFor({state:'attached',timeout:20000});

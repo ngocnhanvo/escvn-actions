@@ -59,14 +59,19 @@ jobs:
           node --input-type=module <<'NODE'
           import ts from 'typescript';
           import fs from 'node:fs';
-          for (const file of ['src/lib/hkd/api.ts','src/lib/hkd/map-page.ts']) {
-            const input=fs.readFileSync(file,'utf8');
-            const result=ts.transpileModule(input,{
-              fileName:file,reportDiagnostics:true,
-              compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
-            });
-            const errors=(result.diagnostics||[]).filter(d=>d.category===ts.DiagnosticCategory.Error);
-            if(errors.length)throw Error(file+': '+errors.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));
+          const sourceFiles=['src/lib/hkd/api.ts','src/lib/hkd/map-page.ts'];
+          const program=ts.createProgram(sourceFiles,{
+            module:ts.ModuleKind.ESNext,moduleResolution:ts.ModuleResolutionKind.Bundler,
+            target:ts.ScriptTarget.ES2022,lib:['lib.es2022.d.ts','lib.dom.d.ts','lib.dom.iterable.d.ts'],
+            types:[],skipLibCheck:true,noEmit:true,strict:false,
+          });
+          const errors=ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error);
+          if(errors.length){
+            for(const e of errors.slice(0,25)) {
+              const file=e.file?.fileName||'global';
+              console.error(file+': '+ts.flattenDiagnosticMessageText(e.messageText,' '));
+            }
+            throw Error(errors.length+' TypeScript errors in HKD modules');
           }
           const astro=fs.readFileSync('src/pages/ban-do-ho-kinh-doanh/index.astro','utf8');
           if(!astro.startsWith('---') || !astro.includes('</Layout>') || !astro.includes('data-hkd-map-page'))

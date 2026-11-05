@@ -1,0 +1,130 @@
+name: ESC HKD Step 3 — Import References
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step3.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-wordpress-hkd-step3
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout control
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Validate target and source SHAs
+        id: gate
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT" && test -n "$WP_ADMIN_URL"
+          test -n "$WP_ADMIN_USERNAME" && test -n "$WP_ADMIN_PASSWORD"
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          request=control/requests/wordpress-hkd-step3.txt
+          grep -Fqx 'step=3' "$request"
+          grep -Fqx 'scope=reference_only' "$request"
+          source_sha="$(sed -n 's/^source_sha=//p' "$request" | head -n 1 | tr -d '\r')"
+          hkd_sha="$(sed -n 's/^hkd_sha=//p' "$request" | head -n 1 | tr -d '\r')"
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] && [[ "$hkd_sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "hkd_sha=$hkd_sha" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          u=os.environ['WP_ADMIN_URL']
+          host=urlparse(u if '://' in u else 'https://'+u).hostname
+          if host != 'admin.esc.vn': raise SystemExit('Invalid WordPress target')
+          PY
+
+      - name: Checkout PHP application
+        uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: source
+          persist-credentials: false
+
+      - name: Checkout HKD source
+        uses: actions/checkout@v4
+        with:
+          repository: kieukhanhi/hokinhdoanh
+          ref: main
+          path: control/hkd
+          persist-credentials: false
+
+      - name: Verify source and import code
+        shell: bash
+        env:
+          EXPECTED_PHP_SHA: ${{ steps.gate.outputs.source_sha }}
+          EXPECTED_HKD_SHA: ${{ steps.gate.outputs.hkd_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED_PHP_SHA"
+          test "$(git -C control/hkd rev-parse HEAD)" = "$EXPECTED_HKD_SHA"
+          php -l source/wp-content/mu-plugins/esc-hkd-step3.php
+          node --check control/scripts/wordpress-hkd-step3.mjs
+          python3 - <<'PY'
+          import json
+          a=json.load(open('control/hkd/data/admin.vn-2025.json',encoding='utf-8'))
+          i=json.load(open('control/hkd/data/industries.json',encoding='utf-8'))
+          assert (len(a['provinces']),len(a['wards']),len(i)) == (34,3321,15)
+          assert len({x['code'] for x in a['provinces']})==34
+          assert len({x['code'] for x in a['wards']})==3321
+          assert len({x['code'] for x in i})==15
+          PY
+
+      - name: Deploy HKD reference importer only
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y -qq >/dev/null
+          sudo apt-get install -y -qq lftp >/dev/null
+          root=/domains/admin.esc.vn/public_html/wp-content/mu-plugins
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "${FTP_PROTOCOL:-ftp}://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 2
+          set net:timeout 20
+          set ftp:ssl-force yes
+          set ssl:verify-certificate yes
+          put "source/wp-content/mu-plugins/esc-hkd-step3.php" -o "$root/esc-hkd-step3.php"
+          get "$root/esc-hkd-step3.php" -o "/tmp/esc-hkd-step3.php"
+          bye
+          LFTP
+          cmp source/wp-content/mu-plugins/esc-hkd-step3.php /tmp/esc-hkd-step3.php
+          rm -f /tmp/esc-hkd-step3.php
+          echo 'HKD importer deployed and verified'
+
+      - name: Install Playwright
+        working-directory: control
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Import official HKD reference data through WordPress
+        working-directory: control
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-hkd-step3.mjs

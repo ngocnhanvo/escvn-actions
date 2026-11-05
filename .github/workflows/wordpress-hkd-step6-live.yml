@@ -1,0 +1,25 @@
+name: ESC HKD Step 6 Production QA
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-step6-live.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-hkd-step6-live-qa
+  cancel-in-progress: true
+jobs:
+  verify-live:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install matching Playwright
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Test ESC HKD desktop and mobile
+        run: node scripts/wordpress-hkd-step6-live.mjs

@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=42150928345
-attempt=goong-after-user-build
+deploy_run=42155567424
+attempt=source-ui-desktop-mobile

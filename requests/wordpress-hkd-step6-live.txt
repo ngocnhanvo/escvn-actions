@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
 deploy_run=42147079090
-attempt=6-final-20261106
+attempt=7-qa-timing

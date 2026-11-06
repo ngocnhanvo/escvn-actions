@@ -83,6 +83,37 @@ async function checkMapPage(width, height, mobile = false) {
   } finally { await context.close(); }
 }
 
+async function checkRegistrationForm(width, height) {
+  const context=await browser.newContext({viewport:{width,height}});
+  const page=await context.newPage();
+  const posts=[];
+  page.on('request',r=>{
+    if(r.method()==='POST' && r.url().includes('/esc-hkd/v1/registrations')) posts.push(r.url());
+  });
+  try {
+    const res=await page.goto(site+'#register',{waitUntil:'domcontentloaded',timeout:60000});
+    if(res?.status()!==200)throw Error('Registration page HTTP '+res?.status());
+    await page.locator('form#rf').waitFor({state:'visible',timeout:25000});
+    if(!await page.locator('#n').isVisible()||!await page.locator('#c').isVisible()
+      ||!await page.locator('#p').isVisible()||!await page.locator('#a').isVisible())
+      throw Error('Registration required fields missing');
+    if(!await page.locator('#hkdConsent').isVisible())throw Error('Consent checkbox missing');
+    if(!await page.locator('#hkdCompanySite').count())throw Error('Anti-spam honeypot missing');
+    await page.locator('#pv').selectOption('79');
+    await page.waitForFunction(()=>document.querySelectorAll('#dt option').length===169,null,{timeout:18000});
+    if(await page.locator('#ct option').count()!==16)throw Error('Industry choices missing');
+    await page.locator('#rf button[type="submit"]').click();
+    await page.locator('#e-n').getByText('Nhập tên hộ kinh doanh.').waitFor({state:'visible'});
+    if(posts.length)throw Error('Invalid form sent POST to production');
+    await page.evaluate(()=>{location.hash='#update-not-a-real-business'});
+    await page.getByRole('heading',{name:'Không tìm thấy hồ sơ'}).waitFor({state:'visible',timeout:16000});
+    if(posts.length)throw Error('Update lookup sent registration POST');
+    const size=await page.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:innerWidth}));
+    if(size.scrollWidth>size.innerWidth+4)throw Error('Registration form horizontal overflow at '+width);
+    console.log('HKD Step7 REGISTRATION UI PASS width='+width+': real province/ward/industry options, consent, spam field, required validation, invalid-update fail closed; no production submission');
+  }finally{await context.close()}
+}
+
 try {
   const api = await browser.newContext();
   const response = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/meta', { timeout: 45000 });
@@ -95,4 +126,6 @@ try {
 
   await checkMapPage(1366, 642, false);
   await checkMapPage(390, 844, true);
+  await checkRegistrationForm(1366, 768);
+  await checkRegistrationForm(390, 844);
 } finally { await browser.close(); }

@@ -1,4 +1,4 @@
 step=6
 trigger=wordpress_build_website
-astro_sha=896ddfa4082a2d02c77f3ca2047eb99cf9aff176
-attempt=step7-registration-form
+astro_sha=ceafad8647413a740d423a5a46f2e673a29ed917
+attempt=localize-vietnamese-openfreemap-labels

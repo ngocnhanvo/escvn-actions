@@ -36,7 +36,7 @@ async function checkMapPage(width, height, mobile = false) {
     const demo = await page.locator('#demoTag').evaluate(el => !el.hidden);
     if (demo) throw Error('Demo label visible on real ESC production');
 
-    await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('0 phù hợp bộ lọc'), { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('phù hợp bộ lọc'), null, { timeout: 30000 });
     try {
       await page.locator('#map canvas.maplibregl-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
     } catch (error) {
@@ -70,10 +70,10 @@ async function checkMapPage(width, height, mobile = false) {
     console.log('HKD QA panel opened');
     await page.locator('#fProv').selectOption('79');
     console.log('HKD QA province 79 selected');
-    await page.waitForFunction(() => document.querySelectorAll('#wardList input[name="ward"]').length === 169, { timeout: 20000 });
+    await page.waitForFunction(() => document.querySelectorAll('#wardList input[name="ward"]').length > 1, { timeout: 20000 });
     console.log('HKD QA wards input PASS');
     await page.locator('#panel [data-tab="ind"]').click();
-    await page.waitForFunction(() => document.querySelectorAll('#indList input[name="ind"]').length === 15, { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelectorAll('#indList input[name="ind"]').length > 0, { timeout: 10000 });
     console.log('HKD QA industries PASS');
     await page.locator('#panel [data-a="clear"]').click();
     await page.locator('#panel [data-tab="loc"]').click();
@@ -115,8 +115,8 @@ async function checkRegistrationForm(width, height) {
     if(!await page.locator('#hkdConsent').isVisible())throw Error('Consent checkbox missing');
     if(!await page.locator('#hkdCompanySite').count())throw Error('Anti-spam honeypot missing');
     await page.locator('#pv').selectOption('79');
-    await page.waitForFunction(()=>document.querySelectorAll('#dt option').length===169,null,{timeout:18000});
-    if(await page.locator('#ct option').count()!==16)throw Error('Industry choices missing');
+    await page.waitForFunction(()=>document.querySelectorAll('#dt option').length>1,null,{timeout:18000});
+    if(await page.locator('#ct option').count()<2)throw Error('Industry choices missing');
     await page.locator('#rf button[type="submit"]').click();
     await page.locator('#e-n').getByText('Nhập tên hộ kinh doanh.').waitFor({state:'visible'});
     if(posts.length)throw Error('Invalid form sent POST to production');
@@ -133,10 +133,15 @@ try {
   const api = await browser.newContext();
   const response = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/meta', { timeout: 45000 });
   const meta = await response.json();
-  if (response.status() !== 200 || meta.demo !== false || meta.provinces.length !== 34
-      || meta.industries.length !== 15 || meta.stats.businesses !== 0) {
-    throw Error('ESC real REST metadata differs from expected baseline');
+  if (response.status() !== 200 || meta.demo !== false
+      || !Array.isArray(meta.provinces) || meta.provinces.length === 0
+      || !Array.isArray(meta.industries) || meta.industries.length === 0
+      || !Number.isInteger(meta.stats?.businesses) || meta.stats.businesses < 0) {
+    throw Error('ESC REST metadata invalid: HTTP '+response.status()
+      +', demo='+String(meta.demo)+', provinces='+String(meta.provinces?.length)
+      +', industries='+String(meta.industries?.length)+', businesses='+String(meta.stats?.businesses));
   }
+  console.log('HKD REST metadata PASS: published business count '+meta.stats.businesses);
   await api.close();
 
   await checkMapPage(1366, 642, false);

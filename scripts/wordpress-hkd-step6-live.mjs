@@ -9,17 +9,20 @@ async function checkMapPage(width, height, mobile = false) {
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   const errors = [];
-  const mapNetworkErrors = [];
+  const goongTileErrors = [];
   const goongRequests = [];
+  const openFreeMapRequests = [];
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
-  page.on('request', r => { if (/goong\\.io|goongmaps/i.test(r.url())) goongRequests.push(r.url()); });
+  page.on('request', r => {
+    if (r.url().includes('tiles.goong.io')) goongRequests.push(r.url());
+    if (r.url().includes('tiles.openfreemap.org')) openFreeMapRequests.push(r.url());
+  });
   page.on('response', r => {
-    if (r.url().includes('tiles.openfreemap.org') && r.status() >= 400)
-      mapNetworkErrors.push(r.status() + ' ' + r.url().slice(0, 160));
+    if (r.url().includes('tiles.goong.io') && r.status() >= 400)
+      goongTileErrors.push('Goong HTTP ' + r.status());
   });
   page.on('requestfailed', r => {
-    if (r.url().includes('tiles.openfreemap.org'))
-      mapNetworkErrors.push('Failed ' + r.url().slice(0, 160) + ': ' + r.failure()?.errorText);
+    if (r.url().includes('tiles.goong.io')) goongTileErrors.push('Goong request failed: ' + (r.failure()?.errorText || 'unknown'));
   });
   try {
     const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -38,7 +41,7 @@ async function checkMapPage(width, height, mobile = false) {
 
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('phù hợp bộ lọc'), null, { timeout: 30000 });
     try {
-      await page.locator('#map canvas.maplibregl-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
+      await page.locator('#map canvas.goongjs-canvas, #map canvas.mapboxgl-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
     } catch (error) {
       const info = await page.evaluate(() => ({
         note: document.querySelector('#note')?.textContent?.slice(0, 500),
@@ -46,20 +49,22 @@ async function checkMapPage(width, height, mobile = false) {
         canvasCount: document.querySelectorAll('#map canvas').length,
         mapNode: document.querySelector('#map')?.outerHTML.slice(0, 320),
         loading: document.querySelector('#busy')?.textContent,
-        sdkLoaded: !!window.maplibregl,
-        sdkScripts: document.querySelectorAll('script[src*="maplibre-gl"]').length,
+        sdkLoaded: !!window.goongjs,
+        sdkScripts: document.querySelectorAll('script[src*="goong-js"]').length,
       }));
-      throw Error('MAPLIBRE_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
+      throw Error('GOONG_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
     }
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });
-    if (goongRequests.length) throw Error('Legacy Goong network requests detected');
-    if (mapNetworkErrors.length) throw Error('OpenFreeMap network errors: ' + mapNetworkErrors.join(' | '));
-    const localizedLayers = await page.locator('#map').getAttribute('data-hkd-map-localized-layers');
-    if (await page.locator('#map').getAttribute('data-hkd-map-language') !== 'vi'
-      || !Number.isInteger(Number(localizedLayers)) || Number(localizedLayers) < 1)
-      throw Error('Vietnamese basemap label override missing: ' + String(localizedLayers));
-    console.log('HKD Vietnamese basemap labels PASS: localized layers=' + localizedLayers);
+    if (!goongRequests.length) throw Error('Goong Maptiles network requests were not observed');
+    if (openFreeMapRequests.length) throw Error('Unexpected OpenFreeMap requests on Goong map');
+    if (goongTileErrors.length) throw Error('Goong tile request failures: ' + goongTileErrors.join(' | '));
+    if (await page.locator('#map').getAttribute('data-hkd-map-provider') !== 'goong'
+      || !await page.evaluate(() => Boolean(window.goongjs)))
+      throw Error('Goong SDK/provider marker missing');
+    const noteText = await page.locator('#note').innerText().catch(() => '');
+    if (noteText.includes('Không tải được bản đồ')) throw Error('Goong map failure notice: '+noteText.slice(0,100));
+    console.log('HKD Goong Maptiles PASS: canvas and requests verified, no OpenFreeMap');
     const size = await page.evaluate(() => ({
       headerHeight: document.querySelector('header')?.getBoundingClientRect().height,
       mapHeight: document.querySelector('#mv')?.getBoundingClientRect().height,
@@ -99,7 +104,7 @@ async function checkMapPage(width, height, mobile = false) {
     if (errors.length) throw Error('JavaScript page error: ' + errors.join(' | '));
 
     console.log('HKD SOURCE UI ' + (mobile ? 'MOBILE' : 'DESKTOP')
-      + ' PASS: MapLibre/OpenFreeMap canvas, full-screen layout, floating chips/search, province-wards, industry filters, bottom drawer, no demo, width=' + width);
+      + ' PASS: Goong canvas, full-screen layout, floating chips/search, province-wards, industry filters, bottom drawer, no demo, width=' + width);
   } finally { await context.close(); }
 }
 
@@ -147,6 +152,11 @@ try {
       +', industries='+String(meta.industries?.length)+', businesses='+String(meta.stats?.businesses));
   }
   console.log('HKD REST metadata PASS: published business count '+meta.stats.businesses);
+  const configResponse = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/map-config', { timeout: 45000 });
+  const config = await configResponse.json().catch(() => null);
+  if (configResponse.status() !== 200 || config?.provider !== 'goong' || !config?.goongMaptilesKey)
+    throw Error('Goong Maptiles key unavailable in WordPress configuration');
+  console.log('HKD Goong Maptiles config PASS (token redacted)');
   await api.close();
 
   await checkMapPage(1366, 642, false);

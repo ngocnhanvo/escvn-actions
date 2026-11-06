@@ -19,7 +19,7 @@ async function post(payload,origin) {
     data:payload,headers,timeout:45000,
   });
   const data=await response.json().catch(()=>({}));
-  return {status:response.status(),error:data?.error||data?.code};
+  return {status:response.status(),error:data?.error||data?.code,fields:data?.fields||{}};
 }
 
 try {
@@ -34,6 +34,13 @@ try {
   if(spam.status!==400)throw Error('Honeypot not rejected');
   const tooFast=await post({company_site:'',startedAt:Date.now()},'https://esc.vn');
   if(tooFast.status!==400)throw Error('Fast spam attempt not rejected');
+
+  const invalidCoordinates=await post({
+    ...empty,lat:95,lng:200,
+  },'https://esc.vn');
+  if(invalidCoordinates.status!==400
+     || !invalidCoordinates.fields.lat || !invalidCoordinates.fields.lng)
+    throw Error('Invalid latitude/longitude must return field errors with HTTP 400');
 
   const unknownCodes=await post({
     company_site:'',startedAt, name:'INVALID QA - MUST NOT SAVE',contact:'QA',

@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
 deploy_run=42155567424
-attempt=source-ui-diagnostic
+attempt=source-ui-qa-canvas

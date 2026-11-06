@@ -27,7 +27,7 @@ async function checkMapPage(width, height, mobile = false) {
 
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('0 phù hợp bộ lọc'), { timeout: 30000 });
     try {
-      await page.locator('#map .goongjs-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
+      await page.locator('#map canvas.mapboxgl-canvas, #map canvas.goongjs-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
     } catch (error) {
       const info = await page.evaluate(() => ({
         note: document.querySelector('#note')?.textContent?.slice(0, 500),

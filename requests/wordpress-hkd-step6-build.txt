@@ -1,4 +1,4 @@
 step=6
 trigger=wordpress_build_website
-astro_sha=cdc67cb078fa95be84386fe2dcc67aba5629a2e7
-attempt=source-interface-20261106
+astro_sha=896ddfa4082a2d02c77f3ca2047eb99cf9aff176
+attempt=step7-registration-form

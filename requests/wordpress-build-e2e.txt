@@ -1,4 +1,5 @@
-triggered_at=2026-11-06T15:05:00+07:00
-purpose=Hide default Goong POI labels from HKD map
+purpose=Force WordPress Build Website for HKD POI labels
+mode=wp_build_force
 astro_sha=c27cd42158892e771de17a6e64c8db0758cd66f4
 expected_flow=WordPress -> repository_dispatch -> escvn-actions deploy -> production smoke
+retry_of=42186171410

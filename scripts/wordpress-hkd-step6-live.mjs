@@ -26,7 +26,20 @@ async function checkMapPage(width, height, mobile = false) {
     if (demo) throw Error('Demo label visible on real ESC production');
 
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('0 phù hợp bộ lọc'), { timeout: 30000 });
-    await page.locator('#map .goongjs-canvas').first().waitFor({ state: 'attached', timeout: 60000 });
+    try {
+      await page.locator('#map .goongjs-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
+    } catch (error) {
+      const info = await page.evaluate(() => ({
+        note: document.querySelector('#note')?.textContent?.slice(0, 500),
+        app: document.querySelector('#app')?.textContent?.slice(0, 700),
+        canvasCount: document.querySelectorAll('#map canvas').length,
+        mapNode: document.querySelector('#map')?.outerHTML.slice(0, 320),
+        loading: document.querySelector('#busy')?.textContent,
+        sdkLoaded: !!window.goongjs,
+        sdkScripts: document.querySelectorAll('script[src*="goong-js"]').length,
+      }));
+      throw Error('GOONG_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
+    }
     const size = await page.evaluate(() => ({
       headerHeight: document.querySelector('header')?.getBoundingClientRect().height,
       mapHeight: document.querySelector('#mv')?.getBoundingClientRect().height,

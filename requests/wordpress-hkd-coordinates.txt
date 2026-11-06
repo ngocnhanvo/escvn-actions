@@ -1,0 +1,3 @@
+scope=coordinates
+source_sha=6e9449594f8cdc5a41286dc030b81ae9413bfa2e
+attempt=coordinate-schema-and-handlers-20261106

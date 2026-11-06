@@ -1,0 +1,155 @@
+name: ESC HKD Coordinates Rollout
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-hkd-coordinates.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-hkd-coordinates-rollout
+  cancel-in-progress: false
+jobs:
+  deploy-schema:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, path: control}
+      - name: Validate approved PHP source and credentials
+        shell: bash
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT" && test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          grep -Fqx 'scope=coordinates' control/requests/wordpress-hkd-coordinates.txt
+          sha="$(sed -n 's/^source_sha=//p' control/requests/wordpress-hkd-coordinates.txt | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "EXPECTED_PHP_SHA=$sha" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: php
+      - name: Lint all coordinate PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C php rev-parse HEAD)" = "$EXPECTED_PHP_SHA"
+          php -l php/wp-content/mu-plugins/esc-hkd-schema.php
+          php -l php/wp-content/plugins/esc-hkd/registrations.php
+          php -l php/wp-content/plugins/esc-hkd/admin-transactions.php
+      - name: Stage admin-only additive schema upgrade
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq -y >/dev/null
+          sudo apt-get install -qq -y lftp >/dev/null
+          root=/domains/admin.esc.vn/public_html/wp-content/mu-plugins
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "${FTP_PROTOCOL:-ftp}://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set ftp:ssl-force yes
+          set ssl:verify-certificate yes
+          set net:max-retries 2
+          set net:timeout 20
+          put php/wp-content/mu-plugins/esc-hkd-schema.php -o "$root/esc-hkd-schema.php"
+          get "$root/esc-hkd-schema.php" -o /tmp/esc-hkd-coordinates-schema.php
+          bye
+          LFTP
+          cmp php/wp-content/mu-plugins/esc-hkd-schema.php /tmp/esc-hkd-coordinates-schema.php
+          rm -f /tmp/esc-hkd-coordinates-schema.php
+          echo 'HKD admin-only schema tool staged and verified'
+  migrate:
+    needs: deploy-schema
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Install Playwright driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Apply and verify coordinate columns through WordPress Admin
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-hkd-coordinates-migrate.mjs
+  deploy-handlers:
+    needs: migrate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, path: control}
+      - name: Validate PHP source SHA
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$SOURCE_REPO_PAT"
+          sha="$(sed -n 's/^source_sha=//p' control/requests/wordpress-hkd-coordinates.txt | tr -d '\r')"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "EXPECTED_PHP_SHA=$sha" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: php
+      - name: Deploy registration and approval logic
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        run: |
+          set -euo pipefail
+          test "$(git -C php rev-parse HEAD)" = "$EXPECTED_PHP_SHA"
+          sudo apt-get update -qq -y >/dev/null
+          sudo apt-get install -qq -y lftp >/dev/null
+          root=/domains/admin.esc.vn/public_html/wp-content/plugins/esc-hkd
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "${FTP_PROTOCOL:-ftp}://$FTP_SERVER" <<LFTP
+          set cmd:fail-exit yes
+          set ftp:ssl-force yes
+          set ssl:verify-certificate yes
+          set net:max-retries 2
+          set net:timeout 20
+          put php/wp-content/plugins/esc-hkd/registrations.php -o "$root/registrations.php"
+          put php/wp-content/plugins/esc-hkd/admin-transactions.php -o "$root/admin-transactions.php"
+          get "$root/registrations.php" -o /tmp/esc-hkd-coordinate-registrations.php
+          get "$root/admin-transactions.php" -o /tmp/esc-hkd-coordinate-approvals.php
+          bye
+          LFTP
+          cmp php/wp-content/plugins/esc-hkd/registrations.php /tmp/esc-hkd-coordinate-registrations.php
+          cmp php/wp-content/plugins/esc-hkd/admin-transactions.php /tmp/esc-hkd-coordinate-approvals.php
+          rm -f /tmp/esc-hkd-coordinate-registrations.php /tmp/esc-hkd-coordinate-approvals.php
+          echo 'HKD registration/approval code deployed and verified'
+  qa:
+    needs: deploy-handlers
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Install Playwright driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Verify registration API rejects invalid coordinates without writes
+        run: node scripts/wordpress-hkd-step7-qa.mjs

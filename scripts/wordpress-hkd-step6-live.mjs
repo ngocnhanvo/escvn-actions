@@ -61,7 +61,8 @@ async function checkMapPage(width, height, mobile = false) {
     await page.waitForFunction(() => document.querySelectorAll('#indList input[name="ind"]').length === 15, { timeout: 10000 });
     console.log('HKD QA industries PASS');
     await page.locator('#panel [data-a="clear"]').click();
-    await page.waitForFunction(() => document.querySelector('#fProv')?.value === '', { timeout: 15000 });
+    await page.locator('#panel [data-tab="loc"]').click();
+    await page.waitForFunction(() => document.querySelector('#fProv')?.value === '' && document.querySelector('#fbdg')?.hidden === true, null, { timeout: 15000 });
 
     console.log('HKD QA clear filters PASS');
     await page.locator('#q').fill('quan ca phe');

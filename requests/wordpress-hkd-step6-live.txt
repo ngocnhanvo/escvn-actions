@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=42182354612
-attempt=hkd-goong-coordinate-picker-live-qa
+deploy_run=42186500922
+attempt=hkd-goong-data-only-labels-live-qa

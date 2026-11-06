@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=42006036189
-attempt=5-retry-20261106
+deploy_run=42147079090
+attempt=6-final-20261106

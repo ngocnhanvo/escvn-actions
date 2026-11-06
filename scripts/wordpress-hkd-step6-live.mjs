@@ -25,8 +25,7 @@ try{
   await page.waitForFunction(()=>document.querySelectorAll('#hkd-province option').length===35,{timeout:30000});
   const inds=await page.locator('#hkd-industry option').count();
   if(inds!==16)throw Error('15 industries expected, found '+(inds-1));
-  if(!await page.locator('#hkd-list').getByText('Chưa có hộ kinh doanh phù hợp').isVisible())
-    throw Error('Empty state not rendered');
+  await page.locator('#hkd-list').getByText('Chưa có hộ kinh doanh phù hợp').waitFor({state:'visible',timeout:30000});
   await page.selectOption('#hkd-province','79');
   await page.waitForFunction(()=>document.querySelectorAll('#hkd-ward option').length===169,{timeout:20000});
   await page.locator('#hkd-search').fill('quan ca phe');

@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 
 const url='https://esc.vn/ban-do-ho-kinh-doanh/';
-const browser=await chromium.launch({headless:true});
+const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 try{
   const ctx=await browser.newContext({viewport:{width:1440,height:920}});
   const page=await ctx.newPage();
@@ -26,6 +26,16 @@ try{
   const inds=await page.locator('#hkd-industry option').count();
   if(inds!==16)throw Error('15 industries expected, found '+(inds-1));
   await page.locator('#hkd-list').getByText('Chưa có hộ kinh doanh phù hợp').waitFor({state:'visible',timeout:30000});
+  // Goong must actually initialize, not merely render the container or a placeholder.
+  try {
+    await page.locator('#hkd-map[data-hkd-map-provider="goong"]').waitFor({state:'attached',timeout:55000});
+    await page.locator('#hkd-map canvas').first().waitFor({state:'attached',timeout:10000});
+  } catch (e) {
+    const reason=await page.locator('#hkd-map-placeholder p').textContent().catch(()=>null);
+    throw Error('Goong map did not initialize: '+(reason||'unknown')+'; '+String(e).slice(0,90));
+  }
+  const goongScript=await page.locator('script[data-hkd-goong]').count();
+  if(goongScript!==1)throw Error('Goong SDK missing or duplicated');
   await page.selectOption('#hkd-province','79');
   await page.waitForFunction(()=>document.querySelectorAll('#hkd-ward option').length===169,{timeout:20000});
   await page.locator('#hkd-search').fill('quan ca phe');
@@ -37,14 +47,16 @@ try{
   if(errors.length)throw Error('Browser page errors: '+errors.join(' | '));
   const mapExists=await page.locator('#hkd-map').count();
   if(mapExists!==1)throw Error('Map root missing');
-  console.log('HKD Step6 DESKTOP PASS: live route, CORS data, 34 provinces, 3321 wards, 15 industries, search, reset, empty state, no pageerror');
+  console.log('HKD GOONG DESKTOP PASS: map initialized with canvas and Goong SDK; REST data, 34 provinces, 15 industries, filters, no pageerror');
   const mobile=await ctx.newPage();
   await mobile.setViewportSize({width:390,height:844});
   await mobile.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await mobile.locator('#hkd-filter-form').waitFor({timeout:12000});
   await mobile.waitForFunction(()=>document.getElementById('hkd-total')?.textContent?.trim()==='0',{timeout:30000});
+  await mobile.locator('#hkd-map[data-hkd-map-provider="goong"]').waitFor({state:'attached',timeout:55000});
+  await mobile.locator('#hkd-map canvas').first().waitFor({state:'attached',timeout:10000});
   const metrics=await mobile.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
   if(metrics.scrollWidth>metrics.innerWidth+4)throw Error('Mobile horizontal overflow: '+JSON.stringify(metrics));
-  console.log('HKD Step6 MOBILE PASS: 390px responsive layout, loaded categories, no horizontal overflow');
+  console.log('HKD GOONG MOBILE PASS: map canvas at 390px, loaded categories, no horizontal overflow');
   await ctx.close();
 } finally { await browser.close(); }

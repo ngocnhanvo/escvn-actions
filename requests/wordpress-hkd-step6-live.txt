@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
 deploy_run=42174371573
-attempt=maplibre-openfreemap-post-build-qa
+attempt=maplibre-openfreemap-post-build-qa-recheck

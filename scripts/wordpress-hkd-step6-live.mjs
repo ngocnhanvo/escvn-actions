@@ -55,6 +55,11 @@ async function checkMapPage(width, height, mobile = false) {
       null, { timeout: 15000 });
     if (goongRequests.length) throw Error('Legacy Goong network requests detected');
     if (mapNetworkErrors.length) throw Error('OpenFreeMap network errors: ' + mapNetworkErrors.join(' | '));
+    const localizedLayers = await page.locator('#map').getAttribute('data-hkd-map-localized-layers');
+    if (await page.locator('#map').getAttribute('data-hkd-map-language') !== 'vi'
+      || !Number.isInteger(Number(localizedLayers)) || Number(localizedLayers) < 1)
+      throw Error('Vietnamese basemap label override missing: ' + String(localizedLayers));
+    console.log('HKD Vietnamese basemap labels PASS: localized layers=' + localizedLayers);
     const size = await page.evaluate(() => ({
       headerHeight: document.querySelector('header')?.getBoundingClientRect().height,
       mapHeight: document.querySelector('#mv')?.getBoundingClientRect().height,

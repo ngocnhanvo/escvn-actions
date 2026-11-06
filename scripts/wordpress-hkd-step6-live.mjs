@@ -9,7 +9,18 @@ async function checkMapPage(width, height, mobile = false) {
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   const errors = [];
+  const mapNetworkErrors = [];
+  const goongRequests = [];
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
+  page.on('request', r => { if (/goong\\.io|goongmaps/i.test(r.url())) goongRequests.push(r.url()); });
+  page.on('response', r => {
+    if (r.url().includes('tiles.openfreemap.org') && r.status() >= 400)
+      mapNetworkErrors.push(r.status() + ' ' + r.url().slice(0, 160));
+  });
+  page.on('requestfailed', r => {
+    if (r.url().includes('tiles.openfreemap.org'))
+      mapNetworkErrors.push('Failed ' + r.url().slice(0, 160) + ': ' + r.failure()?.errorText);
+  });
   try {
     const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
     if (response?.status() !== 200) throw Error('HKD page returned HTTP ' + response?.status());
@@ -20,14 +31,14 @@ async function checkMapPage(width, height, mobile = false) {
     if (!name.includes('Bản đồ HKD')) throw Error('Expected standalone source HKD header');
     if (!await page.locator('.ov-search #q').isVisible()) throw Error('Floating search missing');
     if (!await page.locator('#chips .chip2').first().isVisible()) throw Error('Source industry chips missing');
-    if (!await page.locator('#zin').isVisible()) throw Error('Goong map controls missing');
+    if (!await page.locator('#zin').isVisible()) throw Error('Map controls missing');
     if (!await page.locator('#bottom #bbT').isVisible()) throw Error('Bottom drawer missing');
     const demo = await page.locator('#demoTag').evaluate(el => !el.hidden);
     if (demo) throw Error('Demo label visible on real ESC production');
 
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('0 phù hợp bộ lọc'), { timeout: 30000 });
     try {
-      await page.locator('#map canvas.mapboxgl-canvas, #map canvas.goongjs-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
+      await page.locator('#map canvas.maplibregl-canvas').first().waitFor({ state: 'attached', timeout: 20000 });
     } catch (error) {
       const info = await page.evaluate(() => ({
         note: document.querySelector('#note')?.textContent?.slice(0, 500),
@@ -35,11 +46,15 @@ async function checkMapPage(width, height, mobile = false) {
         canvasCount: document.querySelectorAll('#map canvas').length,
         mapNode: document.querySelector('#map')?.outerHTML.slice(0, 320),
         loading: document.querySelector('#busy')?.textContent,
-        sdkLoaded: !!window.goongjs,
-        sdkScripts: document.querySelectorAll('script[src*="goong-js"]').length,
+        sdkLoaded: !!window.maplibregl,
+        sdkScripts: document.querySelectorAll('script[src*="maplibre-gl"]').length,
       }));
-      throw Error('GOONG_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
+      throw Error('MAPLIBRE_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
     }
+    await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
+      null, { timeout: 15000 });
+    if (goongRequests.length) throw Error('Legacy Goong network requests detected');
+    if (mapNetworkErrors.length) throw Error('OpenFreeMap network errors: ' + mapNetworkErrors.join(' | '));
     const size = await page.evaluate(() => ({
       headerHeight: document.querySelector('header')?.getBoundingClientRect().height,
       mapHeight: document.querySelector('#mv')?.getBoundingClientRect().height,
@@ -79,7 +94,7 @@ async function checkMapPage(width, height, mobile = false) {
     if (errors.length) throw Error('JavaScript page error: ' + errors.join(' | '));
 
     console.log('HKD SOURCE UI ' + (mobile ? 'MOBILE' : 'DESKTOP')
-      + ' PASS: Goong canvas, full-screen layout, floating chips/search, province-wards, industry filters, bottom drawer, no demo, width=' + width);
+      + ' PASS: MapLibre/OpenFreeMap canvas, full-screen layout, floating chips/search, province-wards, industry filters, bottom drawer, no demo, width=' + width);
   } finally { await context.close(); }
 }
 

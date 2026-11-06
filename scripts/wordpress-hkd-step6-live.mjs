@@ -49,21 +49,29 @@ async function checkMapPage(width, height, mobile = false) {
     if (size.horizontalOverflow) throw Error('Horizontal overflow at ' + width);
     if (size.mapHeight < height * .70) throw Error('Map no longer fills viewport: ' + JSON.stringify(size));
 
+    console.log('HKD QA map canvas PASS; testing filter panel');
     await page.locator('#btnF').click();
     await page.locator('#panel').waitFor({ state: 'visible', timeout: 7000 });
+    console.log('HKD QA panel opened');
     await page.locator('#fProv').selectOption('79');
+    console.log('HKD QA province 79 selected');
     await page.waitForFunction(() => document.querySelectorAll('#wardList input[name="ward"]').length === 169, { timeout: 20000 });
+    console.log('HKD QA wards input PASS');
     await page.locator('#panel [data-tab="ind"]').click();
     await page.waitForFunction(() => document.querySelectorAll('#indList input[name="ind"]').length === 15, { timeout: 10000 });
+    console.log('HKD QA industries PASS');
     await page.locator('#panel [data-a="clear"]').click();
     await page.waitForFunction(() => document.querySelector('#fProv')?.value === '', { timeout: 15000 });
 
+    console.log('HKD QA clear filters PASS');
     await page.locator('#q').fill('quan ca phe');
     await page.waitForFunction(() => document.querySelector('#qclr')?.hidden === false, { timeout: 8000 });
+    console.log('HKD QA search clear control visible');
     await page.locator('#qclr').click();
     if (await page.locator('#q').inputValue() !== '') throw Error('Search reset failed');
 
     await page.locator('#btnF').click();
+    console.log('HKD QA bottom drawer phase');
     await page.locator('#bbT').click();
     if (await page.locator('#bbT').getAttribute('aria-expanded') !== 'true') throw Error('Bottom drawer not expanded');
     await page.locator('#bbT').click();

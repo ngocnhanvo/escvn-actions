@@ -1,62 +1,76 @@
-import {chromium} from 'playwright';
+import { chromium } from 'playwright';
 
-const url='https://esc.vn/ban-do-ho-kinh-doanh/';
-const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-try{
-  const ctx=await browser.newContext({viewport:{width:1440,height:920}});
-  const page=await ctx.newPage();
-  const errors=[];
-  page.on('pageerror',e=>errors.push(String(e).slice(0,220)));
-  const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  if(response?.status()!==200) {
-    const probe=['/ban-do-ho-kinh-doanh','/ban-do-ho-kinh-doanh/','/ban-do-ho-kinh-doanh/index.html','/client/ban-do-ho-kinh-doanh/index.html','/tao-cv-truc-tuyen/builder/','/tao-cv-truc-tuyen/builder/index.html','/'];
-    for(const candidate of probe) {
-      try {
-        const r=await ctx.request.get('https://esc.vn'+candidate,{timeout:20000,maxRedirects:3});
-        const body=await r.text();
-        console.log('HKD ROUTE PROBE',candidate,r.status(),r.url(),body.includes('data-hkd-map-page')?'HKD_CONTENT':'',body.slice(0,60).replace(/\\s+/g,' '));
-      }catch(e){console.log('HKD ROUTE PROBE ERROR',candidate,String(e).slice(0,110));}
-    }
-    throw Error('HKD route HTTP '+response?.status());
-  }
-  await page.locator('[data-hkd-map-page]').waitFor({timeout:12000});
-  await page.getByRole('heading',{name:'Bản đồ số hộ kinh doanh'}).waitFor({timeout:12000});
-  await page.waitForFunction(()=>document.getElementById('hkd-total')?.textContent?.trim()==='0',{timeout:30000});
-  await page.waitForFunction(()=>document.querySelectorAll('#hkd-province option').length===35,{timeout:30000});
-  const inds=await page.locator('#hkd-industry option').count();
-  if(inds!==16)throw Error('15 industries expected, found '+(inds-1));
-  await page.locator('#hkd-list').getByText('Chưa có hộ kinh doanh phù hợp').waitFor({state:'visible',timeout:30000});
-  // Goong must actually initialize, not merely render the container or a placeholder.
+const site = 'https://esc.vn/ban-do-ho-kinh-doanh/';
+const browser = await chromium.launch({
+  headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+});
+
+async function checkMapPage(width, height, mobile = false) {
+  const context = await browser.newContext({ viewport: { width, height } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
   try {
-    await page.locator('#hkd-map[data-hkd-map-provider="goong"]').waitFor({state:'attached',timeout:55000});
-    await page.locator('#hkd-map canvas').first().waitFor({state:'attached',timeout:10000});
-  } catch (e) {
-    const reason=await page.locator('#hkd-map-placeholder p').textContent().catch(()=>null);
-    throw Error('Goong map did not initialize: '+(reason||'unknown')+'; '+String(e).slice(0,90));
+    const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    if (response?.status() !== 200) throw Error('HKD page returned HTTP ' + response?.status());
+    await page.locator('#mv.mapview').waitFor({ timeout: 20000 });
+    const header = page.locator('header .nav');
+    await header.waitFor({ state: 'visible' });
+    const name = await header.locator('.logo').innerText();
+    if (!name.includes('Bản đồ HKD')) throw Error('Expected standalone source HKD header');
+    if (!await page.locator('.ov-search #q').isVisible()) throw Error('Floating search missing');
+    if (!await page.locator('#chips .chip2').first().isVisible()) throw Error('Source industry chips missing');
+    if (!await page.locator('#zin').isVisible()) throw Error('Goong map controls missing');
+    if (!await page.locator('#bottom #bbT').isVisible()) throw Error('Bottom drawer missing');
+    const demo = await page.locator('#demoTag').evaluate(el => !el.hidden);
+    if (demo) throw Error('Demo label visible on real ESC production');
+
+    await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('0 phù hợp bộ lọc'), { timeout: 30000 });
+    await page.locator('#map .goongjs-canvas').first().waitFor({ state: 'attached', timeout: 60000 });
+    const size = await page.evaluate(() => ({
+      headerHeight: document.querySelector('header')?.getBoundingClientRect().height,
+      mapHeight: document.querySelector('#mv')?.getBoundingClientRect().height,
+      viewport: window.innerHeight,
+      horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 4,
+    }));
+    if (size.horizontalOverflow) throw Error('Horizontal overflow at ' + width);
+    if (size.mapHeight < height * .70) throw Error('Map no longer fills viewport: ' + JSON.stringify(size));
+
+    await page.locator('#btnF').click();
+    await page.locator('#panel').waitFor({ state: 'visible', timeout: 7000 });
+    await page.locator('#fProv').selectOption('79');
+    await page.waitForFunction(() => document.querySelectorAll('#wardList input[name="ward"]').length === 169, { timeout: 20000 });
+    await page.locator('#panel [data-tab="ind"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('#indList input[name="ind"]').length === 15, { timeout: 10000 });
+    await page.locator('#panel [data-a="clear"]').click();
+    await page.waitForFunction(() => document.querySelector('#fProv')?.value === '', { timeout: 15000 });
+
+    await page.locator('#q').fill('quan ca phe');
+    await page.waitForFunction(() => document.querySelector('#qclr')?.hidden === false, { timeout: 8000 });
+    await page.locator('#qclr').click();
+    if (await page.locator('#q').inputValue() !== '') throw Error('Search reset failed');
+
+    await page.locator('#btnF').click();
+    await page.locator('#bbT').click();
+    if (await page.locator('#bbT').getAttribute('aria-expanded') !== 'true') throw Error('Bottom drawer not expanded');
+    await page.locator('#bbT').click();
+    if (errors.length) throw Error('JavaScript page error: ' + errors.join(' | '));
+
+    console.log('HKD SOURCE UI ' + (mobile ? 'MOBILE' : 'DESKTOP')
+      + ' PASS: Goong canvas, full-screen layout, floating chips/search, province-wards, industry filters, bottom drawer, no demo, width=' + width);
+  } finally { await context.close(); }
+}
+
+try {
+  const api = await browser.newContext();
+  const response = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/meta', { timeout: 45000 });
+  const meta = await response.json();
+  if (response.status() !== 200 || meta.demo !== false || meta.provinces.length !== 34
+      || meta.industries.length !== 15 || meta.stats.businesses !== 0) {
+    throw Error('ESC real REST metadata differs from expected baseline');
   }
-  const goongScript=await page.locator('script[data-hkd-goong]').count();
-  if(goongScript!==1)throw Error('Goong SDK missing or duplicated');
-  await page.selectOption('#hkd-province','79');
-  await page.waitForFunction(()=>document.querySelectorAll('#hkd-ward option').length===169,{timeout:20000});
-  await page.locator('#hkd-search').fill('quan ca phe');
-  await page.getByRole('button',{name:'Tìm kiếm',exact:true}).click();
-  await page.waitForFunction(()=>document.getElementById('hkd-notice')?.textContent?.includes('Chưa tìm thấy'),{timeout:20000});
-  if(!page.url().includes('province=79'))throw Error('Filter URL persistence failed');
-  await page.getByRole('button',{name:'Xóa lọc'}).click();
-  await page.waitForFunction(()=>document.querySelector('#hkd-province')?.value===''&&document.getElementById('hkd-notice')?.textContent?.includes('Chưa tìm thấy'),{timeout:20000});
-  if(errors.length)throw Error('Browser page errors: '+errors.join(' | '));
-  const mapExists=await page.locator('#hkd-map').count();
-  if(mapExists!==1)throw Error('Map root missing');
-  console.log('HKD GOONG DESKTOP PASS: map initialized with canvas and Goong SDK; REST data, 34 provinces, 15 industries, filters, no pageerror');
-  const mobile=await ctx.newPage();
-  await mobile.setViewportSize({width:390,height:844});
-  await mobile.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  await mobile.locator('#hkd-filter-form').waitFor({timeout:12000});
-  await mobile.waitForFunction(()=>document.getElementById('hkd-total')?.textContent?.trim()==='0',{timeout:30000});
-  await mobile.locator('#hkd-map[data-hkd-map-provider="goong"]').waitFor({state:'attached',timeout:55000});
-  await mobile.locator('#hkd-map canvas').first().waitFor({state:'attached',timeout:10000});
-  const metrics=await mobile.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,innerWidth:window.innerWidth}));
-  if(metrics.scrollWidth>metrics.innerWidth+4)throw Error('Mobile horizontal overflow: '+JSON.stringify(metrics));
-  console.log('HKD GOONG MOBILE PASS: map canvas at 390px, loaded categories, no horizontal overflow');
-  await ctx.close();
+  await api.close();
+
+  await checkMapPage(1366, 642, false);
+  await checkMapPage(390, 844, true);
 } finally { await browser.close(); }

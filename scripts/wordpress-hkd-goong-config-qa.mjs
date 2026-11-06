@@ -16,7 +16,8 @@ try {
   if(configured && !/^[A-Za-z0-9._-]{8,256}$/.test(body.goongMaptilesKey)) {
     throw Error('Maptiles token format incorrect');
   }
-  console.log('HKD Goong map-config PASS. Maptiles configured:',configured);
+  if(!configured) throw Error('Goong Maptiles key is not configured');
+  console.log('HKD Goong map-config PASS; Maptiles key present (value redacted)');
   const meta=await context.request.get(origin+'/wp-json/esc-hkd/v1/meta',{timeout:45000});
   const data=await meta.json().catch(()=>null);
   if(meta.status()!==200 || data?.provinces?.length!==34 || data?.industries?.length!==15)

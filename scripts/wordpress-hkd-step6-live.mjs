@@ -124,6 +124,27 @@ async function checkRegistrationForm(width, height) {
       throw Error('Registration required fields missing');
     if(!await page.locator('#hkdConsent').isVisible())throw Error('Consent checkbox missing');
     if(!await page.locator('#hkdCompanySite').count())throw Error('Anti-spam honeypot missing');
+    const canvas=page.locator('#hkd-coordinate-map canvas').first();
+    await canvas.waitFor({state:'visible',timeout:30000});
+    await canvas.click({position:{x:120,y:125}});
+    await page.waitForFunction(()=>{
+      const lat=document.querySelector('#hkd-lat')?.value;
+      const lng=document.querySelector('#hkd-lng')?.value;
+      return lat && lng && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+    },null,{timeout:12000});
+    if(!await page.locator('#hkd-coordinate-map .goongjs-marker, #hkd-coordinate-map .mapboxgl-marker').count())
+      throw Error('Goong coordinate marker was not added after map click');
+    await page.locator('#hkd-clear-location').click();
+    if(await page.locator('#hkd-lat').inputValue()!=='' || await page.locator('#hkd-lng').inputValue()!=='')
+      throw Error('Coordinate clear button failed');
+    await page.locator('#hkd-lat').fill('10.823100');
+    await page.locator('#hkd-lng').fill('106.629700');
+    await page.locator('#hkd-lng').dispatchEvent('change');
+    if(await page.locator('#hkd-lat').inputValue()!=='10.823100'
+       || await page.locator('#hkd-lng').inputValue()!=='106.629700')
+      throw Error('Manual coordinate fallback failed');
+    console.log('HKD Goong coordinate picker PASS: map click, draggable marker, clear, manual edit; no registration POST');
+
     await page.locator('#pv').selectOption('79');
     await page.waitForFunction(()=>document.querySelectorAll('#dt option').length>1,null,{timeout:18000});
     if(await page.locator('#ct option').count()<2)throw Error('Industry choices missing');

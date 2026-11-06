@@ -1,4 +1,4 @@
 step=6
 trigger=wordpress_build_website
-astro_sha=ceafad8647413a740d423a5a46f2e673a29ed917
-attempt=localize-vietnamese-openfreemap-labels
+astro_sha=af3f52c300ef50a59619201c58a99ea4cee3b4e2
+attempt=hkd-registration-coordinate-picker

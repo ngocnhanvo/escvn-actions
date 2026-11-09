@@ -11,3 +11,6 @@ production_run=42591215619
 hero=live-text-cropped-art-cta
 image_decode_check=2026-11-09T16:13+07:00
 image_dimension_inventory=2026-11-09-probe
+source_sha=13b3385d54c6c50461ce6cb088c8a40c44b52033
+production_run=42592654295
+qa=native-size-hero-text-and-anchor

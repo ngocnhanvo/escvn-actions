@@ -29,6 +29,28 @@ try {
     await page.locator('.ndl-faq-item').last().locator('summary').click();
     assert.equal(await page.locator('.ndl-faq-item').last().getAttribute('open'), '', 'FAQ should expand');
     await page.locator('#ndl-cf7 form.wpcf7-form').waitFor({ state: 'attached', timeout: 30000 });
+    if (name === 'desktop') {
+      const layout = await page.locator('#ndl-cf7 form.wpcf7-form').evaluate((form) => {
+        const brief = (el) => {
+          const r = el.getBoundingClientRect();
+          const s = getComputedStyle(el);
+          return { tag: el.tagName, className: typeof el.className === 'string' ? el.className : '', width: Math.round(r.width), x: Math.round(r.x), display: s.display, gridColumns: s.gridTemplateColumns, margin: s.margin, maxWidth: s.maxWidth };
+        };
+        return {
+          host: brief(document.querySelector('#ndl-cf7')),
+          wrapper: brief(form.parentElement),
+          form: brief(form),
+          children: Array.from(form.children).slice(0, 20).map(brief),
+          formAncestors: [form.parentElement?.parentElement, form.parentElement?.parentElement?.parentElement].filter(Boolean).map(brief),
+          labels: Array.from(form.querySelectorAll('label')).slice(0, 7).map((el) => ({text: (el.textContent||'').trim().slice(0,70), node: brief(el)})),
+        };
+      });
+      console.log('FORM_LAYOUT', JSON.stringify(layout));
+      const siteHome = await context.newPage();
+      await siteHome.goto('https://esc.vn/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+      console.log('REAL_ESC_LOGO', await siteHome.locator('#header-logo').getAttribute('src'));
+      await siteHome.close();
+    }
     assert.ok(await page.locator('#ndl-cf7 input[name="_wpcf7"]').count(), 'Original CF7 hidden id should exist');
     assert.equal(await page.locator('#ndl-form-status').innerText(), '', 'Form must load without an error');
     await page.screenshot({ path: `new-domains-landing-qa/${name}.png`, fullPage: true, animations: 'disabled' });

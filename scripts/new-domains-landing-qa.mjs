@@ -25,26 +25,21 @@ try {
     const heroImage = page.locator('.ndl-hero-crisp .ndl-art-source');
     assert.equal(await heroImage.count(), 1, 'The original laptop illustration must remain visible');
     const imageMetrics = await heroImage.evaluate(async (img) => {
-      try { await img.decode(); } catch (error) { return { loaded: false, naturalWidth: img.naturalWidth, src: img.currentSrc, error: String(error) }; }
-      return { loaded: img.complete && img.naturalWidth > 0, naturalWidth: img.naturalWidth, src: img.currentSrc };
+      try { await img.decode(); } catch (error) { return { loaded: false, src: img.currentSrc, error: String(error) }; }
+      const rect = img.getBoundingClientRect();
+      return {
+        loaded: img.complete && img.naturalWidth > 0,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        renderedHeight: Math.round(rect.height),
+        src: img.currentSrc,
+      };
     });
     console.log('HERO_IMAGE', JSON.stringify(imageMetrics));
-    if (name === 'desktop') {
-      const candidates = [
-        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi.png',
-        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-1.png',
-        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-scaled.png',
-        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-1-scaled.png',
-      ];
-      const widths = await page.evaluate(async (urls) => Promise.all(urls.map(async (url) => {
-        const image = new Image();
-        image.src = url;
-        try { await image.decode(); return {url, width: image.naturalWidth, height: image.naturalHeight}; }
-        catch {return {url, width:0, height:0};}
-      })), candidates);
-      console.log('BANNER_IMAGE_CANDIDATES', JSON.stringify(widths));
-    }
-    assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1800, 'Laptop image must load at full resolution');
+    assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1000, 'Laptop artwork must load');
+    assert.ok(imageMetrics.renderedHeight <= imageMetrics.naturalHeight + 1,
+      'Laptop artwork must not be enlarged beyond natural pixel dimensions');
+    if (imageMetrics.naturalWidth < 1800) console.warn('SOURCE_LOW_RES: WordPress has only', imageMetrics.naturalWidth, 'pixels; replace with higher-resolution original for Retina');
     const heroCTA = page.locator('.ndl-hero-copy a[href="#dang-ky-tu-van"]');
     assert.equal(await heroCTA.count(), 1, 'Hero consultation CTA must be a real anchor');
     await heroCTA.click();

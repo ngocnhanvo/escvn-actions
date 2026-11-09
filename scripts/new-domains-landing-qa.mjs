@@ -29,6 +29,21 @@ try {
       return { loaded: img.complete && img.naturalWidth > 0, naturalWidth: img.naturalWidth, src: img.currentSrc };
     });
     console.log('HERO_IMAGE', JSON.stringify(imageMetrics));
+    if (name === 'desktop') {
+      const candidates = [
+        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi.png',
+        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-1.png',
+        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-scaled.png',
+        '/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-1-scaled.png',
+      ];
+      const widths = await page.evaluate(async (urls) => Promise.all(urls.map(async (url) => {
+        const image = new Image();
+        image.src = url;
+        try { await image.decode(); return {url, width: image.naturalWidth, height: image.naturalHeight}; }
+        catch {return {url, width:0, height:0};}
+      })), candidates);
+      console.log('BANNER_IMAGE_CANDIDATES', JSON.stringify(widths));
+    }
     assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1800, 'Laptop image must load at full resolution');
     const heroCTA = page.locator('.ndl-hero-copy a[href="#dang-ky-tu-van"]');
     assert.equal(await heroCTA.count(), 1, 'Hero consultation CTA must be a real anchor');

@@ -3,3 +3,4 @@ production_run=42564019656
 url=https://esc.vn/ten-mien-moi/
 route_record=55534
 production_run=42564702473
+visual_diagnostics=1

@@ -19,6 +19,17 @@ try {
     assert.equal(response?.status(), 200, `${name} route should exist`);
     await page.locator('#ndl-hero-title').waitFor();
     assert.match(await page.locator('h1').first().innerText(), /3 TÊN MIỀN MỚI/i);
+    const heroCopy = page.locator('.ndl-hero-crisp .ndl-hero-copy');
+    assert.equal(await heroCopy.count(), 1, 'Hero headline and descriptive text must be live HTML');
+    assert.equal(await page.locator('.ndl-hero-upload-image').count(), 0, 'Full-banner raster text must not be used');
+    const heroImage = page.locator('.ndl-hero-crisp .ndl-art-source');
+    assert.equal(await heroImage.count(), 1, 'The original laptop illustration must remain visible');
+    const imageMetrics = await heroImage.evaluate((img) => ({ loaded: img.complete && img.naturalWidth > 0, naturalWidth: img.naturalWidth }));
+    assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1800, 'Laptop image must load at full resolution');
+    const heroCTA = page.locator('.ndl-hero-copy a[href="#dang-ky-tu-van"]');
+    assert.equal(await heroCTA.count(), 1, 'Hero consultation CTA must be a real anchor');
+    await heroCTA.click();
+    assert.equal(new URL(page.url()).hash, '#dang-ky-tu-van', 'CTA should navigate to consultation form');
     assert.equal(await page.locator('.ndl-domain-card').count(), 3);
     assert.equal(await page.locator('.ndl-faq-item').count(), 5);
     assert.equal(await page.locator('.ndl-final-cta a').getAttribute('href'), '/dang-ky-ten-mien');

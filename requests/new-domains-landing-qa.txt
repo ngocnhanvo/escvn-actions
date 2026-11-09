@@ -9,3 +9,4 @@ production_run=42565502228
 source_sha=75792c7501b376dece95fd6f9c781a75c8d8cd43
 production_run=42591215619
 hero=live-text-cropped-art-cta
+image_decode_check=2026-11-09T16:13+07:00

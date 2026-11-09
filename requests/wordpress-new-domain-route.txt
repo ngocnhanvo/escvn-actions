@@ -1,3 +1,4 @@
 route=/ten-mien-moi
 target=/ten-mien-moi/index.html
 source_sha=91602ff03cddbf894039631eafb9b3ff7911d7c0
+retry=verify-all-pages

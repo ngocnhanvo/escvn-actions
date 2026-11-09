@@ -6,3 +6,6 @@ production_run=42564702473
 visual_diagnostics=1
 visual_fix_sha=fc9c2255ec3647d4eb2aa87496883077ea04f636
 production_run=42565502228
+source_sha=75792c7501b376dece95fd6f9c781a75c8d8cd43
+production_run=42591215619
+hero=live-text-cropped-art-cta

@@ -1,0 +1,33 @@
+name: ESC New Domains Landing QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['requests/new-domains-landing-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-new-domains-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Install Playwright driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Verify live desktop and mobile
+        run: node scripts/new-domains-landing-qa.mjs
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-domains-landing-screens
+          path: new-domains-landing-qa/*.png
+          retention-days: 7
+          if-no-files-found: ignore

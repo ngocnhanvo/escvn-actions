@@ -95,11 +95,17 @@ try {
       const confirmation = page.getByRole('button', { name: /^(Publish|Đăng|Đăng bài)$/ }).last();
       if (await confirmation.isVisible().catch(() => false)) await confirmation.click();
     }
-    const check = await get('/wp-json/wp/v2/chuyen-huong-link?per_page=100&page=1&status=publish');
-    assert.equal(check.status(), 200);
-    const pages = await check.json();
-    const record = pages.find((item) => item?.acf?.from_link === route);
-    if (!record) throw new Error('Created WordPress route not found in REST response');
+    console.log('WordPress post editor after save:', page.url());
+    let record = null;
+    for (let pageNumber = 1; pageNumber <= 30; pageNumber++) {
+      const check = await get(`/wp-json/wp/v2/chuyen-huong-link?per_page=100&page=${pageNumber}&status=publish`);
+      assert.equal(check.status(), 200);
+      const list = await check.json();
+      record = list.find((item) => item?.acf?.from_link === route);
+      if (record) break;
+      if (pageNumber >= Number(check.headers()['x-wp-totalpages'] || 1)) break;
+    }
+    if (!record) throw new Error('New route is not published in WordPress; check the post editor save/publish state');
     assertRouting(record);
     console.log('WP URL route created, read-after-write verified. Route ID:', record.id);
   }

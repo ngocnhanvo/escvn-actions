@@ -24,7 +24,11 @@ try {
     assert.equal(await page.locator('.ndl-hero-upload-image').count(), 0, 'Full-banner raster text must not be used');
     const heroImage = page.locator('.ndl-hero-crisp .ndl-art-source');
     assert.equal(await heroImage.count(), 1, 'The original laptop illustration must remain visible');
-    const imageMetrics = await heroImage.evaluate((img) => ({ loaded: img.complete && img.naturalWidth > 0, naturalWidth: img.naturalWidth }));
+    const imageMetrics = await heroImage.evaluate(async (img) => {
+      try { await img.decode(); } catch (error) { return { loaded: false, naturalWidth: img.naturalWidth, src: img.currentSrc, error: String(error) }; }
+      return { loaded: img.complete && img.naturalWidth > 0, naturalWidth: img.naturalWidth, src: img.currentSrc };
+    });
+    console.log('HERO_IMAGE', JSON.stringify(imageMetrics));
     assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1800, 'Laptop image must load at full resolution');
     const heroCTA = page.locator('.ndl-hero-copy a[href="#dang-ky-tu-van"]');
     assert.equal(await heroCTA.count(), 1, 'Hero consultation CTA must be a real anchor');

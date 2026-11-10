@@ -1,0 +1,247 @@
+{
+  "slug": "ten-mien-moi",
+  "table_id": "tenmienmoi_00",
+  "title": "3 tên miền mới – Triệu cơ hội mới",
+  "fields": [
+    {
+      "key": "hero.title",
+      "value": "3 tên miền mới – Triệu cơ hội mới: .ON.VN, .AD.VN, .AP.VN"
+    },
+    {
+      "key": "hero.banner",
+      "value": "<img src=\"/wp-content/uploads/2026/11/Ba-Ten-Mien-Moi-Trieu-Co-Hoi-Moi-1.png\" alt=\"3 tên miền mới – Triệu cơ hội mới .ON.VN, .AD.VN, .AP.VN\" />"
+    },
+    {
+      "key": "hero.cta_label",
+      "value": "Nhận tư vấn miễn phí"
+    },
+    {
+      "key": "hero.cta_url",
+      "value": "#dang-ky-tu-van"
+    },
+    {
+      "key": "intro.eyebrow",
+      "value": "KHÁM PHÁ"
+    },
+    {
+      "key": "intro.title",
+      "value": "Ba đuôi tên miền mới – Ba hướng phát triển"
+    },
+    {
+      "key": "intro.description",
+      "value": "Mỗi đuôi tên miền mang đến một định hướng riêng, giúp bạn lựa chọn phù hợp với lĩnh vực hoạt động và mục tiêu xây dựng thương hiệu."
+    },
+    {
+      "key": "benefits.title_1",
+      "value": "Vì sao nên"
+    },
+    {
+      "key": "benefits.title_2",
+      "value": "quan tâm ngay?"
+    },
+    {
+      "key": "benefits.1",
+      "value": "Thêm lựa chọn tên miền ngắn gọn, dễ nhớ"
+    },
+    {
+      "key": "benefits.2",
+      "value": "Xây dựng và khẳng định dấu ấn thương hiệu"
+    },
+    {
+      "key": "benefits.3",
+      "value": "Mở rộng hệ thống tên miền, hỗ trợ hoạt động marketing"
+    },
+    {
+      "key": "benefits.4",
+      "value": "Chủ động chuẩn bị để đăng ký ngay khi mở bán"
+    },
+    {
+      "key": "launch.label",
+      "value": "Dự kiến mở đăng ký"
+    },
+    {
+      "key": "launch.date",
+      "value": "23/11/2026"
+    },
+    {
+      "key": "launch.iso_date",
+      "value": "2026-11-23T00:00:00+07:00"
+    },
+    {
+      "key": "consult.eyebrow",
+      "value": "NHẬN TƯ VẤN"
+    },
+    {
+      "key": "consult.title_1",
+      "value": "Đăng ký nhận tư vấn"
+    },
+    {
+      "key": "consult.title_2",
+      "value": "và cập nhật thông tin sớm nhất"
+    },
+    {
+      "key": "consult.description",
+      "value": "Để lại thông tin, đội ngũ ESC sẽ liên hệ tư vấn lựa chọn tên miền phù hợp và thông báo ngày chính thức mở đăng ký."
+    },
+    {
+      "key": "consult.form_title",
+      "value": "Yêu cầu tư vấn"
+    },
+    {
+      "key": "consult.form_subtitle",
+      "value": "ESC sẽ liên hệ với bạn sớm nhất"
+    },
+    {
+      "key": "faq.eyebrow",
+      "value": "CÂU HỎI THƯỜNG GẶP"
+    },
+    {
+      "key": "faq.title_1",
+      "value": "Giải đáp nhanh"
+    },
+    {
+      "key": "faq.title_2",
+      "value": "về 3 đuôi tên miền mới"
+    },
+    {
+      "key": "cta.title",
+      "value": "Đừng bỏ lỡ cơ hội lựa chọn tên miền phù hợp cho thương hiệu của bạn!"
+    },
+    {
+      "key": "cta.label",
+      "value": "Nhận tư vấn ngay"
+    },
+    {
+      "key": "cta.url",
+      "value": "/dang-ky-ten-mien"
+    },
+    {
+      "key": "domain.1.name",
+      "value": ".ON.VN"
+    },
+    {
+      "key": "domain.1.heading",
+      "value": "Bật kết nối online"
+    },
+    {
+      "key": "domain.1.description",
+      "value": "Với cách viết ngắn gọn, dễ nhớ, .ON.VN gợi liên tưởng đến Online hoặc Always On, phù hợp cho hoạt động kinh doanh trực tuyến."
+    },
+    {
+      "key": "domain.1.detail",
+      "value": "Phù hợp với cửa hàng thương mại điện tử, dịch vụ trực tuyến, nhà sáng tạo nội dung và thương hiệu cá nhân."
+    },
+    {
+      "key": "domain.1.theme",
+      "value": "online"
+    },
+    {
+      "key": "domain.1.icon",
+      "value": "🛒"
+    },
+    {
+      "key": "domain.1.chips",
+      "value": "Shop online|E-commerce|Dịch vụ số"
+    },
+    {
+      "key": "domain.2.name",
+      "value": ".AD.VN"
+    },
+    {
+      "key": "domain.2.heading",
+      "value": "Dấu ấn truyền thông"
+    },
+    {
+      "key": "domain.2.description",
+      "value": ".AD.VN gợi liên tưởng đến Advertising (quảng cáo), dành cho ý tưởng đặt tên thương hiệu trong lĩnh vực marketing và truyền thông."
+    },
+    {
+      "key": "domain.2.detail",
+      "value": "Phù hợp với agency, đơn vị quảng cáo, người làm nội dung và các dự án truyền thông."
+    },
+    {
+      "key": "domain.2.theme",
+      "value": "advertising"
+    },
+    {
+      "key": "domain.2.icon",
+      "value": "📣"
+    },
+    {
+      "key": "domain.2.chips",
+      "value": "Agency|Marketing|Truyền thông"
+    },
+    {
+      "key": "domain.3.name",
+      "value": ".AP.VN"
+    },
+    {
+      "key": "domain.3.heading",
+      "value": "Khởi đầu công nghệ"
+    },
+    {
+      "key": "domain.3.description",
+      "value": ".AP.VN gợi liên tưởng đến App hoặc Application, phù hợp với định hướng xây dựng thương hiệu phần mềm và công nghệ."
+    },
+    {
+      "key": "domain.3.detail",
+      "value": "Phù hợp với startup công nghệ, ứng dụng di động, nền tảng dịch vụ số và các sản phẩm phần mềm."
+    },
+    {
+      "key": "domain.3.theme",
+      "value": "apps"
+    },
+    {
+      "key": "domain.3.icon",
+      "value": "</>"
+    },
+    {
+      "key": "domain.3.chips",
+      "value": "Startup|Ứng dụng (App)|Phần mềm"
+    },
+    {
+      "key": "faq.1.question",
+      "value": "Cá nhân có thể đăng ký các đuôi tên miền mới không?"
+    },
+    {
+      "key": "faq.1.answer",
+      "value": "Có. Cá nhân, cơ quan, tổ chức và doanh nghiệp đều có thể đăng ký nếu đáp ứng các điều kiện theo quy định hiện hành."
+    },
+    {
+      "key": "faq.2.question",
+      "value": "Khi nào có thể đăng ký tên miền .AD.VN, .ON.VN và .AP.VN?"
+    },
+    {
+      "key": "faq.2.answer",
+      "value": "Ba đuôi tên miền mới dự kiến được mở đăng ký từ ngày 23/11/2026. Khách hàng có thể liên hệ ESC để được cập nhật lịch tiếp nhận đăng ký chính thức."
+    },
+    {
+      "key": "faq.3.question",
+      "value": "Có thể đăng ký cùng một tên thương hiệu với cả 3 đuôi không?"
+    },
+    {
+      "key": "faq.3.answer",
+      "value": "Có thể, nếu các tên miền tương ứng còn khả dụng và đáp ứng điều kiện đăng ký. Ví dụ, một thương hiệu có thể sử dụng các tên miền dạng thuonghieu.ad.vn, thuonghieu.on.vn và thuonghieu.ap.vn."
+    },
+    {
+      "key": "faq.4.question",
+      "value": "Có thể đăng ký trước khi chính thức mở bán không?"
+    },
+    {
+      "key": "faq.4.answer",
+      "value": "Khách hàng có thể gửi thông tin quan tâm để được ESC tư vấn và hướng dẫn chuẩn bị. Việc này không đồng nghĩa với giữ chỗ hoặc đảm bảo đăng ký thành công."
+    },
+    {
+      "key": "faq.5.question",
+      "value": "Làm thế nào để đăng ký tên miền tại ESC?"
+    },
+    {
+      "key": "faq.5.answer",
+      "value": "Khách hàng thực hiện theo các bước:"
+    },
+    {
+      "key": "faq.5.steps",
+      "value": "Lựa chọn đuôi tên miền phù hợp.\nTra cứu tình trạng tên miền mong muốn.\nCung cấp thông tin đăng ký và hoàn thiện hồ sơ.\nThanh toán theo hướng dẫn.\nNhận xác nhận đăng ký thành công và cấu hình sử dụng tên miền."
+    }
+  ]
+}

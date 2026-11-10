@@ -87,137 +87,54 @@ try {
   assert.ok(table.items?.some(x=>x.key==='hero.title'),'ESC Table REST fields missing');
   let wpPage=await readPage();
   if(!wpPage){
-    await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
-    const existing=await page.locator('#the-list tr').evaluateAll((rows) => rows.map((el) => ({
-      id:el.id, title:el.querySelector('.row-title')?.textContent?.trim(),
-      status:el.querySelector('.post-state')?.textContent?.trim(),
-      text:el.innerText.slice(0,180),
-      editHref:el.querySelector('.row-title')?.getAttribute('href')
-    })));
-    console.log('WP_PAGE_ADMIN_AUDIT',JSON.stringify(existing).slice(0,5000));
-    if(existing.some(x => x.id && x.id.startsWith('post-'))) {
-      // The following exact IDs were created by this workflow's failed previous attempts
-      // (all titled ten-mien-moi). Never touch unrelated WordPress content.
-      const ourIds=[55540,55541,55542,55544,55545,55546,55548];
-      const actual=existing.filter(x=>x.id?.startsWith('post-'));
-      assert.deepEqual(actual.map(x=>Number(x.id.slice(5))).sort((a,b)=>a-b),ourIds,
-        'Unexpected Page in targeted admin search; manual review required');
-      assert.ok(actual.every(x=>x.title==='ten-mien-moi'),'Page ownership/title changed, refuse mutation');
-      const canonicalId=55546;
-      const original=await get('/wp-json/wp/v2/pages/'+canonicalId);
-      assert.equal(original.status(),200,'Canonical Page must be published');
-      const originalPage=await original.json();
-      console.log('RECOVERY_CANONICAL',JSON.stringify({
-        id:originalPage.id,slug:originalPage.slug,status:originalPage.status,
-        shortcode:JSON.stringify(originalPage.content?.rendered||'').includes(tableId)
-      }));
-      assert.ok(String(originalPage.content?.rendered||'').includes(tableId),'Canonical Page missing ESC Table shortcode');
-      // Trash only the second accidental published Page first to release its permalink.
+    // Recover the Page created by this workflow on 2026-11-10; never create another.
+    const canonicalId=55546;
+    const currentResponse=await get('/wp-json/wp/v2/pages/'+canonicalId);
+    assert.equal(currentResponse.status(),200,'Known canonical WordPress Page must still exist');
+    const current=await currentResponse.json();
+    assert.equal(current.status,'publish');
+    assert.ok(String(current.content?.rendered||'').includes(tableId),'Canonical Page must include ESC Table');
+    console.log('RECOVER',JSON.stringify({id:current.id,title:current.title?.rendered,slug:current.slug}));
+    const ownDraftIds=[55540,55541,55542,55544,55545];
+    let cleaned=0;
+    for(const id of ownDraftIds){
       await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
-      const extra=page.locator('#post-55548');
-      const trashHref=await extra.locator('a.submitdelete').first().getAttribute('href');
-      assert.ok(trashHref?.includes('post=55548') && trashHref.includes('_wpnonce'),'Unsafe trash URL');
-      await page.goto(new URL(trashHref,host).toString(),{waitUntil:'domcontentloaded'});
-      console.log('TRASHED_EXTRA_PUBLISHED',55548);
-      // Restore canonical Page to its required exact URL, and give it a readable title.
-      await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
-      await page.locator('#post-55546 .editinline').first().evaluate(el=>el.click());
-      const row=page.locator('#edit-55546');
-      await row.waitFor({state:'visible',timeout:15000});
-      await row.locator('input[name="post_title"]').fill(title);
-      await row.locator('input[name="post_name"]').fill(slug);
-      await row.locator('button.save').first().click();
-      await row.waitFor({state:'detached',timeout:30000});
-      for(let i=0;i<5;i++){
-        wpPage=await readPage();
-        if(wpPage)break;
-        await page.waitForTimeout(800);
-      }
-      assert.ok(wpPage,'Canonical WP Page slug could not be set exactly');
-      assert.equal(wpPage.id,canonicalId,'Wrong canonical Page recovered');
-      assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Canonical Page lost ESC Table shortcode');
-      console.log('CANONICAL_PAGE_RESTORED',wpPage.id,wpPage.slug);
-      for(const id of [55540,55541,55542,55544,55545]){
-        await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
-        const draft=page.locator('#post-'+id);
-        const href=await draft.locator('a.submitdelete').first().getAttribute('href');
-        assert.ok(href?.includes('post='+id) && href.includes('_wpnonce'),'Unsafe draft cleanup: '+id);
-        await page.goto(new URL(href,host).toString(),{waitUntil:'domcontentloaded'});
-        console.log('TRASHED_OWN_DRAFT',id);
-      }
-      console.log('WP_PAGE_CLEANUP_PASS canonical='+canonicalId+' extra_published=1 drafts=5');
+      const row=page.locator('#post-'+id);
+      if(!await row.count())continue; // Already moved to Trash by an earlier recovery run.
+      assert.equal((await row.locator('.row-title').textContent()).trim(),'ten-mien-moi','Do not delete changed content');
+      assert.match(await row.innerText(),/Bản nháp/,'Only our own drafts may be trashed');
+      const href=await row.locator('a.submitdelete').first().getAttribute('href');
+      assert.ok(href?.includes('post='+id) && href.includes('_wpnonce'),'Unsafe draft trash URL');
+      await page.goto(new URL(href,host).toString(),{waitUntil:'domcontentloaded'});
+      console.log('TRASHED_OWN_DRAFT',id);
+      cleaned++;
     }
-  }
-  if(!wpPage){
-    await page.goto(host+'/wp-admin/post-new.php?post_type=page',{waitUntil:'domcontentloaded',timeout:60000});
-    const titleBox=page.locator('#title');
-    await titleBox.waitFor({state:'visible',timeout:30000});
-    await titleBox.fill(slug);
-    console.log('EDITOR_CONTROL',JSON.stringify(await page.evaluate(() => ({
-      mode:document.querySelector('#wp-content-wrap')?.className,
-      insertHandler:typeof window.tablepress_open_shortcode_thickbox,
-      thickbox:typeof window.tb_show
-    }))));
-    await page.evaluate(() => {
-      if (typeof window.tablepress_open_shortcode_thickbox !== 'function') throw new Error('ESC Table Insert Code unavailable');
-      window.tablepress_open_shortcode_thickbox(); // Official editor Insert Code UI, no raw shortcode entry.
-    });
-    await page.locator('iframe#TB_iframeContent').waitFor({state:'attached',timeout:15000});
-
-    console.log('EDITOR_INSERT_DIALOG',JSON.stringify(await page.evaluate(() => ({
-      frameCount:document.querySelectorAll('iframe#TB_iframeContent').length,
-      thickbox:!!document.getElementById('TB_window'),
-      editorMode:document.getElementById('wp-content-wrap')?.className
-    }))));
-    const frame=page.frameLocator('iframe#TB_iframeContent');
-    const search=frame.getByRole('searchbox').first();
-    await search.waitFor({state:'visible',timeout:15000});
-    await search.fill(tableId);
-    await search.press('Enter');
-    console.log('INSERT_CODE_SEARCH_USED',tableId);
-    console.log('INSERT_DIALOG_TEXT',(await frame.locator('body').innerText({timeout:12000}).catch(()=>'NOT_LOADED')).slice(0,600));
-    const row=frame.locator('tr').filter({hasText:tableId}).first();
-    await row.waitFor({state:'visible',timeout:15000});
-    await row.locator('.insert-shortcode').first().click();
-    console.log('EDITOR_AFTER_INSERT',JSON.stringify(await page.evaluate(() => ({
-      textarea:document.querySelector('#content')?.value?.slice(0,140),
-      tinyEditor:typeof window.tinymce?.get('content')?.getContent,
-      tinyHTML:window.tinymce?.get('content')?.getContent?.().slice(0,140),
-      editorMode:document.querySelector('#wp-content-wrap')?.className
-    }))));
-    await page.waitForFunction(id =>
-      (document.querySelector('#content')?.value || '').includes(id) ||
-      (window.tinymce?.get('content')?.getContent?.() || '').includes(id),
-      tableId,{timeout:10000});
-
-    console.log('SHORTCODE_INSERTED_USING_EDITOR_UI',tableId);
-    const key=page.locator('.acf-field[data-name="key"] input:not([type="hidden"])').first();
-    if(await key.count())await key.fill(slug);
-    const action=page.locator('.acf-field[data-name="action"] select, .acf-field[data-name="action"] input:not([type="hidden"])').first();
-    if(await action.count()){
-      if(await action.evaluate(el=>el.tagName)==='SELECT')await action.selectOption('PublicPage');
-      else await action.fill('PublicPage');
+    await page.goto(host+'/wp-admin/edit.php?post_type=page',{waitUntil:'domcontentloaded'});
+    let canonicalRow=page.locator('#post-'+canonicalId);
+    if(!await canonicalRow.count()){
+      await page.goto(host+'/wp-admin/edit.php?post_type=page&s='+encodeURIComponent(title),{waitUntil:'domcontentloaded'});
+      canonicalRow=page.locator('#post-'+canonicalId);
     }
-    await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:60000}),page.locator('#publish').click()]);
-    console.log('WP_PUBLISH_LOCATION',new URL(page.url()).pathname);
+    await canonicalRow.waitFor({state:'attached',timeout:15000});
+    await canonicalRow.locator('.editinline').first().evaluate(el=>el.click());
+    const quick=page.locator('#edit-'+canonicalId);
+    await quick.waitFor({state:'visible',timeout:10000});
+    await quick.locator('input[name="post_title"]').fill(title);
+    await quick.locator('input[name="post_name"]').fill(slug);
+    await quick.locator('button.save').first().click();
+    await quick.waitFor({state:'detached',timeout:30000});
+    let verified=null;
+    for(let i=0;i<6;i++){
+      const r=await get('/wp-json/wp/v2/pages/'+canonicalId);
+      if(r.status()===200)verified=await r.json();
+      if(verified?.slug===slug)break;
+      await page.waitForTimeout(800);
+    }
+    console.log('RECOVERY_RESULT',JSON.stringify({id:verified?.id,slug:verified?.slug,title:verified?.title?.rendered,cleanedDrafts:cleaned}));
+    assert.equal(verified?.slug,slug,'Page permalink still reserved; do not overwrite unrelated content');
     wpPage=await readPage();
-    if(!wpPage){
-      const probe=await get('/wp-json/wp/v2/pages?search=ten-mien-moi&per_page=30');
-      console.log('WP_PAGE_PROBE',(await probe.json()).map(x=>({id:x.id,slug:x.slug,status:x.status})).slice(0,10));
-    }
-    assert.ok(wpPage,'Published WordPress Page not found');
-    assert.equal(wpPage.slug,slug);
-    assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Page shortcode not persisted');
-    await page.goto(host+'/wp-admin/post.php?post='+wpPage.id+'&action=edit',{waitUntil:'domcontentloaded'});
-    const titleField=page.locator('#title');
-    await titleField.waitFor({state:'visible',timeout:15000});
-    if(await titleField.inputValue()!==title){
-      await titleField.fill(title);
-      await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:60000}),page.locator('#publish').click()]);
-    }
-    wpPage=await readPage();
-    assert.equal(wpPage.slug,slug,'Page slug mutated');
-    console.log('WP_PAGE_CREATED',wpPage.id);
+    assert.equal(wpPage?.id,canonicalId,'Wrong Page at exact permalink');
+    console.log('WP_PAGE_CLEANUP_PASS canonical='+canonicalId+' drafts='+cleaned+' extra_published=1');
   }else console.log('WP_PAGE_EXISTS, not overwritten',wpPage.id);
   assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Existing page not linked to ESC Table');
   console.log('CMS_PASS id='+wpPage.id+' table='+tableId+' temporary_created=0 cleanup_remaining=0');

@@ -14,3 +14,4 @@ image_dimension_inventory=2026-11-09-probe
 source_sha=13b3385d54c6c50461ce6cb088c8a40c44b52033
 production_run=42592654295
 qa=native-size-hero-text-and-anchor
+2026-11-10: Verify published /ten-mien-moi-on-ad-ap/ after escvn-astro f442814.

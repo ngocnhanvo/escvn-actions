@@ -18,6 +18,8 @@ try {
     const response = await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 45000 });
     assert.equal(response?.status(), 200, `${name} route should exist`);
     await page.locator('#ndl-hero-title').waitFor();
+    assert.equal(await page.locator('[data-tablepress-preview="tenmienmoi_00"]').count(), 1,
+      'Landing must render through Tenmienmoi_00 TablePress component');
     assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), origin, 'Canonical must match the published WordPress slug');
     assert.match(await page.locator('h1').first().innerText(), /3 TÊN MIỀN MỚI/i);
     const heroImage = page.locator('.ndl-hero-upload-image');

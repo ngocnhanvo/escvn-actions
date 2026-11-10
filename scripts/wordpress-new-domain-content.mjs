@@ -50,7 +50,7 @@ try {
     assert.ok(nonce.length>4,'Import nonce unavailable');
     const source={
       id:tableId,name:'Tên miền mới — nội dung trang',description:'Nội dung landing page /ten-mien-moi',
-      data:[['key','value'],...fields.map(({key,value})=>[key,value])],
+      data:[['key','value'],['__ignored_header_row__',''],...fields.map(({key,value})=>[key,value])],
       options:{table_head:true,table_foot:false,alternating_row_colors:false,row_hover:false,print_name:false,print_description:false,use_datatables:false}
     };
     const r=await context.request.post(host+'/wp-admin/admin-post.php',{form:{
@@ -64,6 +64,26 @@ try {
     console.log('ESC_TABLE_CREATED',tableId,fields.length);
   }else console.log('ESC_TABLE_EXISTS, not overwritten',tableId);
   console.log('ESC_TABLE_SCHEMA',JSON.stringify({keys:Object.keys(table),meta:table.meta,first:table.items?.slice(0,2)}).slice(0,1600));
+  if (!table.items?.some(x=>x.key==='hero.title') && table.items?.length===fields.length-1 && table.items[0]?.key==='hero.banner') {
+    // Initial import used a single header row; REST strips the first content row.
+    // This is our own newly seeded table, and has not yet been linked to a Page.
+    assert.equal(await readPage(),null,'Do not replace a table already linked to a published Page');
+    await page.goto(host+'/wp-admin/admin.php?page=tablepress&action=import',{waitUntil:'domcontentloaded'});
+    const nonce=await page.locator('input[name="_wpnonce"]').first().inputValue();
+    const replacement={
+      id:tableId,name:'Tên miền mới — nội dung trang',description:'Nội dung landing page /ten-mien-moi',
+      data:[['key','value'],['__ignored_header_row__',''],...fields.map(({key,value})=>[key,value])],
+      options:{table_head:true,table_foot:false,print_name:false,print_description:false,use_datatables:false}
+    };
+    const res=await context.request.post(host+'/wp-admin/admin-post.php',{form:{
+      action:'tablepress_import',_wpnonce:nonce,'import[source]':'form-field',
+      'import[form-field]':JSON.stringify(replacement),'import[type]':'replace',
+      'import[existing_table]':tableId
+    },timeout:90000});
+    assert.ok(!/error_import|error_details=/.test(res.url()),'Table replace failed: '+res.url());
+    table=await readTable();
+    console.log('ESC_TABLE_REPAIRED',tableId,table?.items?.length);
+  }
   assert.ok(table.items?.some(x=>x.key==='hero.title'),'ESC Table REST fields missing');
   let wpPage=await readPage();
   if(!wpPage){

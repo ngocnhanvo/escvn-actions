@@ -63,6 +63,7 @@ try {
     assert.ok(table,'ESC Table not saved via import');
     console.log('ESC_TABLE_CREATED',tableId,fields.length);
   }else console.log('ESC_TABLE_EXISTS, not overwritten',tableId);
+  console.log('ESC_TABLE_SCHEMA',JSON.stringify({keys:Object.keys(table),meta:table.meta,first:table.items?.slice(0,2)}).slice(0,1600));
   assert.ok(table.items?.some(x=>x.key==='hero.title'),'ESC Table REST fields missing');
   let wpPage=await readPage();
   if(!wpPage){

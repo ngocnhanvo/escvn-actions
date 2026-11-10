@@ -8,3 +8,4 @@ retry=esc-table-dialog
 retry=searchbox-ready
 retry=editor-content
 retry=publish-navigation
+retry=audit-duplicates

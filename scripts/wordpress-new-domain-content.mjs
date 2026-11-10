@@ -117,7 +117,17 @@ try {
     const row=frame.locator('tr').filter({hasText:tableId}).first();
     await row.waitFor({state:'visible',timeout:15000});
     await row.locator('.insert-shortcode').first().click();
-    await page.waitForFunction(id=>document.querySelector('#content')?.value.includes(id),tableId,{timeout:10000});
+    console.log('EDITOR_AFTER_INSERT',JSON.stringify(await page.evaluate(() => ({
+      textarea:document.querySelector('#content')?.value?.slice(0,140),
+      tinyEditor:typeof window.tinymce?.get('content')?.getContent,
+      tinyHTML:window.tinymce?.get('content')?.getContent?.().slice(0,140),
+      editorMode:document.querySelector('#wp-content-wrap')?.className
+    }))));
+    await page.waitForFunction(id =>
+      (document.querySelector('#content')?.value || '').includes(id) ||
+      (window.tinymce?.get('content')?.getContent?.() || '').includes(id),
+      tableId,{timeout:10000});
+
     console.log('SHORTCODE_INSERTED_USING_EDITOR_UI',tableId);
     const key=page.locator('.acf-field[data-name="key"] input:not([type="hidden"])').first();
     if(await key.count())await key.fill(slug);

@@ -1,1 +1,2 @@
 slug=ten-mien-moi
+retry=read-schema

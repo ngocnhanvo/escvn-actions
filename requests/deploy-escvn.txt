@@ -89,3 +89,4 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-10: Deploy CMS-managed /ten-mien-moi, WordPress published Page #55546, ESC Table tenmienmoi_00 (60 fields). Astro master 66b540a343c7150420155d15140f2bb54679c5d8. Keep original full-width banner and CF7, original route rewrite; verify production build and QA.
 2026-11-10: Deploy escvn-astro/master f442814 — fix /ten-mien-moi-on-ad-ap/ route.
 2026-11-10: Deploy escvn-astro/master cba59aced8f0135ea53f43abe6ceb614c8b2ffd7 (Tenmienmoi_00 TablePress refactor).
+2026-11-10: Deploy escvn-astro/master 266ba516 — remove redundant landing header.

@@ -90,3 +90,4 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-10: Deploy escvn-astro/master f442814 — fix /ten-mien-moi-on-ad-ap/ route.
 2026-11-10: Deploy escvn-astro/master cba59aced8f0135ea53f43abe6ceb614c8b2ffd7 (Tenmienmoi_00 TablePress refactor).
 2026-11-10: Deploy escvn-astro/master 266ba516 — remove redundant landing header.
+2026-11-10: Deploy escvn-astro/master 9741cb7 (restore shared ESC header on landing route).

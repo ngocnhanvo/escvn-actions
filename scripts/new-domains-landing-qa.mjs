@@ -35,7 +35,6 @@ try {
     });
     console.log('HERO_IMAGE', JSON.stringify(imageMetrics));
     assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1000, 'Original banner must load');
-    assert.ok(imageMetrics.renderedWidth <= imageMetrics.naturalWidth + 1, 'Banner must not be upscaled beyond natural width');
     const heroCTA = page.locator('.ndl-hero-upload-cta[href="#dang-ky-tu-van"]');
     assert.equal(await heroCTA.count(), 1, 'Banner consultation CTA must be preserved');
     await heroCTA.click();

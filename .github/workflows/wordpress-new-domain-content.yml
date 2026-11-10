@@ -1,0 +1,30 @@
+name: Provision ESC new domain CMS content
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-new-domain-content.txt']
+permissions:
+  contents: read
+concurrency:
+  group: esc-new-domain-content
+  cancel-in-progress: false
+jobs:
+  provision:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Validate request scope
+        run: grep -Fqx 'slug=ten-mien-moi' requests/wordpress-new-domain-content.txt
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Provision WordPress Page and ESC Table
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-new-domain-content.mjs

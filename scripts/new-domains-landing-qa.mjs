@@ -19,31 +19,41 @@ try {
     assert.equal(response?.status(), 200, `${name} route should exist`);
     await page.locator('#ndl-hero-title').waitFor();
     assert.match(await page.locator('h1').first().innerText(), /3 TÊN MIỀN MỚI/i);
-    const heroCopy = page.locator('.ndl-hero-crisp .ndl-hero-copy');
-    assert.equal(await heroCopy.count(), 1, 'Hero headline and descriptive text must be live HTML');
-    assert.equal(await page.locator('.ndl-hero-upload-image').count(), 0, 'Full-banner raster text must not be used');
-    const heroImage = page.locator('.ndl-hero-crisp .ndl-art-source');
-    assert.equal(await heroImage.count(), 1, 'The original laptop illustration must remain visible');
+    const heroImage = page.locator('.ndl-hero-upload-image');
+    assert.equal(await heroImage.count(), 1, 'Approved WordPress banner must remain in place');
     const imageMetrics = await heroImage.evaluate(async (img) => {
-      try { await img.decode(); } catch (error) { return { loaded: false, src: img.currentSrc, error: String(error) }; }
+      try { await img.decode(); } catch (error) { return { loaded: false, error: String(error) }; }
       const rect = img.getBoundingClientRect();
       return {
         loaded: img.complete && img.naturalWidth > 0,
         naturalWidth: img.naturalWidth,
         naturalHeight: img.naturalHeight,
+        renderedWidth: Math.round(rect.width),
         renderedHeight: Math.round(rect.height),
         src: img.currentSrc,
       };
     });
     console.log('HERO_IMAGE', JSON.stringify(imageMetrics));
-    assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1000, 'Laptop artwork must load');
-    assert.ok(imageMetrics.renderedHeight <= imageMetrics.naturalHeight + 1,
-      'Laptop artwork must not be enlarged beyond natural pixel dimensions');
-    if (imageMetrics.naturalWidth < 1800) console.warn('SOURCE_LOW_RES: WordPress has only', imageMetrics.naturalWidth, 'pixels; replace with higher-resolution original for Retina');
-    const heroCTA = page.locator('.ndl-hero-copy a[href="#dang-ky-tu-van"]');
-    assert.equal(await heroCTA.count(), 1, 'Hero consultation CTA must be a real anchor');
+    assert.ok(imageMetrics.loaded && imageMetrics.naturalWidth >= 1000, 'Original banner must load');
+    assert.ok(imageMetrics.renderedWidth <= imageMetrics.naturalWidth + 1, 'Banner must not be upscaled beyond natural width');
+    const heroCTA = page.locator('.ndl-hero-upload-cta[href="#dang-ky-tu-van"]');
+    assert.equal(await heroCTA.count(), 1, 'Banner consultation CTA must be preserved');
     await heroCTA.click();
     assert.equal(new URL(page.url()).hash, '#dang-ky-tu-van', 'CTA should navigate to consultation form');
+    if (name === 'desktop') {
+      const cmsResponse = await context.request.get('https://admin.esc.vn/wp-json/wp/v2/pages?slug=ten-mien-moi', { timeout: 30000 });
+      assert.equal(cmsResponse.status(), 200, 'WordPress Pages REST must work');
+      const cmsPages = await cmsResponse.json();
+      const cmsPage = cmsPages.find((p) => p.slug === 'ten-mien-moi' && p.status === 'publish');
+      assert.ok(cmsPage, 'Landing page must exist in WordPress Pages');
+      const buildResponse = await context.request.get('https://esc.vn/data/page-ten-mien-moi.json', { timeout: 30000 });
+      assert.equal(buildResponse.status(), 200, 'WordPress Page data must be exported by Astro build');
+      const buildPage = await buildResponse.json();
+      const content = buildPage.contents?.find((p) => p.shortcode === 'tenmienmoi_00');
+      assert.equal(buildPage.id, cmsPage.id, 'Published Astro data must match WordPress Page');
+      assert.ok(content?.data?.items?.length >= 60, 'ESC Table must contain all editable landing fields');
+      console.log('CMS_BINDING_PASS', JSON.stringify({ page_id: cmsPage.id, table: 'tenmienmoi_00', fields: content.data.items.length }));
+    }
     assert.equal(await page.locator('.ndl-domain-card').count(), 3);
     assert.equal(await page.locator('.ndl-faq-item').count(), 5);
     assert.equal(await page.locator('.ndl-final-cta a').getAttribute('href'), '/dang-ky-ten-mien');

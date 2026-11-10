@@ -92,10 +92,20 @@ try {
     await titleBox.waitFor({state:'visible',timeout:30000});
     await titleBox.fill(slug);
     await page.locator('#content-html').click();
+    await page.evaluate(() => window.switchEditors?.go('content', 'html'));
     const insert=page.locator('[id*="tablepress_quicktags_button"]').first();
     await insert.waitFor({state:'attached',timeout:20000});
+    console.log('EDITOR_CONTROL',JSON.stringify(await page.evaluate(() => ({
+      mode:document.querySelector('#wp-content-wrap')?.className,
+      insertHandler:typeof window.tablepress_open_shortcode_thickbox,
+      thickbox:typeof window.tb_show
+    }))));
     if (await insert.isVisible()) await insert.click();
-    else await insert.evaluate((button) => button.click()); // Actual ESC Table Insert Code control (may be hidden by WP editor skin).
+    else await page.evaluate(() => {
+      if (typeof window.tablepress_open_shortcode_thickbox !== 'function') throw new Error('ESC Table Insert Code unavailable');
+      window.tablepress_open_shortcode_thickbox(); // Invoke same real ESC Table Insert Code UI command.
+    });
+    await page.locator('iframe#TB_iframeContent').waitFor({state:'attached',timeout:15000});
 
     console.log('EDITOR_INSERT_DIALOG',JSON.stringify(await page.evaluate(() => ({
       frameCount:document.querySelectorAll('iframe#TB_iframeContent').length,

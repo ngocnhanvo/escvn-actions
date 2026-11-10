@@ -97,9 +97,21 @@ try {
     if (await insert.isVisible()) await insert.click();
     else await insert.evaluate((button) => button.click()); // Actual ESC Table Insert Code control (may be hidden by WP editor skin).
 
+    console.log('EDITOR_INSERT_DIALOG',JSON.stringify(await page.evaluate(() => ({
+      frameCount:document.querySelectorAll('iframe#TB_iframeContent').length,
+      thickbox:!!document.getElementById('TB_window'),
+      editorMode:document.getElementById('wp-content-wrap')?.className
+    }))));
     const frame=page.frameLocator('iframe#TB_iframeContent');
+    const search=frame.locator('input[name="s"]').first();
+    if (await search.isVisible({timeout:15000}).catch(() => false)) {
+      await search.fill(tableId);
+      await search.press('Enter');
+      console.log('INSERT_CODE_SEARCH_USED',tableId);
+    }
+    console.log('INSERT_DIALOG_TEXT',(await frame.locator('body').innerText({timeout:12000}).catch(()=>'NOT_LOADED')).slice(0,600));
     const row=frame.locator('tr').filter({hasText:tableId}).first();
-    await row.waitFor({state:'visible',timeout:30000});
+    await row.waitFor({state:'visible',timeout:15000});
     await row.locator('.insert-shortcode').first().click();
     await page.waitForFunction(id=>document.querySelector('#content')?.value.includes(id),tableId,{timeout:10000});
     console.log('SHORTCODE_INSERTED_USING_EDITOR_UI',tableId);

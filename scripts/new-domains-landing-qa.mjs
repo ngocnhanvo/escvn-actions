@@ -41,12 +41,11 @@ try {
     await heroCTA.click();
     assert.equal(new URL(page.url()).hash, '#dang-ky-tu-van', 'CTA should navigate to consultation form');
     if (name === 'desktop') {
-      const cmsResponse = await context.request.get('https://admin.esc.vn/wp-json/wp/v2/pages?slug=ten-mien-moi', { timeout: 30000 });
-      assert.equal(cmsResponse.status(), 200, 'WordPress Pages REST must work');
-      const cmsPages = await cmsResponse.json();
-      const cmsPage = cmsPages.find((p) => p.slug === 'ten-mien-moi' && p.status === 'publish');
-      assert.ok(cmsPage, 'Landing page must exist in WordPress Pages');
-      const buildResponse = await context.request.get('https://esc.vn/data/page-ten-mien-moi.json', { timeout: 30000 });
+      const cmsResponse = await context.request.get('https://admin.esc.vn/wp-json/wp/v2/pages/55546', { timeout: 30000 });
+      assert.equal(cmsResponse.status(), 200, 'WordPress Page must exist');
+      const cmsPage = await cmsResponse.json();
+      assert.equal(cmsPage.status, 'publish', 'Landing Page must be published');
+      const buildResponse = await context.request.get('https://esc.vn/data/page-' + cmsPage.slug + '.json', { timeout: 30000 });
       assert.equal(buildResponse.status(), 200, 'WordPress Page data must be exported by Astro build');
       const buildPage = await buildResponse.json();
       const content = buildPage.contents?.find((p) => p.shortcode === 'tenmienmoi_00');

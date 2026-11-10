@@ -95,7 +95,58 @@ try {
       editHref:el.querySelector('.row-title')?.getAttribute('href')
     })));
     console.log('WP_PAGE_ADMIN_AUDIT',JSON.stringify(existing).slice(0,5000));
-    if(existing.some(x => x.id && x.id.startsWith('post-'))) throw new Error('Existing WordPress Pages found; no additional Page will be created until duplicates are reconciled');
+    if(existing.some(x => x.id && x.id.startsWith('post-'))) {
+      // The following exact IDs were created by this workflow's failed previous attempts
+      // (all titled ten-mien-moi). Never touch unrelated WordPress content.
+      const ourIds=[55540,55541,55542,55544,55545,55546,55548];
+      const actual=existing.filter(x=>x.id?.startsWith('post-'));
+      assert.deepEqual(actual.map(x=>Number(x.id.slice(5))).sort((a,b)=>a-b),ourIds,
+        'Unexpected Page in targeted admin search; manual review required');
+      assert.ok(actual.every(x=>x.title==='ten-mien-moi'),'Page ownership/title changed, refuse mutation');
+      const canonicalId=55546;
+      const original=await get('/wp-json/wp/v2/pages/'+canonicalId);
+      assert.equal(original.status(),200,'Canonical Page must be published');
+      const originalPage=await original.json();
+      console.log('RECOVERY_CANONICAL',JSON.stringify({
+        id:originalPage.id,slug:originalPage.slug,status:originalPage.status,
+        shortcode:JSON.stringify(originalPage.content?.rendered||'').includes(tableId)
+      }));
+      assert.ok(String(originalPage.content?.rendered||'').includes(tableId),'Canonical Page missing ESC Table shortcode');
+      // Trash only the second accidental published Page first to release its permalink.
+      await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
+      const extra=page.locator('#post-55548');
+      const trashHref=await extra.locator('a.submitdelete').first().getAttribute('href');
+      assert.ok(trashHref?.includes('post=55548') && trashHref.includes('_wpnonce'),'Unsafe trash URL');
+      await page.goto(new URL(trashHref,host).toString(),{waitUntil:'domcontentloaded'});
+      console.log('TRASHED_EXTRA_PUBLISHED',55548);
+      // Restore canonical Page to its required exact URL, and give it a readable title.
+      await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
+      await page.locator('#post-55546 .editinline').first().evaluate(el=>el.click());
+      const row=page.locator('#edit-55546');
+      await row.waitFor({state:'visible',timeout:15000});
+      await row.locator('input[name="post_title"]').fill(title);
+      await row.locator('input[name="post_name"]').fill(slug);
+      await row.locator('button.save').first().click();
+      await row.waitFor({state:'detached',timeout:30000});
+      for(let i=0;i<5;i++){
+        wpPage=await readPage();
+        if(wpPage)break;
+        await page.waitForTimeout(800);
+      }
+      assert.ok(wpPage,'Canonical WP Page slug could not be set exactly');
+      assert.equal(wpPage.id,canonicalId,'Wrong canonical Page recovered');
+      assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Canonical Page lost ESC Table shortcode');
+      console.log('CANONICAL_PAGE_RESTORED',wpPage.id,wpPage.slug);
+      for(const id of [55540,55541,55542,55544,55545]){
+        await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
+        const draft=page.locator('#post-'+id);
+        const href=await draft.locator('a.submitdelete').first().getAttribute('href');
+        assert.ok(href?.includes('post='+id) && href.includes('_wpnonce'),'Unsafe draft cleanup: '+id);
+        await page.goto(new URL(href,host).toString(),{waitUntil:'domcontentloaded'});
+        console.log('TRASHED_OWN_DRAFT',id);
+      }
+      console.log('WP_PAGE_CLEANUP_PASS canonical='+canonicalId+' extra_published=1 drafts=5');
+    }
   }
   if(!wpPage){
     await page.goto(host+'/wp-admin/post-new.php?post_type=page',{waitUntil:'domcontentloaded',timeout:60000});

@@ -18,6 +18,12 @@ try {
     const response = await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 45000 });
     assert.equal(response?.status(), 200, `${name} route should exist`);
     await page.locator('#ndl-hero-title').waitFor();
+    assert.equal(await page.locator('.ndl-page .ndl-header, .ndl-page .ndl-nav, .ndl-page .ndl-hotline').count(), 0,
+      'Landing must not contain the redundant nested logo/menu/hotline header');
+    assert.equal(await page.locator('.ndl-page > main > .ndl-hero').count(), 1,
+      'Approved hero must immediately follow the landing wrapper');
+    assert.equal(await page.locator('#header-logo').count(), 1,
+      'Shared ESC website header must remain visible');
     assert.equal(await page.locator('[data-tablepress-preview="tenmienmoi_00"]').count(), 1,
       'Landing must render through Tenmienmoi_00 TablePress component');
     assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), origin, 'Canonical must match the published WordPress slug');

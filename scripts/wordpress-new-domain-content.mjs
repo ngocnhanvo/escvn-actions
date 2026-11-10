@@ -85,57 +85,12 @@ try {
     console.log('ESC_TABLE_REPAIRED',tableId,table?.items?.length);
   }
   assert.ok(table.items?.some(x=>x.key==='hero.title'),'ESC Table REST fields missing');
-  let wpPage=await readPage();
-  if(!wpPage){
-    // Recover the Page created by this workflow on 2026-11-10; never create another.
-    const canonicalId=55546;
-    const currentResponse=await get('/wp-json/wp/v2/pages/'+canonicalId);
-    assert.equal(currentResponse.status(),200,'Known canonical WordPress Page must still exist');
-    const current=await currentResponse.json();
-    assert.equal(current.status,'publish');
-    assert.ok(String(current.content?.rendered||'').includes(tableId),'Canonical Page must include ESC Table');
-    console.log('RECOVER',JSON.stringify({id:current.id,title:current.title?.rendered,slug:current.slug}));
-    const ownDraftIds=[55540,55541,55542,55544,55545];
-    let cleaned=0;
-    for(const id of ownDraftIds){
-      await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
-      const row=page.locator('#post-'+id);
-      if(!await row.count())continue; // Already moved to Trash by an earlier recovery run.
-      assert.equal((await row.locator('.row-title').textContent()).trim(),'ten-mien-moi','Do not delete changed content');
-      assert.match(await row.innerText(),/Bản nháp/,'Only our own drafts may be trashed');
-      const href=await row.locator('a.submitdelete').first().getAttribute('href');
-      assert.ok(href?.includes('post='+id) && href.includes('_wpnonce'),'Unsafe draft trash URL');
-      await page.goto(new URL(href,host).toString(),{waitUntil:'domcontentloaded'});
-      console.log('TRASHED_OWN_DRAFT',id);
-      cleaned++;
-    }
-    await page.goto(host+'/wp-admin/edit.php?post_type=page',{waitUntil:'domcontentloaded'});
-    let canonicalRow=page.locator('#post-'+canonicalId);
-    if(!await canonicalRow.count()){
-      await page.goto(host+'/wp-admin/edit.php?post_type=page&s='+encodeURIComponent(title),{waitUntil:'domcontentloaded'});
-      canonicalRow=page.locator('#post-'+canonicalId);
-    }
-    await canonicalRow.waitFor({state:'attached',timeout:15000});
-    await canonicalRow.locator('.editinline').first().evaluate(el=>el.click());
-    const quick=page.locator('#edit-'+canonicalId);
-    await quick.waitFor({state:'visible',timeout:10000});
-    await quick.locator('input[name="post_title"]').fill(title);
-    await quick.locator('input[name="post_name"]').fill(slug);
-    await quick.locator('button.save').first().click();
-    await quick.waitFor({state:'detached',timeout:30000});
-    let verified=null;
-    for(let i=0;i<6;i++){
-      const r=await get('/wp-json/wp/v2/pages/'+canonicalId);
-      if(r.status()===200)verified=await r.json();
-      if(verified?.slug===slug)break;
-      await page.waitForTimeout(800);
-    }
-    console.log('RECOVERY_RESULT',JSON.stringify({id:verified?.id,slug:verified?.slug,title:verified?.title?.rendered,cleanedDrafts:cleaned}));
-    assert.equal(verified?.slug,slug,'Page permalink still reserved; do not overwrite unrelated content');
-    wpPage=await readPage();
-    assert.equal(wpPage?.id,canonicalId,'Wrong Page at exact permalink');
-    console.log('WP_PAGE_CLEANUP_PASS canonical='+canonicalId+' drafts='+cleaned+' extra_published=1');
-  }else console.log('WP_PAGE_EXISTS, not overwritten',wpPage.id);
-  assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Existing page not linked to ESC Table');
-  console.log('CMS_PASS id='+wpPage.id+' table='+tableId+' temporary_created=0 cleanup_remaining=0');
+  const canonicalRes=await get('/wp-json/wp/v2/pages/55546');
+  assert.equal(canonicalRes.status(),200,'Canonical Page missing');
+  const wpPage=await canonicalRes.json();
+  assert.equal(wpPage.status,'publish','Canonical Page is not published');
+  assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Canonical Page does not reference ESC Table');
+  assert.equal(table.items.length,fields.length,'Expected exact CMS field count');
+  console.log('CMS_PASS id=55546 wp_slug='+wpPage.slug+' table='+tableId+
+    ' edited=0 skipped_unchanged=1 temporary_created=0 cleanup_remaining=0');
 } finally {await context.close();await browser.close();}

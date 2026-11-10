@@ -22,15 +22,10 @@ try {
       'Landing must not contain the redundant nested logo/menu/hotline header');
     assert.equal(await page.locator('.ndl-page > main > .ndl-hero').count(), 1,
       'Approved hero must immediately follow the landing wrapper');
-    if (name === 'desktop') {
-      const pageChrome = await page.evaluate(() => ({
-        headerCount: document.querySelectorAll('header').length,
-        sharedLogoCount: document.querySelectorAll('#header-logo').length,
-        headerLabels: [...document.querySelectorAll('header')].map(el => (el.textContent || '').trim().slice(0, 90)),
-        bodyChildTags: [...document.body.children].slice(0, 8).map(el => ({ tag: el.tagName, id: el.id, className: typeof el.className === 'string' ? el.className.slice(0, 100) : '' }))
-      }));
-      console.log('PAGE_CHROME', JSON.stringify(pageChrome));
-    }
+    assert.equal(await page.locator('#main-header #header-logo').count(), 1,
+      'Shared ESC website header must remain visible');
+    assert.equal(await page.locator('.ndl-page header').count(), 0,
+      'Do not render a second landing-specific header');
     assert.equal(await page.locator('[data-tablepress-preview="tenmienmoi_00"]').count(), 1,
       'Landing must render through Tenmienmoi_00 TablePress component');
     assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), origin, 'Canonical must match the published WordPress slug');

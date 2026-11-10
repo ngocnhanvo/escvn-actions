@@ -16,3 +16,4 @@ production_run=42592654295
 qa=native-size-hero-text-and-anchor
 2026-11-10: Verify published /ten-mien-moi-on-ad-ap/ after escvn-astro f442814.
 2026-11-10: Verify Tenmienmoi_00 component after escvn-astro cba59ac production deploy.
+2026-11-10: QA header removal, escvn-astro 266ba516, /ten-mien-moi-on-ad-ap/.

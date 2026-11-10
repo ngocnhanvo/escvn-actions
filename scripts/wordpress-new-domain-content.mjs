@@ -136,8 +136,13 @@ try {
       if(await action.evaluate(el=>el.tagName)==='SELECT')await action.selectOption('PublicPage');
       else await action.fill('PublicPage');
     }
-    await Promise.all([page.waitForLoadState('domcontentloaded'),page.locator('#publish').click()]);
+    await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:60000}),page.locator('#publish').click()]);
+    console.log('WP_PUBLISH_LOCATION',new URL(page.url()).pathname);
     wpPage=await readPage();
+    if(!wpPage){
+      const probe=await get('/wp-json/wp/v2/pages?search=ten-mien-moi&per_page=30');
+      console.log('WP_PAGE_PROBE',(await probe.json()).map(x=>({id:x.id,slug:x.slug,status:x.status})).slice(0,10));
+    }
     assert.ok(wpPage,'Published WordPress Page not found');
     assert.equal(wpPage.slug,slug);
     assert.ok(String(wpPage.content?.rendered||'').includes(tableId),'Page shortcode not persisted');
@@ -146,7 +151,7 @@ try {
     await titleField.waitFor({state:'visible',timeout:15000});
     if(await titleField.inputValue()!==title){
       await titleField.fill(title);
-      await Promise.all([page.waitForLoadState('domcontentloaded'),page.locator('#publish').click()]);
+      await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:60000}),page.locator('#publish').click()]);
     }
     wpPage=await readPage();
     assert.equal(wpPage.slug,slug,'Page slug mutated');

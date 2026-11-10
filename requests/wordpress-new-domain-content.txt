@@ -9,3 +9,4 @@ retry=searchbox-ready
 retry=editor-content
 retry=publish-navigation
 retry=audit-duplicates
+retry=recover-page

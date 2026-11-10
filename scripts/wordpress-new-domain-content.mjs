@@ -108,12 +108,11 @@ try {
       editorMode:document.getElementById('wp-content-wrap')?.className
     }))));
     const frame=page.frameLocator('iframe#TB_iframeContent');
-    const search=frame.locator('input[name="s"]').first();
-    if (await search.isVisible({timeout:15000}).catch(() => false)) {
-      await search.fill(tableId);
-      await search.press('Enter');
-      console.log('INSERT_CODE_SEARCH_USED',tableId);
-    }
+    const search=frame.getByRole('searchbox').first();
+    await search.waitFor({state:'visible',timeout:15000});
+    await search.fill(tableId);
+    await search.press('Enter');
+    console.log('INSERT_CODE_SEARCH_USED',tableId);
     console.log('INSERT_DIALOG_TEXT',(await frame.locator('body').innerText({timeout:12000}).catch(()=>'NOT_LOADED')).slice(0,600));
     const row=frame.locator('tr').filter({hasText:tableId}).first();
     await row.waitFor({state:'visible',timeout:15000});

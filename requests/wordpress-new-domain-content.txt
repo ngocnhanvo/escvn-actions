@@ -2,3 +2,4 @@ slug=ten-mien-moi
 retry=read-schema
 repair=header-row
 retry=insert-code
+retry=search-table

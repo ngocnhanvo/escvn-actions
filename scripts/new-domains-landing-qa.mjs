@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { strict as assert } from 'node:assert';
 import { mkdirSync } from 'node:fs';
 
-const origin = 'https://esc.vn/ten-mien-moi/';
+const origin = 'https://esc.vn/ten-mien-moi-on-ad-ap/';
 const browser = await chromium.launch({ headless: true });
 mkdirSync('new-domains-landing-qa', { recursive: true });
 try {
@@ -18,6 +18,7 @@ try {
     const response = await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 45000 });
     assert.equal(response?.status(), 200, `${name} route should exist`);
     await page.locator('#ndl-hero-title').waitFor();
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), origin, 'Canonical must match the published WordPress slug');
     assert.match(await page.locator('h1').first().innerText(), /3 TÊN MIỀN MỚI/i);
     const heroImage = page.locator('.ndl-hero-upload-image');
     assert.equal(await heroImage.count(), 1, 'Approved WordPress banner must remain in place');

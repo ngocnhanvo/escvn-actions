@@ -6,3 +6,4 @@ retry=search-table
 retry=editor-control
 retry=esc-table-dialog
 retry=searchbox-ready
+retry=editor-content

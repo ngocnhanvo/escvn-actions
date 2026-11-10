@@ -93,8 +93,10 @@ try {
     await titleBox.fill(slug);
     await page.locator('#content-html').click();
     const insert=page.locator('[id*="tablepress_quicktags_button"]').first();
-    await insert.waitFor({state:'visible',timeout:20000});
-    await insert.click();
+    await insert.waitFor({state:'attached',timeout:20000});
+    if (await insert.isVisible()) await insert.click();
+    else await insert.evaluate((button) => button.click()); // Actual ESC Table Insert Code control (may be hidden by WP editor skin).
+
     const frame=page.frameLocator('iframe#TB_iframeContent');
     const row=frame.locator('tr').filter({hasText:tableId}).first();
     await row.waitFor({state:'visible',timeout:30000});

@@ -87,6 +87,17 @@ try {
   assert.ok(table.items?.some(x=>x.key==='hero.title'),'ESC Table REST fields missing');
   let wpPage=await readPage();
   if(!wpPage){
+    await page.goto(host+'/wp-admin/edit.php?post_type=page&s=ten-mien-moi',{waitUntil:'domcontentloaded'});
+    const existing=await page.locator('#the-list tr').evaluateAll((rows) => rows.map((el) => ({
+      id:el.id, title:el.querySelector('.row-title')?.textContent?.trim(),
+      status:el.querySelector('.post-state')?.textContent?.trim(),
+      text:el.innerText.slice(0,180),
+      editHref:el.querySelector('.row-title')?.getAttribute('href')
+    })));
+    console.log('WP_PAGE_ADMIN_AUDIT',JSON.stringify(existing).slice(0,5000));
+    if(existing.some(x => x.id && x.id.startsWith('post-'))) throw new Error('Existing WordPress Pages found; no additional Page will be created until duplicates are reconciled');
+  }
+  if(!wpPage){
     await page.goto(host+'/wp-admin/post-new.php?post_type=page',{waitUntil:'domcontentloaded',timeout:60000});
     const titleBox=page.locator('#title');
     await titleBox.waitFor({state:'visible',timeout:30000});

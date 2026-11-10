@@ -3,3 +3,4 @@ retry=read-schema
 repair=header-row
 retry=insert-code
 retry=search-table
+retry=editor-control

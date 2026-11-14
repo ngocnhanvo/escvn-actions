@@ -2,11 +2,12 @@ import { chromium } from 'playwright';
 
 const site = 'https://esc.vn/ban-do-ho-kinh-doanh/';
 const expectedProvider='google';
+let restGoogleMapsKey='';
 const browser = await chromium.launch({
   headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 
-async function checkMapPage(width, height, mobile = false) {
+async function checkMapPage(width, height, mobile = false, url = site) {
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   const errors = [];
@@ -14,6 +15,7 @@ async function checkMapPage(width, height, mobile = false) {
   const legacyMapRequests = [];
   let googleSdkRequests=0;
   const sdkReferrerOrigins=[];
+  const sdkKeyMatches=[];
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
   page.on('console',m=>{
     if(m.type()!=='error')return;
@@ -31,10 +33,12 @@ async function checkMapPage(width, height, mobile = false) {
       let origin='(missing)';
       try{if(referrer)origin=new URL(referrer).origin+'/'}catch(e){origin='(unparseable)'}
       sdkReferrerOrigins.push(origin);
+      sdkKeyMatches.push(new URL(r.url()).searchParams.get('key')===restGoogleMapsKey);
     }
   });
   try {
-    const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    console.log('MAP_REQUEST_CONTEXT '+JSON.stringify({variant:url.includes('?')?'query':'clean',viewport:width,referrerPolicy:response?.headers()['referrer-policy']||'(not set)'}));
     if (response?.status() !== 200) throw Error('HKD page returned HTTP ' + response?.status());
     await page.locator('#mv.mapview').waitFor({ timeout: 20000 });
     const header = page.locator('header .nav');
@@ -61,11 +65,12 @@ async function checkMapPage(width, height, mobile = false) {
         loading: document.querySelector('#busy')?.textContent,
         googleSdkLoaded: !!window.google?.maps?.importLibrary,
       }));
-      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify({...info,googleErrorCodes:[...new Set(mapApiErrors)],sdkReferrerOrigins:[...new Set(sdkReferrerOrigins)]}) + '; ' + String(error).slice(0, 100));
+      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify({...info,googleErrorCodes:[...new Set(mapApiErrors)],sdkReferrerOrigins:[...new Set(sdkReferrerOrigins)],sdkKeyMatches:[...new Set(sdkKeyMatches)]}) + '; ' + String(error).slice(0, 100));
     }
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });
     if (legacyMapRequests.length) throw Error('Legacy map SDK or tile requests observed');
+    if (!sdkKeyMatches.length || sdkKeyMatches.includes(false)) throw Error('SDK API Key differs from current WordPress config');
     if (mapApiErrors.length) throw Error('Google Maps API errors: '+[...new Set(mapApiErrors)].join(', '));
     if (await page.locator('#map').getAttribute('data-hkd-map-provider') !== expectedProvider)
       throw Error('Map provider mismatch: expected '+expectedProvider);
@@ -191,11 +196,17 @@ try {
   if(configResponse.status()!==200||config?.provider!=='google'||legacyKeyExposed||!keyValid||!mapIdValid)
     throw Error('Google Maps configuration incomplete or legacy key exposed');
   console.log('HKD Google Maps map-config PASS (credentials redacted)');
+  restGoogleMapsKey=config.googleMapsApiKey;
   await api.close();
 
+  const linked=site+'?utm_source=chatgpt.com';
   const scenarios=[
-    ['map-desktop',()=>checkMapPage(1366,642,false)],
-    ['map-mobile',()=>checkMapPage(390,844,true)],
+    ['map-linked-desktop-1',()=>checkMapPage(1366,642,false,linked)],
+    ['map-clean-mobile',()=>checkMapPage(390,844,true)],
+    ['map-linked-mobile-1',()=>checkMapPage(390,844,true,linked)],
+    ['map-clean-desktop',()=>checkMapPage(1366,642,false)],
+    ['map-linked-desktop-2',()=>checkMapPage(1366,642,false,linked)],
+    ['map-linked-mobile-2',()=>checkMapPage(390,844,true,linked)],
     ['coordinates-desktop',()=>checkRegistrationForm(1366,768)],
     ['coordinates-mobile',()=>checkRegistrationForm(390,844)],
   ];

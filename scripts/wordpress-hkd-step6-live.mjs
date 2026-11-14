@@ -193,8 +193,21 @@ try {
   console.log('HKD Google Maps map-config PASS (credentials redacted)');
   await api.close();
 
-  await checkMapPage(1366, 642, false);
-  await checkMapPage(390, 844, true);
-  await checkRegistrationForm(1366, 768);
-  await checkRegistrationForm(390, 844);
+  const scenarios=[
+    ['map-desktop',()=>checkMapPage(1366,642,false)],
+    ['map-mobile',()=>checkMapPage(390,844,true)],
+    ['coordinates-desktop',()=>checkRegistrationForm(1366,768)],
+    ['coordinates-mobile',()=>checkRegistrationForm(390,844)],
+  ];
+  const failed=[];
+  for(const [name,run] of scenarios){
+    try{
+      await run();
+      console.log('SCENARIO PASS: '+name);
+    }catch(e){
+      console.error('SCENARIO FAIL: '+name+' — '+String(e).slice(0,1800));
+      failed.push(name);
+    }
+  }
+  if(failed.length)throw Error('HKD production scenarios failed: '+failed.join(', '));
 } finally { await browser.close(); }

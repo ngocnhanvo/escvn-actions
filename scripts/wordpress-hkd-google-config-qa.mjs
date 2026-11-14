@@ -16,8 +16,9 @@ try {
     throw Error('HKD must expose Google Maps configuration only');
   }
   if(!/^[A-Za-z0-9_-]{20,200}$/.test(body.googleMapsApiKey)
-     || !/^[A-Za-z0-9_-]{6,128}$/.test(body.googleMapId))
-    throw Error('Google Maps API Key or Map ID is missing or invalid');
+     || (body.googleMapId !== '' && !/^[A-Za-z0-9_-]{6,128}$/.test(body.googleMapId)))
+    throw Error('Google Maps API Key missing or Map ID malformed');
+  console.log('Google Maps Map ID configured: '+Boolean(body.googleMapId));
   console.log('HKD map-config PASS; provider='+body.provider+'; keys redacted');
   const meta=await context.request.get(origin+'/wp-json/esc-hkd/v1/meta',{timeout:45000});
   const data=await meta.json().catch(()=>null);

@@ -166,10 +166,10 @@ try {
   const configResponse = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/map-config', { timeout: 45000 });
   const config = await configResponse.json().catch(() => null);
   const keyValid=typeof config?.googleMapsApiKey==='string' && /^[A-Za-z0-9_-]{20,200}$/.test(config.googleMapsApiKey);
-  const mapIdValid=typeof config?.googleMapId==='string' && /^[A-Za-z0-9_-]{6,128}$/.test(config.googleMapId);
+  const mapIdValid=typeof config?.googleMapId==='string' && (config.googleMapId==='' || /^[A-Za-z0-9_-]{6,128}$/.test(config.googleMapId));
   const legacyKeyExposed=Object.prototype.hasOwnProperty.call(config||{},'goongMaptilesKey');
   console.log('Google Maps configuration status (no values logged): '+JSON.stringify({
-    http:configResponse.status(),provider:config?.provider,keyValid,mapIdValid,legacyKeyExposed
+    http:configResponse.status(),provider:config?.provider,keyValid,mapIdValid,mapIdConfigured:Boolean(config?.googleMapId),legacyKeyExposed
   }));
   if(configResponse.status()!==200||config?.provider!=='google'||legacyKeyExposed||!keyValid||!mapIdValid)
     throw Error('Google Maps configuration incomplete or legacy key exposed');

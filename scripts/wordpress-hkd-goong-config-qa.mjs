@@ -9,15 +9,24 @@ const page=await context.newPage();
 try {
   const response=await context.request.get(origin+'/wp-json/esc-hkd/v1/map-config',{timeout:45000});
   const body=await response.json().catch(()=>null);
-  if(response.status()!==200 || body?.provider!=='goong' || typeof body?.goongMaptilesKey!=='string') {
-    throw Error('Goong Maptiles configuration API unavailable');
+  if(response.status()!==200 || !['goong','google'].includes(body?.provider)
+      || typeof body?.goongMaptilesKey!=='string'
+      || typeof body?.googleMapsApiKey!=='string'
+      || typeof body?.googleMapId!=='string') {
+    throw Error('HKD map configuration API unavailable');
   }
   const configured=body.goongMaptilesKey.length>0;
   if(configured && !/^[A-Za-z0-9._-]{8,256}$/.test(body.goongMaptilesKey)) {
     throw Error('Maptiles token format incorrect');
   }
-  if(!configured) throw Error('Goong Maptiles key is not configured');
-  console.log('HKD Goong map-config PASS; Maptiles key present (value redacted)');
+  if(body.provider==='google') {
+    if(!/^[A-Za-z0-9_-]{20,200}$/.test(body.googleMapsApiKey)
+       || !/^[A-Za-z0-9_-]{6,128}$/.test(body.googleMapId))
+      throw Error('Google Maps key or Map ID format invalid');
+  } else if(!configured) {
+    throw Error('No working HKD map provider is configured');
+  }
+  console.log('HKD map-config PASS; provider='+body.provider+'; keys redacted');
   const meta=await context.request.get(origin+'/wp-json/esc-hkd/v1/meta',{timeout:45000});
   const data=await meta.json().catch(()=>null);
   if(meta.status()!==200 || data?.provinces?.length!==34 || data?.industries?.length!==15)
@@ -44,8 +53,9 @@ try {
   if(page.url().includes('wp-login.php')||await page.locator('#login_error').isVisible().catch(()=>false))
     throw Error('WP login failed');
   await page.goto(origin+'/wp-admin/admin.php?page=esc-hkd-goong',{waitUntil:'domcontentloaded',timeout:60000});
-  await page.getByRole('heading',{name:'Cấu hình bản đồ Goong'}).waitFor({timeout:20000});
-  if(!await page.locator('#esc-hkd-goong-status').isVisible())throw Error('Goong config status missing');
-  if(!await page.locator('#esc-hkd-goong-key').isVisible())throw Error('Goong key configuration field missing');
-  console.log('HKD Goong WordPress Admin PASS; REST references unchanged; token not logged');
+  await page.getByRole('heading',{name:'Cấu hình bản đồ Hộ kinh doanh'}).waitFor({timeout:20000});
+  if(!await page.locator('#esc-hkd-google-key').isVisible())throw Error('Google Maps key field missing');
+  if(!await page.locator('#esc-hkd-google-map-id').isVisible())throw Error('Google Maps Map ID field missing');
+  if(!await page.locator('#esc-hkd-goong-key').isVisible())throw Error('Goong fallback key field missing');
+  console.log('HKD Google/Goong WordPress Admin PASS; REST references unchanged; keys redacted');
 } finally {await browser.close();}

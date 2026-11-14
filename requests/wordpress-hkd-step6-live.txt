@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=43546663041
-attempt=hkd-repeated-link-mobile-google-auth-20261114
+deploy_run=43554935192
+attempt=hkd-csp-unpkg-map-auth-regression-20261114

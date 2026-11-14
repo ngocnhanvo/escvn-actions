@@ -1,2 +1,0 @@
-scope=goong_php_only
-source_sha=5615ad65c2a8c15bdfd2c6721ccae29f1dbd1b90

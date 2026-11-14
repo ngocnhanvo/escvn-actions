@@ -97,3 +97,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-14: Remove Goong fallback and use Google Maps only @ 604f147e3d8f92fa6c64f09bd1832014eba24c45. Scope: HKD map frontend, registration coordinate selection and CSP. PHP Google-only rollout requested separately.
 
 2026-11-14: Fix Google Maps without Map ID, preserve HKD markers and registration coordinates. Astro master b1a2ce6b39466a98e2e431c2dfbba42c40c20a21.
+
+2026-11-14: Allow unpkg.com in HKD-only connect-src for Google MarkerClusterer; leave Google Cloud API Key restrictions unchanged. Astro master b167d56919b81d6756de4d9d7498b6fdfd4df539.

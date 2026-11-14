@@ -38,7 +38,10 @@ async function checkMapPage(width, height, mobile = false, url = site) {
   });
   try {
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    console.log('MAP_REQUEST_CONTEXT '+JSON.stringify({variant:url.includes('?')?'query':'clean',viewport:width,referrerPolicy:response?.headers()['referrer-policy']||'(not set)'}));
+    const connectSrc=(response?.headers()['content-security-policy']||'').split(';').find(x=>x.trim().startsWith('connect-src'))||'';
+    const hkdCdnAllowed=connectSrc.trim().split(/\s+/).includes('https://unpkg.com');
+    console.log('MAP_REQUEST_CONTEXT '+JSON.stringify({variant:url.includes('?')?'query':'clean',viewport:width,referrerPolicy:response?.headers()['referrer-policy']||'(not set)',clustererConnectAllowed:hkdCdnAllowed}));
+    if(!hkdCdnAllowed)throw Error('HKD Content-Security-Policy connect-src blocks MarkerClusterer CDN');
     if (response?.status() !== 200) throw Error('HKD page returned HTTP ' + response?.status());
     await page.locator('#mv.mapview').waitFor({ timeout: 20000 });
     const header = page.locator('header .nav');

@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
 deploy_run=43546663041
-attempt=diagnose-google-http-referer-20261114
+attempt=hkd-google-isolated-desktop-mobile-registration-20261114

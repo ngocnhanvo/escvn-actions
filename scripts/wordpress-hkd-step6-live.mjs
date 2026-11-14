@@ -13,6 +13,7 @@ async function checkMapPage(width, height, mobile = false) {
   const mapApiErrors = [];
   const legacyMapRequests = [];
   let googleSdkRequests=0;
+  const sdkReferrerOrigins=[];
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
   page.on('console',m=>{
     if(m.type()!=='error')return;
@@ -24,7 +25,13 @@ async function checkMapPage(width, height, mobile = false) {
   });
   page.on('request', r => {
     if (/goong\.io|goong-js|openfreemap\.org/i.test(r.url())) legacyMapRequests.push('Legacy provider request');
-    if (r.url().includes('maps.googleapis.com/maps/api/js')) googleSdkRequests++;
+    if(r.url().startsWith('https://maps.googleapis.com/maps/api/js')){
+      googleSdkRequests++;
+      const referrer=r.headers()['referer']||'';
+      let origin='(missing)';
+      try{if(referrer)origin=new URL(referrer).origin+'/'}catch(e){origin='(unparseable)'}
+      sdkReferrerOrigins.push(origin);
+    }
   });
   try {
     const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -54,7 +61,7 @@ async function checkMapPage(width, height, mobile = false) {
         loading: document.querySelector('#busy')?.textContent,
         googleSdkLoaded: !!window.google?.maps?.importLibrary,
       }));
-      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify({...info,googleErrorCodes:[...new Set(mapApiErrors)]}) + '; ' + String(error).slice(0, 100));
+      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify({...info,googleErrorCodes:[...new Set(mapApiErrors)],sdkReferrerOrigins:[...new Set(sdkReferrerOrigins)]}) + '; ' + String(error).slice(0, 100));
     }
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });

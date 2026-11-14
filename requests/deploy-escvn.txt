@@ -95,3 +95,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-14: Deploy HKD Google Maps integration, escvn-astro/master a376ccf6191a4635db43b8325edcc914d562cd6e. Google map rendering and draggable registration coordinates; preserve original UI, approved HKD dataset, and temporary Goong fallback until Google billing, browser API key and Map ID are configured in WordPress. PHP map-config source 5615ad65c2a8c15bdfd2c6721ccae29f1dbd1b90. Use existing ESC production pipeline, validate release, provider and registration form without writing test records.
 
 2026-11-14: Remove Goong fallback and use Google Maps only @ 604f147e3d8f92fa6c64f09bd1832014eba24c45. Scope: HKD map frontend, registration coordinate selection and CSP. PHP Google-only rollout requested separately.
+
+2026-11-14: Fix Google Maps without Map ID, preserve HKD markers and registration coordinates. Astro master b1a2ce6b39466a98e2e431c2dfbba42c40c20a21.

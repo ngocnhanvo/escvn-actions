@@ -10,9 +10,18 @@ async function checkMapPage(width, height, mobile = false) {
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   const errors = [];
+  const mapApiErrors = [];
   const legacyMapRequests = [];
   let googleSdkRequests=0;
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
+  page.on('console',m=>{
+    if(m.type()!=='error')return;
+    const text=m.text();
+    if(/Google Maps JavaScript API error|MapError/i.test(text)){
+      const code=text.match(/\b[A-Za-z]+MapError\b/)?.[0]||'GoogleMapsApiError';
+      mapApiErrors.push(code);
+    }
+  });
   page.on('request', r => {
     if (/goong\.io|goong-js|openfreemap\.org/i.test(r.url())) legacyMapRequests.push('Legacy provider request');
     if (r.url().includes('maps.googleapis.com/maps/api/js')) googleSdkRequests++;
@@ -50,6 +59,7 @@ async function checkMapPage(width, height, mobile = false) {
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });
     if (legacyMapRequests.length) throw Error('Legacy map SDK or tile requests observed');
+    if (mapApiErrors.length) throw Error('Google Maps API errors: '+[...new Set(mapApiErrors)].join(', '));
     if (await page.locator('#map').getAttribute('data-hkd-map-provider') !== expectedProvider)
       throw Error('Map provider mismatch: expected '+expectedProvider);
     const noteText = await page.locator('#note').innerText().catch(() => '');

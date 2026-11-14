@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=43541293377
-attempt=hkd-google-map-stage-live-qa
+deploy_run=43545411619
+attempt=hkd-google-only-config-check-20261114

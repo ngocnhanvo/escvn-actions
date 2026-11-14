@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 
 const site = 'https://esc.vn/ban-do-ho-kinh-doanh/';
-let expectedProvider='goong';
+const expectedProvider='google';
 const browser = await chromium.launch({
   headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
@@ -10,22 +10,12 @@ async function checkMapPage(width, height, mobile = false) {
   const context = await browser.newContext({ viewport: { width, height } });
   const page = await context.newPage();
   const errors = [];
-  const goongTileErrors = [];
-  const goongRequests = [];
-  const openFreeMapRequests = [];
+  const legacyMapRequests = [];
   let googleSdkRequests=0;
   page.on('pageerror', e => errors.push(String(e).slice(0, 300)));
   page.on('request', r => {
-    if (r.url().includes('tiles.goong.io')) goongRequests.push(r.url());
-    if (r.url().includes('tiles.openfreemap.org')) openFreeMapRequests.push(r.url());
+    if (/goong\.io|goong-js|openfreemap\.org/i.test(r.url())) legacyMapRequests.push('Legacy provider request');
     if (r.url().includes('maps.googleapis.com/maps/api/js')) googleSdkRequests++;
-  });
-  page.on('response', r => {
-    if (r.url().includes('tiles.goong.io') && r.status() >= 400)
-      goongTileErrors.push('Goong HTTP ' + r.status());
-  });
-  page.on('requestfailed', r => {
-    if (r.url().includes('tiles.goong.io')) goongTileErrors.push('Goong request failed: ' + (r.failure()?.errorText || 'unknown'));
   });
   try {
     const response = await page.goto(site, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -44,9 +34,7 @@ async function checkMapPage(width, height, mobile = false) {
 
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('phù hợp bộ lọc'), null, { timeout: 30000 });
     try {
-      const canvasOrMap=expectedProvider==='google'
-        ?page.locator('#map .gm-style').first()
-        :page.locator('#map canvas.goongjs-canvas, #map canvas.mapboxgl-canvas').first();
+      const canvasOrMap=page.locator('#map .gm-style').first();
       await canvasOrMap.waitFor({state:'attached',timeout:30000});
     } catch (error) {
       const info = await page.evaluate(() => ({
@@ -55,23 +43,18 @@ async function checkMapPage(width, height, mobile = false) {
         canvasCount: document.querySelectorAll('#map canvas').length,
         mapNode: document.querySelector('#map')?.outerHTML.slice(0, 320),
         loading: document.querySelector('#busy')?.textContent,
-        sdkLoaded: !!window.goongjs,
-        sdkScripts: document.querySelectorAll('script[src*="goong-js"]').length,
+        googleSdkLoaded: !!window.google?.maps?.importLibrary,
       }));
       throw Error('MAP_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
     }
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });
-    if (openFreeMapRequests.length) throw Error('Unexpected OpenFreeMap requests on HKD map');
+    if (legacyMapRequests.length) throw Error('Legacy map SDK or tile requests observed');
     if (await page.locator('#map').getAttribute('data-hkd-map-provider') !== expectedProvider)
       throw Error('Map provider mismatch: expected '+expectedProvider);
     const noteText = await page.locator('#note').innerText().catch(() => '');
     if (noteText.includes('Không tải được bản đồ')) throw Error('HKD map failure notice: '+noteText.slice(0,100));
-    if(expectedProvider==='goong'){
-      if(!goongRequests.length)throw Error('Goong Maptiles network requests not observed');
-      if(goongTileErrors.length)throw Error('Goong tile request failures');
-      if(!await page.evaluate(()=>Boolean(window.goongjs)))throw Error('Goong SDK not initialized');
-    }else if(googleSdkRequests===0 || !await page.evaluate(()=>Boolean(window.google?.maps?.importLibrary)))
+    if(googleSdkRequests===0 || !await page.evaluate(()=>Boolean(window.google?.maps?.importLibrary)))
       throw Error('Google Maps JavaScript API not loaded');
     console.log('HKD '+expectedProvider+' map provider and viewport PASS (credentials redacted)');
     const size = await page.evaluate(() => ({
@@ -133,9 +116,7 @@ async function checkRegistrationForm(width, height) {
       throw Error('Registration required fields missing');
     if(!await page.locator('#hkdConsent').isVisible())throw Error('Consent checkbox missing');
     if(!await page.locator('#hkdCompanySite').count())throw Error('Anti-spam honeypot missing');
-    const canvas=expectedProvider==='google'
-      ?page.locator('#hkd-coordinate-map .gm-style').first()
-      :page.locator('#hkd-coordinate-map canvas').first();
+    const canvas=page.locator('#hkd-coordinate-map .gm-style').first();
     await canvas.waitFor({state:'visible',timeout:30000});
     await canvas.click({position:{x:120,y:125}});
     await page.waitForFunction(()=>{
@@ -143,8 +124,6 @@ async function checkRegistrationForm(width, height) {
       const lng=document.querySelector('#hkd-lng')?.value;
       return lat && lng && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
     },null,{timeout:12000});
-    if(expectedProvider==='goong'&&!await page.locator('#hkd-coordinate-map .goongjs-marker, #hkd-coordinate-map .mapboxgl-marker').count())
-      throw Error('Goong coordinate marker was not added after map click');
     await page.locator('#hkd-clear-location').click();
     if(await page.locator('#hkd-lat').inputValue()!=='' || await page.locator('#hkd-lng').inputValue()!=='')
       throw Error('Coordinate clear button failed');
@@ -186,13 +165,15 @@ try {
   console.log('HKD REST metadata PASS: published business count '+meta.stats.businesses);
   const configResponse = await api.request.get('https://admin.esc.vn/wp-json/esc-hkd/v1/map-config', { timeout: 45000 });
   const config = await configResponse.json().catch(() => null);
-  if (configResponse.status() !== 200 || !['goong','google'].includes(config?.provider))
-    throw Error('HKD map-config provider unavailable');
-  if(config.provider==='goong'&&!config.goongMaptilesKey)throw Error('Goong Maptiles key missing');
-  if(config.provider==='google'&&(!config.googleMapsApiKey||!config.googleMapId))
-    throw Error('Google Maps browser key or Map ID missing');
-  expectedProvider=config.provider;
-  console.log('HKD '+expectedProvider+' map-config PASS (credentials redacted)');
+  const keyValid=typeof config?.googleMapsApiKey==='string' && /^[A-Za-z0-9_-]{20,200}$/.test(config.googleMapsApiKey);
+  const mapIdValid=typeof config?.googleMapId==='string' && /^[A-Za-z0-9_-]{6,128}$/.test(config.googleMapId);
+  const legacyKeyExposed=Object.prototype.hasOwnProperty.call(config||{},'goongMaptilesKey');
+  console.log('Google Maps configuration status (no values logged): '+JSON.stringify({
+    http:configResponse.status(),provider:config?.provider,keyValid,mapIdValid,legacyKeyExposed
+  }));
+  if(configResponse.status()!==200||config?.provider!=='google'||legacyKeyExposed||!keyValid||!mapIdValid)
+    throw Error('Google Maps configuration incomplete or legacy key exposed');
+  console.log('HKD Google Maps map-config PASS (credentials redacted)');
   await api.close();
 
   await checkMapPage(1366, 642, false);

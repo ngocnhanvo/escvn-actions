@@ -1,4 +1,4 @@
 step=6
 scope=live_smoke
-deploy_run=42186500922
-attempt=hkd-goong-data-only-labels-live-qa
+deploy_run=43541293377
+attempt=hkd-google-map-stage-live-qa

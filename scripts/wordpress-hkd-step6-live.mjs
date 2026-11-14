@@ -44,7 +44,7 @@ async function checkMapPage(width, height, mobile = false) {
     await page.waitForFunction(() => document.querySelector('#bbT')?.textContent?.includes('phù hợp bộ lọc'), null, { timeout: 30000 });
     try {
       const canvasOrMap=page.locator('#map .gm-style').first();
-      await canvasOrMap.waitFor({state:'attached',timeout:30000});
+      await canvasOrMap.waitFor({state:'attached',timeout:15000});
     } catch (error) {
       const info = await page.evaluate(() => ({
         note: document.querySelector('#note')?.textContent?.slice(0, 500),
@@ -54,7 +54,7 @@ async function checkMapPage(width, height, mobile = false) {
         loading: document.querySelector('#busy')?.textContent,
         googleSdkLoaded: !!window.google?.maps?.importLibrary,
       }));
-      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify(info) + '; ' + String(error).slice(0, 100));
+      throw Error('MAP_DIAGNOSTIC ' + JSON.stringify({...info,googleErrorCodes:[...new Set(mapApiErrors)]}) + '; ' + String(error).slice(0, 100));
     }
     await page.waitForFunction(() => typeof MAP !== 'undefined' && MAP && typeof MAP.bbox === 'function',
       null, { timeout: 15000 });

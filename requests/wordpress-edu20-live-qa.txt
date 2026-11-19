@@ -1,3 +1,4 @@
 slug=khuyen-mai
 campaign=EDU20
 deploy_run=44498973454
+inspect=20261119-layout

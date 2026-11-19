@@ -111,6 +111,42 @@ for (const row of input) {
     });
   }
 }
+// Reviewed ESC-specific legacy G Suite labels. The Member CSV contains these
+// identifiers, while ESC.vn sells the corresponding Google Workspace products
+// under renamed titles. Restrict this one-to-one mapping to verified WP IDs and
+// exact current titles to prevent accidental assignment to Microsoft 365 plans.
+// G Suite Enterprise -> Business Plus is ESC's legacy catalogue mapping, NOT
+// the official Google licensing equivalence; confirm plan entitlement separately.
+const reviewedGsuite = [
+  { label: 'GSuitebasic', member_id: '131600', wp_id: 832, title: 'Google Workspace Business Starter' },
+  { label: 'Gsuitebusiness', member_id: '131700', wp_id: 833, title: 'Google Google Workspace Business Standard' },
+  { label: 'GsuiteEnterprise', member_id: '131800', wp_id: 834, title: 'Google Google Workspace Business Plus' }
+];
+for (const mapping of reviewedGsuite) {
+  const memberRows = input.filter(row => norm(row.product_name) === norm(mapping.label));
+  assert.equal(memberRows.length, 1, `CSV member code not unique: ${mapping.label}`);
+  assert.equal(String(memberRows[0].product_id), mapping.member_id, `Member ID changed: ${mapping.label}`);
+  const wp = products.find(p => p.id === mapping.wp_id);
+  assert.ok(wp, `ESC product missing: ${mapping.wp_id}`);
+  assert.equal(norm(htmlTitle(wp.title?.rendered)), norm(mapping.title),
+    `ESC product title changed: ${mapping.wp_id}`);
+  assert.ok(!usedWpIds.has(wp.id), `Target already mapped: ${wp.id}`);
+  const prior_identifier = tidy(wp.acf?.tld);
+  const prior_member_id = tidy(wp.acf?.member_product_id);
+  assert.ok(!prior_identifier || norm(prior_identifier) === norm(mapping.label),
+    `Identifier conflict: ${wp.id}`);
+  assert.ok(!prior_member_id || prior_member_id === mapping.member_id,
+    `Member ID conflict: ${wp.id}`);
+  usedWpIds.add(wp.id);
+  const unmatchedIndex = unmatched.findIndex(item =>
+    norm(item.label) === norm(mapping.label) && item.member_id === mapping.member_id);
+  if (unmatchedIndex >= 0) unmatched.splice(unmatchedIndex, 1);
+  candidates.push({
+    id: wp.id, label: mapping.label, member_id: mapping.member_id,
+    origin: String(wp.acf?.origin_product_id || wp.id), product_title: mapping.title,
+    prior_identifier, prior_member_id, source: 'MANUAL_GSUITE'
+  });
+}
 // The reviewed 2026-11-19 read-only snapshot contained 65 already-identified
 // Member codes and 269 previously unmarked product titles. A substantial
 // deviation indicates changed source data and requires re-review.
@@ -202,7 +238,8 @@ async function updateOne(target, nonce) {
     results.push({ id: target.id, label: target.label, status: 'CONFLICT', reason: 'MEMBER_ID_CHANGED' }); save(); return;
   }
   const nameMatches = norm(currentTitle) === key ||
-    (target.source === 'COMPACT_TITLE' && compact(currentTitle) === compact(target.label));
+    (target.source === 'COMPACT_TITLE' && compact(currentTitle) === compact(target.label)) ||
+    (target.source === 'MANUAL_GSUITE' && norm(currentTitle) === norm(target.product_title));
   if (!nameMatches && norm(currentIdentifier) !== key) {
     results.push({ id: target.id, label: target.label, status: 'CONFLICT', reason: 'TITLE_CHANGED' }); save(); return;
   }

@@ -16,4 +16,15 @@ try {
     });
   });
   console.log('PROMO_INSPECT',JSON.stringify(info));
+  const details=await page.evaluate(()=>{
+    const hs=[...document.querySelectorAll('h2')];
+    const first=hs.find(x=>x.textContent.includes('TRI ÂN NGÀY NHÀ GIÁO VIỆT NAM'));
+    const original=hs.find(x=>x.textContent.includes('DEAL HOT KHÔNG THỂ BỎ LỠ'));
+    const neighbor=hs.find(x=>x.textContent.includes('Tên Miền Việt Nam Giá Tốt Nhất'));
+    const chain=(h)=>{let e=h;return Array.from({length:6},(_,i)=>{const x=e;e=e?.parentElement;return {i,tag:x?.tagName,style:x?.getAttribute('style'),class:x?.getAttribute('class'),html:x?.outerHTML.slice(0,550)};});};
+    const li=(h)=>{let c=h;for(let i=0;i<4;i++)c=c?.parentElement;return [...(c?.querySelectorAll('li')||[])].slice(0,9).map(x=>x.outerHTML.slice(0,700));};
+    return {first:chain(first),original:chain(original),neighbor:chain(neighbor),firstLi:li(first),originalLi:li(original),neighborLi:li(neighbor)};
+  });
+  console.log('PROMO_DETAILS',JSON.stringify(details));
+
 }finally{await browser.close();}

@@ -150,7 +150,93 @@ for (const mapping of reviewedGsuite) {
 // Targeted execution only touches the three explicitly reviewed Google Workspace
 // products, leaving unrelated catalog changes outside this request's write scope.
 const GSUITE_ONLY = process.env.ESC_MEMBER_GSUITE_ONLY === '1';
-if (GSUITE_ONLY) {
+const REVIEW_ONLY = process.env.ESC_MEMBER_REVIEW_ONLY === '1';
+if (REVIEW_ONLY) {
+  assert.ok(!GSUITE_ONLY, 'Overlapping import scopes');
+  // Human-reviewed 2026-11-19 candidate list: 36 high confidence and 11
+  // medium-confidence mappings with a single chosen plan. Two genuinely
+  // ambiguous codes (GlobalSignSANsSSL and GlobalSignWildcardSSL) are
+  // intentionally excluded rather than assigning a possibly wrong license.
+  const mappings = [
+    {"label": "DSVN1", "wp_id": 889, "title": "DSVN01"},
+    {"label": "DSVN2", "wp_id": 890, "title": "DSVN02"},
+    {"label": "DSVN3", "wp_id": 891, "title": "DSVN03"},
+    {"label": "CVN1", "wp_id": 879, "title": "CVN01"},
+    {"label": "CVN2", "wp_id": 880, "title": "CVN02"},
+    {"label": "CVN3", "wp_id": 881, "title": "CVN03"},
+    {"label": "CVN4", "wp_id": 882, "title": "CVN04"},
+    {"label": "Plesk Unlimited Domains VPS", "wp_id": 995, "title": "Plesk Web Host Edition (Unlimited Domains) VPS"},
+    {"label": "Plesk Unlimited Domains", "wp_id": 996, "title": "Plesk Web Host Edition (Unlimited Domains) Server"},
+    {"label": "Plesk 30 Domains", "wp_id": 994, "title": "Plesk Web Pro Edition (30 Domains) Server"},
+    {"label": "Plesk 10 Domains", "wp_id": 992, "title": "Plesk Web Admin Edition (10 Domains) Server"},
+    {"label": "MP5", "wp_id": 820, "title": "MAIL PRO (MP5)"},
+    {"label": "MP4", "wp_id": 819, "title": "MAIL PRO (MP4)"},
+    {"label": "MP0", "wp_id": 815, "title": "MAIL PRO (MP0)"},
+    {"label": "eCloud1", "wp_id": 868, "title": "ECLOUD VPS 1"},
+    {"label": "eCloud2", "wp_id": 869, "title": "ECLOUD VPS 2"},
+    {"label": "eCloud3", "wp_id": 870, "title": "ECLOUD VPS 3"},
+    {"label": "eCloud4", "wp_id": 871, "title": "ECLOUD VPS 4"},
+    {"label": "WPStandard", "wp_id": 813, "title": "WordPress Standard"},
+    {"label": "WPPro", "wp_id": 814, "title": "WordPress Pro"},
+    {"label": "PositiveSSL", "wp_id": 752, "title": "Sectigo PositiveSSL DV"},
+    {"label": "KAV", "wp_id": 775, "title": "Kaspersky Anti-Virus"},
+    {"label": "KIS", "wp_id": 776, "title": "Kaspersky Internet Security"},
+    {"label": "KSOS5pc", "wp_id": 1350, "title": "Kaspersky Small Office Security (5PCs + 1 File Server)"},
+    {"label": "KSOS10pc", "wp_id": 1351, "title": "Kaspersky Small Office Security (10PCs + 1 File Server)"},
+    {"label": "eCloud5", "wp_id": 872, "title": "ECLOUD VPS 5"},
+    {"label": "SectigoEVMultiDomainSSL", "wp_id": 955, "title": "Sectigo EV Multi-Domain SSL (3 domains)"},
+    {"label": "eCloud10", "wp_id": 867, "title": "ECLOUD VPS 10"},
+    {"label": "MS1", "wp_id": 827, "title": "MAIL SERVER (MS1)"},
+    {"label": "MS2", "wp_id": 828, "title": "MAIL SERVER (MS2)"},
+    {"label": "MS3", "wp_id": 829, "title": "MAIL SERVER (MS3)"},
+    {"label": "MS4", "wp_id": 830, "title": "MAIL SERVER (MS4)"},
+    {"label": "eCloud6", "wp_id": 873, "title": "ECLOUD VPS 6"},
+    {"label": "eCloud7", "wp_id": 874, "title": "ECLOUD VPS 7"},
+    {"label": "PositiveSSLWildcard", "wp_id": 944, "title": "Sectigo PositiveSSL Wildcard DV"},
+    {"label": "MailBusinessStarter", "wp_id": 821, "title": "Business Starter"},
+    {"label": "MailBusinessStandard", "wp_id": 822, "title": "Business Standard"},
+    {"label": "MailBusinessPlus", "wp_id": 823, "title": "Business Plus"},
+    {"label": "PositiveSSLMultiDomain", "wp_id": 945, "title": "Sectigo PositiveSSL Multi-Domain DV"},
+    {"label": "GlobalSignAlphaSSLWildcard", "wp_id": 778, "title": "GlobalSign Alpha Wildcard SSL"},
+    {"label": "SPACBasic", "wp_id": 931, "title": "SECTIGO PERSONAL AUTHENTICATION CERTIFICATES BASIC (DV)"},
+    {"label": "SPACPro", "wp_id": 932, "title": "SECTIGO PERSONAL AUTHENTICATION CERTIFICATES PRO (OV)"},
+    {"label": "SPACEnterprise", "wp_id": 933, "title": "SECTIGO PERSONAL AUTHENTICATION CERTIFICATES ENTERPRISEX (EV)"},
+    {"label": "Ms365BusinessStandard", "wp_id": 1006, "title": "Microsoft 365 Business Standard"},
+    {"label": "Ms365BusinessBasic", "wp_id": 1005, "title": "Microsoft 365 Business Basic"},
+    {"label": "Ms365BusinessPremium", "wp_id": 1007, "title": "Microsoft 365 Business Premium"},
+    {"label": "WPsPro", "wp_id": 1429, "title": "WPS PROFESSIONAL"}
+  ];
+  assert.equal(mappings.length, 47, 'Reviewed plan size changed');
+  assert.equal(new Set(mappings.map(m => m.wp_id)).size, 47, 'Duplicate reviewed WordPress target');
+  assert.equal(new Set(mappings.map(m => norm(m.label))).size, 47, 'Duplicate reviewed Member code');
+  const targets = mappings.map(mapping => {
+    const memberRows = input.filter(r => norm(r.product_name) === norm(mapping.label));
+    assert.equal(memberRows.length, 1, `Member code not unique: ${mapping.label}`);
+    const member_id = String(memberRows[0].product_id);
+    assert.ok(validMember(member_id), `Invalid Member Product ID: ${mapping.label}`);
+    const wp = products.find(p => p.id === mapping.wp_id);
+    assert.ok(wp, `WordPress product missing: ${mapping.wp_id}`);
+    assert.equal(norm(htmlTitle(wp.title?.rendered)), norm(mapping.title),
+      `Product title changed: ${mapping.wp_id}`);
+    const prior_identifier = tidy(wp.acf?.tld);
+    const prior_member_id = tidy(wp.acf?.member_product_id);
+    assert.ok(!prior_identifier || norm(prior_identifier) === norm(mapping.label),
+      `Existing identifier conflicts: ${mapping.wp_id}`);
+    assert.ok(!prior_member_id || prior_member_id === member_id,
+      `Existing Member Product ID conflicts: ${mapping.wp_id}`);
+    const otherOwners = products.filter(p => p.id !== wp.id &&
+      (norm(p.acf?.tld) === norm(mapping.label) ||
+        (tidy(p.acf?.member_product_id) && tidy(p.acf?.member_product_id) === member_id)));
+    assert.equal(otherOwners.length, 0, `Existing duplicate owner of ${mapping.label}`);
+    return {
+      id: wp.id, label: mapping.label, member_id,
+      origin: String(wp.acf?.origin_product_id || wp.id),
+      product_title: mapping.title, prior_identifier, prior_member_id,
+      source: 'REVIEW_MEMBER'
+    };
+  });
+  candidates.splice(0, candidates.length, ...targets);
+} else if (GSUITE_ONLY) {
   const targets = candidates.filter(c => c.source === 'MANUAL_GSUITE');
   assert.equal(targets.length, reviewedGsuite.length, 'Unexpected G Suite target count');
   assert.deepEqual(targets.map(c => c.id).sort((a, b) => a - b), [832, 833, 834]);
@@ -177,7 +263,7 @@ const save = () => writeFileSync(`${OUTPUT}/result.json`, JSON.stringify({
   error: results.filter(x => x.status === 'ERROR').length,
   results
 }, null, 2));
-if (!GSUITE_ONLY) assert.equal(conflicts.length, 0, 'Catalog ACF has conflicting mappings; stop before writing');
+if (!GSUITE_ONLY && !REVIEW_ONLY) assert.equal(conflicts.length, 0, 'Catalog ACF has conflicting mappings; stop before writing');
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext();
@@ -247,7 +333,7 @@ async function updateOne(target, nonce) {
   }
   const nameMatches = norm(currentTitle) === key ||
     (target.source === 'COMPACT_TITLE' && compact(currentTitle) === compact(target.label)) ||
-    (target.source === 'MANUAL_GSUITE' && norm(currentTitle) === norm(target.product_title));
+    ((target.source === 'MANUAL_GSUITE' || target.source === 'REVIEW_MEMBER') && norm(currentTitle) === norm(target.product_title));
   if (!nameMatches && norm(currentIdentifier) !== key) {
     results.push({ id: target.id, label: target.label, status: 'CONFLICT', reason: 'TITLE_CHANGED' }); save(); return;
   }
@@ -274,7 +360,7 @@ try {
   // If ACF REST cannot write, fail on one reviewed exact-title canary, not
   // after processing hundreds of records.
   const nonce = await getNonce();
-  const canary = candidates.find(c => c.id === (GSUITE_ONLY ? 832 : 50536));
+  const canary = candidates.find(c => c.id === (REVIEW_ONLY ? 889 : (GSUITE_ONLY ? 832 : 50536)));
   await updateOne(canary, nonce);
   assert.ok(results.at(-1)?.status === 'UPDATED' || results.at(-1)?.status === 'UNCHANGED', 'Canary did not pass');
   // Avoid re-opening hundreds of already-complete products. The catalog

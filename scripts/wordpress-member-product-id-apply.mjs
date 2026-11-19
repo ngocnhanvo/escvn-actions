@@ -202,7 +202,7 @@ async function updateOne(target, nonce) {
     results.push({ id: target.id, label: target.label, status: 'UNCHANGED' }); save(); return;
   }
   const response = await apiProduct(target.id, nonce, data);
-  assert.equal(response.status, 200, `Update ${target.id} HTTP ${response.status}: ${String(response.body?.code || 'UNKNOWN')}`);
+  assert.equal(response.status, 200, `Update ${target.id} HTTP ${response.status}: ${JSON.stringify(response.body).slice(0, 1500)}`);
   const after = await apiProduct(target.id, nonce);
   assert.equal(after.status, 200, `Readback ${target.id} HTTP ${after.status}`);
   assert.equal(norm(after.body.acf?.tld), key, `Identifier readback mismatch ${target.id}`);

@@ -1,3 +1,4 @@
 slug=khuyen-mai
 code=EDU20
 campaign=2026-11-20
+retry=fix-editor-save-shell-20261119

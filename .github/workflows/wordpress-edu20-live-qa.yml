@@ -24,9 +24,11 @@ jobs:
       - name: Check desktop mobile EDU20 modal banner and registration CTA
         run: node scripts/wordpress-edu20-live-qa.mjs
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: edu20-live-qa-failure
-          path: edu20-failure-*.png
+          name: edu20-visual-qa
+          path: |
+            edu20-layout-*.png
+            edu20-failure-*.png
           if-no-files-found: ignore
           retention-days: 3

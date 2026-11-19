@@ -1,48 +1,42 @@
 # ESC.VN — Latest ChatGPT response
 
-- Time (Asia/Ho_Chi_Minh): 2026-11-14, 08:38:35
-- Project: ESC.VN — Hộ Kinh Doanh Google Maps
+- Time (Asia/Ho_Chi_Minh): 2026-11-19, 19:18:15
+- Project: ESC.VN — Member Product ID mapping from boss-provided CSV
 - Repository: ngocnhanvo/escvn-actions
 - Branch: main
-- State: PARTIAL
-- Astro source: a376ccf6191a4635db43b8325edcc914d562cd6e
-- PHP source: 5615ad65c2a8c15bdfd2c6721ccae29f1dbd1b90
-- Backend deploy+QA: SUCCESS #43541184996
-- Astro deploy: SUCCESS #43541293377
-- Post-deploy smoke: SUCCESS #43541497430
-- HKD browser QA: SUCCESS #43541578026 (Goong fallback; not Google live)
-- Pending: Google Cloud billing, Maps JS browser key, Map ID, Google browser QA
+- State: PARTIAL (all safely matched WordPress products are complete; 223 unmatched CSV rows require mapping review)
+- Actions code: 0c39181fcc8dc9b33a1c9c8c9eac91050a7397ce
+- Exact-identifier/title import: SUCCESS #44516972778
+- Uniquely normalized-name import: SUCCESS #44521515816
+- Independent WordPress audit: SUCCESS #44503486720 (attempt 6)
 
 ---
 
-## Chuyển Google Maps cho Hộ kinh doanh ESC.VN
+## Kết quả bổ sung Mã định danh và Member Product ID trên ESC.VN
 
-Tôi đã xác định được các thành phần cần thay đổi trong mã nguồn hiện tại:
+**Đã nhập thành công dữ liệu ghép được chắc chắn** từ file `products (3).csv` do chủ dự án cung cấp. Không sử dụng `woo_id` từ CSV làm khóa để cập nhật, không suy đoán những sản phẩm chỉ giống tên một phần.
 
-- **Bản đồ chính:** Thay Goong Maps JS bằng Google Maps JavaScript API, giữ nguyên giao diện, bộ lọc, ghim ngành nghề và chức năng xem chi tiết.
-- **Biểu mẫu đăng ký/cập nhật:** Chuyển bản đồ chọn tọa độ sang Google Maps, hỗ trợ nhấp chọn và kéo ghim.
-- **WordPress:** Thay cấu hình Goong Maptiles bằng Google Maps API Key.
-- **Dữ liệu:** Giữ nguyên MySQL và REST API, chỉ đưa các hộ kinh doanh có trong dữ liệu đã công khai lên bản đồ.
+- CSV Member: **596 dòng**.
+- WordPress công khai: **554 sản phẩm**.
+- **373 mã Member** đã có ánh xạ theo `acf.tld` (trường hiển thị "Mã định danh").
+- **375 bản ghi WordPress** tương ứng, do một số sản phẩm có bản tiếng Việt và tiếng Anh.
+- **308 sản phẩm** vừa được điền Mã định danh `acf.tld` đúng bằng `product_name` đã trim từ CSV.
+- **310 bản ghi** được điền mới ACF `member_product_id` (308 bản ghi vừa điền cả hai trường, hai bản ghi `.vinhlong.vn` và `.org.uk` trước đó có Mã định danh).
+- **65 bản ghi** đã đúng và được giữ nguyên. Lỗi/xung đột cả hai đợt: **0**.
+- **223 mã Member** chưa tìm được sản phẩm WordPress tương ứng đủ chắc chắn. Chưa tự tạo Product, chưa tự gắn theo tên mơ hồ, chưa ghi đè dữ liệu cũ.
 
-Không cần di chuyển hay tạo lại dữ liệu hộ kinh doanh để thay nhà cung cấp bản đồ.
+Ví dụ đã kiểm chứng: `.ap.vn` → `225600`, `.bacninh.vn` → `40500`, `GlobalSignAlphaSSL` → `102800`, `DSSUN1` → `120090`. Trong 39 tên bổ sung đợt hai, việc chuẩn hóa chỉ loại dấu phân cách/khoảng trắng, yêu cầu khớp toàn bộ tên chuẩn hóa và chỉ một ứng viên WordPress.
 
-## Kết quả triển khai bước đầu
+### Bằng chứng
 
-**Backend WordPress đã triển khai và kiểm thử thành công** qua [GitHub Actions #43541184996](https://github.com/ngocnhanvo/escvn-actions/actions/runs/43541184996).
+- [Import chính: GitHub Actions #44516972778](https://github.com/ngocnhanvo/escvn-actions/actions/runs/44516972778): 271 UPDATED, 65 UNCHANGED, 0 ERROR, 0 CONFLICT.
+- [Import tên chuẩn hóa: GitHub Actions #44521515816](https://github.com/ngocnhanvo/escvn-actions/actions/runs/44521515816): 39 UPDATED, 1 canary UNCHANGED, 0 ERROR, 0 CONFLICT.
+- [Kiểm toán đọc lại WordPress #44503486720](https://github.com/ngocnhanvo/escvn-actions/actions/runs/44503486720), attempt 6: 373 EXACT_KEY và 223 UNMATCHED; 380 WordPress records có Mã định danh (bao gồm các record khác không thuộc CSV).
 
-- Commit PHP: `5615ad65`
-- Commit Astro: `a376ccf6`
-- Đã bổ sung cấu hình Google Maps trong WordPress và giữ lại khóa Goong để dự phòng.
-- Đã cập nhật bài kiểm thử để nhận diện cả Google Maps và Goong.
+Chưa sửa source frontend Astro hoặc backend PHP trong yêu cầu này, chưa chạy build/deploy Astro. Các ghi ACF đi qua GitHub Actions sử dụng WordPress REST có xác thực, kiểm tra sản phẩm trước ghi và đọc lại sau ghi.
 
-Bản build production của Astro đã được kích hoạt qua workflow hiện có. Việc chuyển hẳn sang Google vẫn phụ thuộc API Key và Map ID hợp lệ trong Google Cloud.
-
-**Triển khai đã PASS:** Astro production [#43541293377](https://github.com/ngocnhanvo/escvn-actions/actions/runs/43541293377) build/deploy đúng source `a376ccf6`; smoke test [#43541497430](https://github.com/ngocnhanvo/escvn-actions/actions/runs/43541497430) PASS; kiểm thử HKD desktop/mobile [#43541578026](https://github.com/ngocnhanvo/escvn-actions/actions/runs/43541578026) PASS (bản đồ, bộ lọc, nhấp chọn và xóa tọa độ, nhập tay, kiểm tra form; không gửi hồ sơ giả).
-
-**Chưa hoàn tất chuyển sang Google Maps thực tế:** WordPress REST `map-config` vẫn báo `provider=goong` vì chưa có Google Maps browser API Key và Map ID. Google SDK/Advanced Markers đã tích hợp nhưng chưa thể kiểm thử với Google thực khi thiếu cấu hình.
-
-**Việc cần làm:** Google Cloud bật Billing và Maps JavaScript API, tạo HTTP-referrer-restricted browser key (esc.vn) và Map ID. Cấu hình Cloud Map Style ẩn POI thương mại để bản đồ chỉ hiển thị ghim HKD đã duyệt; nhập hai giá trị qua [WordPress → Hộ kinh doanh → Bản đồ HKD](https://admin.esc.vn/wp-admin/admin.php?page=esc-hkd-goong). Sau đó hệ thống tự chọn Google Maps và cần chạy QA Google thực tế.
+**Còn lại:** rà soát 223 dòng CSV thiếu ánh xạ thật (bao gồm tên khác nhiều, biến thể hoặc sản phẩm chưa tồn tại trên WordPress); chỉ nhập tiếp sau khi có định danh chắc chắn.
 
 Chế độ code: auto-build
-Cổng ghi source: bypass
+Cổng ghi source: source-commit-actions
 Trạng thái: PARTIAL — chưa hoàn tất

@@ -1,0 +1,41 @@
+name: ESC Member Product ID ACF Import
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wordpress-member-product-id-apply.yml'
+      - 'scripts/wordpress-member-product-id-apply.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-product-id-acf-import
+  cancel-in-progress: false
+jobs:
+  import-acf:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Install matching Playwright client
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Validate importer syntax
+        run: node --check scripts/wordpress-member-product-id-apply.mjs
+      - name: Import verified Member product IDs via WordPress ACF
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-member-product-id-apply.mjs
+      - name: Upload import audit and backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-member-product-id-acf-import
+          path: member-product-id-apply/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,30 @@
+name: QA ESC EDU20 promotion live
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-edu20-live-qa.txt']
+permissions:
+  contents: read
+concurrency:
+  group: escvn-edu20-qa
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install matching browser package
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Check desktop mobile EDU20 modal banner and registration CTA
+        run: node scripts/wordpress-edu20-live-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: edu20-live-qa-failure
+          path: edu20-failure-*.png
+          if-no-files-found: ignore
+          retention-days: 3

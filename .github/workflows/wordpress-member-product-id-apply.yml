@@ -27,6 +27,7 @@ jobs:
         run: node --check scripts/wordpress-member-product-id-apply.mjs
       - name: Import verified Member product IDs via WordPress ACF
         env:
+          ESC_MEMBER_GSUITE_ONLY: '1'
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
           WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}

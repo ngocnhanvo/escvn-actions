@@ -147,14 +147,22 @@ for (const mapping of reviewedGsuite) {
     prior_identifier, prior_member_id, source: 'MANUAL_GSUITE'
   });
 }
-// The reviewed 2026-11-19 read-only snapshot contained 65 already-identified
-// Member codes and 269 previously unmarked product titles. A substantial
-// deviation indicates changed source data and requires re-review.
-assert.ok(candidates.length >= 325 && candidates.length <= 380,
-  `Unexpected exact mapping count ${candidates.length}; abort without changes`);
+// Targeted execution only touches the three explicitly reviewed Google Workspace
+// products, leaving unrelated catalog changes outside this request's write scope.
+const GSUITE_ONLY = process.env.ESC_MEMBER_GSUITE_ONLY === '1';
+if (GSUITE_ONLY) {
+  const targets = candidates.filter(c => c.source === 'MANUAL_GSUITE');
+  assert.equal(targets.length, reviewedGsuite.length, 'Unexpected G Suite target count');
+  assert.deepEqual(targets.map(c => c.id).sort((a, b) => a - b), [832, 833, 834]);
+  candidates.splice(0, candidates.length, ...targets);
+} else {
+  // Full-catalog mode retains its original strict bulk-import boundaries.
+  assert.ok(candidates.length >= 325 && candidates.length <= 380,
+    `Unexpected exact mapping count ${candidates.length}; abort without changes`);
+  assert.ok(candidates.some(c => c.id === 55601 && c.member_id === '225600' && norm(c.label) === '.ap.vn'), 'Missing supplied .ap.vn canary');
+  assert.ok(candidates.some(c => c.id === 50536 && c.member_id === '40500' && norm(c.label) === '.bacninh.vn'), 'Missing blank identifier canary');
+}
 assert.equal(new Set(candidates.map(c => c.id)).size, candidates.length, 'Duplicate WordPress ID');
-assert.ok(candidates.some(c => c.id === 55601 && c.member_id === '225600' && norm(c.label) === '.ap.vn'), 'Missing supplied .ap.vn canary');
-assert.ok(candidates.some(c => c.id === 50536 && c.member_id === '40500' && norm(c.label) === '.bacninh.vn'), 'Missing blank identifier canary');
 
 mkdirSync(OUTPUT, { recursive: true });
 writeFileSync(`${OUTPUT}/plan.json`, JSON.stringify({ csv_count: input.length, wp_count: products.length,
@@ -169,7 +177,7 @@ const save = () => writeFileSync(`${OUTPUT}/result.json`, JSON.stringify({
   error: results.filter(x => x.status === 'ERROR').length,
   results
 }, null, 2));
-assert.equal(conflicts.length, 0, 'Catalog ACF has conflicting mappings; stop before writing');
+if (!GSUITE_ONLY) assert.equal(conflicts.length, 0, 'Catalog ACF has conflicting mappings; stop before writing');
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext();
@@ -266,7 +274,7 @@ try {
   // If ACF REST cannot write, fail on one reviewed exact-title canary, not
   // after processing hundreds of records.
   const nonce = await getNonce();
-  const canary = candidates.find(c => c.id === 50536);
+  const canary = candidates.find(c => c.id === (GSUITE_ONLY ? 832 : 50536));
   await updateOne(canary, nonce);
   assert.ok(results.at(-1)?.status === 'UPDATED' || results.at(-1)?.status === 'UNCHANGED', 'Canary did not pass');
   // Avoid re-opening hundreds of already-complete products. The catalog

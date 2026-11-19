@@ -71,6 +71,7 @@ try {
       assert.ok(layout.scrollWidth<=layout.viewportWidth+2,'Horizontal page overflow');
       if(layout.footerTop!==undefined)assert.ok(layout.footerTop+1>=layout.gridBottom,'Promotions overlap footer');
 
+      await page.screenshot({path:'edu20-layout-'+size.width+'.png',fullPage:true});
       const view=card.getByText('Xem chi tiết',{exact:true}).first();
       assert.ok(await view.isVisible(),'Xem chi tiết missing');
       await view.click();

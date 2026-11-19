@@ -1,0 +1,112 @@
+name: Publish ESC EDU20 promotion
+on:
+  push:
+    branches: [main]
+    paths: ['requests/wordpress-edu20-promotion.txt']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: escvn-edu20-promotion
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate request
+        run: |
+          grep -Fqx 'slug=khuyen-mai' requests/wordpress-edu20-promotion.txt
+          grep -Fqx 'code=EDU20' requests/wordpress-edu20-promotion.txt
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Update WordPress promotion Page
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+        run: node scripts/wordpress-edu20-promotion.mjs
+      - name: Record build window
+        run: echo "DISPATCH_AFTER_EPOCH=$(date -u +%s)" >> "$GITHUB_ENV"
+      - name: Trigger existing production build
+        env:
+          WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}
+          WP_ADMIN_USERNAME: ${{ secrets.WP_ADMIN_USERNAME }}
+          WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
+          WP_BUILD_FORCE: '1'
+        run: node scripts/wordpress-build-trigger-e2e.mjs
+      - name: Locate production deploy
+        id: deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            payload="$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?event=repository_dispatch&per_page=30")"
+            id="$(jq -r --argjson after "$DISPATCH_AFTER_EPOCH" '[.workflow_runs[] | select(.path==".github/workflows/deploy.yml") | select((.created_at|fromdateiso8601)>=$after)] | sort_by(.created_at)|last|.id//empty' <<< "$payload")"
+            if [ -n "$id" ]; then
+              echo "run_id=$id" >> "$GITHUB_OUTPUT"
+              echo "DEPLOY_RUN=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${id}"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Wait for production result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..175}; do
+            payload="$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}")"
+            status="$(jq -r '.status' <<< "$payload")"
+            conclusion="$(jq -r '.conclusion//empty' <<< "$payload")"
+            echo "DEPLOY_STATUS ${DEPLOY_RUN_ID} ${status} ${conclusion:-pending}"
+            if [ "$status" = completed ]; then test "$conclusion" = success; exit $?; fi
+            sleep 10
+          done
+          exit 1
+      - name: Live HTML smoke
+        run: |
+          node --input-type=module <<'NODE'
+          import {chromium} from 'playwright';
+          import assert from 'node:assert/strict';
+          const browser=await chromium.launch({headless:true});
+          try {
+            const page=await browser.newPage();
+            await page.goto('https://esc.vn/khuyen-mai',{waitUntil:'domcontentloaded',timeout:60000});
+            const html=await page.content();
+            for(const s of ['TRI ÂN NGÀY NHÀ GIÁO VIỆT NAM 20/11','Mã KM: EDU20','Tặng 20 tên miền .EDU.VN','Free Support 24/24','20/11/2026']) assert.ok(html.includes(s),'Missing '+s);
+            const heading=page.getByRole('heading',{name:'TRI ÂN NGÀY NHÀ GIÁO VIỆT NAM 20/11',exact:true});
+            assert.ok(await heading.count(),'Promotion heading missing');
+            console.log('EDU20_LIVE_PASS');
+          } finally {await browser.close();}
+          NODE
+      - name: Record result for independent verification
+        if: always()
+        env:
+          JOB_RESULT: ${{ job.status }}
+          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p checks
+          {
+            echo 'scope=wordpress:khuyen-mai'
+            echo 'promotion=EDU20'
+            echo "result=${JOB_RESULT}"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "deploy_run_id=${DEPLOY_RUN_ID}"
+            echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > checks/wordpress-edu20-status.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add checks/wordpress-edu20-status.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record EDU20 result'
+            git push origin HEAD:main
+          fi

@@ -19,6 +19,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install matching browser package
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Inspect live promotion card DOM
+        run: node scripts/wordpress-edu20-inspect.mjs
       - name: Check desktop mobile EDU20 modal banner and registration CTA
         run: node scripts/wordpress-edu20-live-qa.mjs
       - uses: actions/upload-artifact@v4

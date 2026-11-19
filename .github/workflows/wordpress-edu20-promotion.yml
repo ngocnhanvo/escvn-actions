@@ -24,6 +24,10 @@ jobs:
           grep -Fqx 'code=EDU20' requests/wordpress-edu20-promotion.txt
       - name: Install Playwright
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Check publisher and production tracking script syntax
+        run: |
+          node --check scripts/wordpress-edu20-promotion.mjs
+          node --check scripts/wordpress-edu20-build-wait.mjs
       - name: Update WordPress promotion Page
         env:
           WP_ADMIN_URL: ${{ secrets.WP_ADMIN_URL }}

@@ -115,7 +115,7 @@ try{
  if(out.changed){
   assert.ok(out.html.length>before.length,'Card insertion failed');
   if(await visible(page.locator('#content-html')))await page.locator('#content-html').click();
-  await page.evaluate(()=>{if(typeof window.switchEditors?.go==='function')window.switchEditors.go('content','html');});
+  // Clicking the Text tab is sufficient; calling switchEditors.go twice crashes on this WordPress editor.
   await editor.evaluate((el,html)=>{el.value=html;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));},out.html);
   assert.equal(await editor.inputValue(),out.html,'WordPress editor rejected HTML');
   await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:60000}),page.locator('#publish').click()]);

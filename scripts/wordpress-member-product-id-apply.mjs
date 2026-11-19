@@ -197,7 +197,7 @@ async function updateOne(target, nonce) {
   }
   const data = {};
   if (!currentIdentifier) data.tld = target.label;
-  if (!currentMemberId) data.member_product_id = Number(target.member_id);
+  if (!currentMemberId) data.member_product_id = target.member_id;
   if (Object.keys(data).length === 0) {
     results.push({ id: target.id, label: target.label, status: 'UNCHANGED' }); save(); return;
   }

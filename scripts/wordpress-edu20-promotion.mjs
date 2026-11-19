@@ -32,7 +32,54 @@ async function login(){
 function build({original,title,image}){
  const root=document.createElement('div');root.innerHTML=original;
  const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('vi');
- if(norm(root.textContent).includes(norm(title)))return {changed:false,html:original};
+
+ if(norm(root.textContent).includes(norm(title))){
+  // Previous publisher inserted the new card inside the first card's 330px grid wrapper.
+  // Detach that card into its own sibling wrapper, without touching other promotions.
+  const headings=[...root.querySelectorAll('h2')];
+  const current=headings.filter(el=>norm(el.textContent)===norm(title));
+  const old=headings.filter(el=>norm(el.textContent).includes('deal hot không thể bỏ lỡ'));
+  if(current.length!==1||old.length!==1)throw Error('EDU20/Deal Hot card titles not unique');
+  const shell=el=>el.parentElement?.parentElement?.parentElement;
+  const currentCard=shell(current[0]),originalCard=shell(old[0]);
+  const wrapper=currentCard?.parentElement;
+  const grid=wrapper?.parentElement;
+  if(!currentCard||!originalCard||!wrapper||!grid)throw Error('EDU20 grid elements missing');
+  const list=[...currentCard.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('mã km: edu20')));
+  if(!list)throw Error('EDU20 short offer list missing');
+  const expected=['Tặng 20 tên miền .EDU.VN','Mã KM: EDU20','Liên hệ: 1900 2069','Free Support 24/24'];
+  if(list.children.length!==expected.length)throw Error('Unexpected EDU20 short offer structure');
+  const sample=[...originalCard.querySelectorAll('li.mceEditable')].find(li=>li.querySelector('span')&&li.style.fontSize&&li.style.color);
+  if(!sample)throw Error('Original card inline offer item not found');
+  for(let i=0;i<expected.length;i++){
+   const replacement=sample.cloneNode(true);
+   const tick=replacement.querySelector('span');
+   if(!tick)throw Error('Original offer icon not found');
+   replacement.replaceChildren(tick,document.createTextNode(expected[i]));
+   list.children[i].replaceWith(replacement);
+  }
+  if(wrapper!==originalCard.parentElement){
+   // Already a standalone grid card: only normalize its offer item styles when needed.
+   if(grid!==originalCard.parentElement?.parentElement)throw Error('EDU20 card is outside original promotions grid');
+   const html=root.innerHTML;
+   return {changed:html!==original,html};
+  }
+  if(wrapper.children.length!==2||wrapper.firstElementChild!==currentCard||wrapper.lastElementChild!==originalCard){
+   throw Error('Unsafe EDU20 wrapper repair: cards are not the only two children');
+  }
+  if(!/max-width:\s*330px/i.test(wrapper.getAttribute('style')||'')||!/flex-wrap:\s*wrap/i.test(grid.getAttribute('style')||'')){
+   throw Error('Unexpected promotions grid dimensions');
+  }
+  const newWrapper=wrapper.cloneNode(false);
+  if(newWrapper.id)throw Error('Cannot duplicate grid wrapper ID');
+  newWrapper.appendChild(currentCard);
+  grid.insertBefore(newWrapper,wrapper);
+  if(grid.querySelectorAll('h2').length<6)throw Error('Other promotions unexpectedly missing');
+  const html=root.innerHTML;
+  if(html===original||!html.includes('EDU20')||!html.includes('DEAL HOT KHÔNG THỂ BỎ LỠ'))throw Error('EDU20 repair incomplete');
+  return {changed:true,html};
+ }
+
  const heading=[...root.querySelectorAll('h2,h3,h4')].find(el=>norm(el.textContent).includes('deal hot không thể bỏ lỡ'));
  if(!heading)throw Error('Reference promotion heading not found');
  let card=null;
@@ -86,7 +133,13 @@ function build({original,title,image}){
  const details=[...copy.querySelectorAll('label,button,a')].find(el=>norm(el.textContent)==='xem chi tiết');
  if(!cta||!details)throw Error('Original card controls not found');
  cta.setAttribute('href','/dang-ky-ten-mien');
- card.parentElement.insertBefore(copy,card);
+ const originalWrapper=card.parentElement;
+ const grid=originalWrapper?.parentElement;
+ if(!originalWrapper||!grid||!/max-width:\s*330px/i.test(originalWrapper.getAttribute('style')||''))throw Error('Promotion grid wrapper missing');
+ const newWrapper=originalWrapper.cloneNode(false);
+ if(newWrapper.id)throw Error('Cannot duplicate promotion wrapper ID');
+ newWrapper.appendChild(copy);
+ grid.insertBefore(newWrapper,originalWrapper);
  const html=root.innerHTML;
  if(!html.includes(image)||!html.includes('20/11/2026')||!html.includes('/dang-ky-ten-mien')||!norm(root.textContent).includes('deal hot không thể bỏ lỡ'))throw Error('Generated HTML incomplete');
  if(root.textContent.split(title).length!==2)throw Error('Duplicate title');

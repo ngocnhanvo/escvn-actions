@@ -1,0 +1,36 @@
+name: ESC Member Product ID Mapping Audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/member-product-mapping-audit.mjs'
+      - 'scripts/data/member-products.json'
+      - '.github/workflows/esc-member-product-mapping-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-product-mapping-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate script syntax
+        run: node --check scripts/member-product-mapping-audit.mjs
+      - name: Audit Member CSV versus live WordPress product identifiers
+        env:
+          WP_URL: https://admin.esc.vn
+        run: node scripts/member-product-mapping-audit.mjs
+      - name: Upload read-only audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: esc-member-product-mapping-audit
+          path: member-product-mapping-audit/
+          if-no-files-found: warn
+          retention-days: 7

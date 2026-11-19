@@ -26,6 +26,7 @@ assert.equal(input.length, 596, 'Member CSV changed; stop before writing');
 
 const tidy = value => String(value ?? '').normalize('NFKC').trim();
 const norm = value => tidy(value).toLocaleLowerCase('en-US');
+const compact = value => Array.from(norm(value)).filter(ch => /[a-z0-9.]/.test(ch)).join('');
 const htmlTitle = value => String(value ?? '')
   .replace(/<[^>]*>/g, '')
   .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
@@ -59,18 +60,22 @@ async function fetchProducts() {
 }
 
 const products = await fetchProducts();
-const byIdentifier = new Map(), byTitle = new Map();
+const byIdentifier = new Map(), byTitle = new Map(), byCompactTitle = new Map();
 for (const product of products) {
   const a = norm(product.acf?.tld);
   const t = norm(htmlTitle(product.title?.rendered));
   if (a) { if (!byIdentifier.has(a)) byIdentifier.set(a, []); byIdentifier.get(a).push(product); }
   if (t) { if (!byTitle.has(t)) byTitle.set(t, []); byTitle.get(t).push(product); }
+  const ct = compact(htmlTitle(product.title?.rendered));
+  if (ct) { if (!byCompactTitle.has(ct)) byCompactTitle.set(ct, []); byCompactTitle.get(ct).push(product); }
 }
-const memberKeys = new Map();
+const memberKeys = new Map(), memberCompactKeys = new Map();
 for (const row of input) {
   assert.ok(validMember(row.product_id), 'Invalid CSV Member ID');
   const key = norm(row.product_name);
   memberKeys.set(key, (memberKeys.get(key) || 0) + 1);
+  const ck = compact(row.product_name);
+  memberCompactKeys.set(ck, (memberCompactKeys.get(ck) || 0) + 1);
 }
 
 const candidates = [], unmatched = [], skipped = [], conflicts = [];
@@ -78,7 +83,9 @@ const usedWpIds = new Set();
 for (const row of input) {
   const label = tidy(row.product_name);
   const key = norm(label);
-  const matches = byIdentifier.get(key) || byTitle.get(key) || [];
+  const exact = byIdentifier.get(key) || byTitle.get(key);
+  const ck = compact(label);
+  const matches = exact || (memberCompactKeys.get(ck) === 1 ? byCompactTitle.get(ck) : undefined) || [];
   if (!matches.length) { unmatched.push({ label, member_id: String(row.product_id), reason: 'NOT_FOUND' }); continue; }
   const origins = new Set(matches.map(p => String(p.acf?.origin_product_id || p.id)));
   if (origins.size !== 1 || memberKeys.get(key) !== 1 || matches.some(p => usedWpIds.has(p.id))) {
@@ -99,7 +106,8 @@ for (const row of input) {
       id: p.id, label, member_id: String(row.product_id), origin: String(p.acf?.origin_product_id || p.id),
       product_title: htmlTitle(p.title?.rendered), prior_identifier: tidy(p.acf?.tld),
       prior_member_id: tidy(p.acf?.member_product_id),
-      source: (byIdentifier.get(key) || []).some(x => x.id === p.id) ? 'IDENTIFIER' : 'EXACT_TITLE'
+      source: (byIdentifier.get(key) || []).some(x => x.id === p.id) ? 'IDENTIFIER' :
+        (byTitle.get(key) || []).some(x => x.id === p.id) ? 'EXACT_TITLE' : 'COMPACT_TITLE'
     });
   }
 }
@@ -114,7 +122,8 @@ assert.ok(candidates.some(c => c.id === 50536 && c.member_id === '40500' && norm
 
 mkdirSync(OUTPUT, { recursive: true });
 writeFileSync(`${OUTPUT}/plan.json`, JSON.stringify({ csv_count: input.length, wp_count: products.length,
-  candidates: candidates.length, unmatched, skipped, conflicts,
+  candidates: candidates.length, pending: candidates.filter(c => !c.prior_identifier || !c.prior_member_id).length,
+  already_complete: candidates.filter(c => c.prior_identifier && c.prior_member_id).length, unmatched, skipped, conflicts,
   records: candidates }, null, 2));
 const results = [];
 const save = () => writeFileSync(`${OUTPUT}/result.json`, JSON.stringify({
@@ -192,7 +201,9 @@ async function updateOne(target, nonce) {
   if (currentMemberId && currentMemberId !== target.member_id) {
     results.push({ id: target.id, label: target.label, status: 'CONFLICT', reason: 'MEMBER_ID_CHANGED' }); save(); return;
   }
-  if (norm(currentTitle) !== key && norm(currentIdentifier) !== key) {
+  const nameMatches = norm(currentTitle) === key ||
+    (target.source === 'COMPACT_TITLE' && compact(currentTitle) === compact(target.label));
+  if (!nameMatches && norm(currentIdentifier) !== key) {
     results.push({ id: target.id, label: target.label, status: 'CONFLICT', reason: 'TITLE_CHANGED' }); save(); return;
   }
   const data = {};
@@ -221,7 +232,10 @@ try {
   const canary = candidates.find(c => c.id === 50536);
   await updateOne(canary, nonce);
   assert.ok(results.at(-1)?.status === 'UPDATED' || results.at(-1)?.status === 'UNCHANGED', 'Canary did not pass');
-  for (const target of candidates.filter(c => c.id !== canary.id)) {
+  // Avoid re-opening hundreds of already-complete products. The catalog
+  // snapshot above was fetched directly from live WordPress in this run.
+  const pending = candidates.filter(c => c.id !== canary.id && (!c.prior_identifier || !c.prior_member_id));
+  for (const target of pending) {
     try { await updateOne(target, nonce); }
     catch (error) {
       results.push({ id: target.id, label: target.label, status: 'ERROR', reason: String(error?.message || error) });
@@ -230,7 +244,7 @@ try {
     }
     await sleep(100); // avoid hammering admin REST
   }
-  console.log(`DONE wp_count=${products.length} matched=${candidates.length} updated=${results.filter(x => x.status === 'UPDATED').length} unchanged=${results.filter(x => x.status === 'UNCHANGED').length} conflicts=${results.filter(x => x.status === 'CONFLICT').length} errors=${results.filter(x => x.status === 'ERROR').length} unmatched_csv=${unmatched.length} temporary_created=0 cleanup_remaining=0`);
+  console.log(`DONE wp_count=${products.length} matched=${candidates.length} pending=${candidates.filter(c => !c.prior_identifier || !c.prior_member_id).length} updated=${results.filter(x => x.status === 'UPDATED').length} unchanged=${results.filter(x => x.status === 'UNCHANGED').length} conflicts=${results.filter(x => x.status === 'CONFLICT').length} errors=${results.filter(x => x.status === 'ERROR').length} unmatched_csv=${unmatched.length} temporary_created=0 cleanup_remaining=0`);
   assert.equal(results.filter(x => x.status === 'CONFLICT' || x.status === 'ERROR').length, 0, 'One or more exact matches failed');
 } finally {
   save();

@@ -40,6 +40,7 @@ jobs:
           WP_BUILD_FORCE: '1'
         run: node scripts/wordpress-build-trigger-e2e.mjs
       - name: Locate production deploy
+        shell: bash
         id: deploy
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,6 +58,7 @@ jobs:
           done
           exit 1
       - name: Wait for production result
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
@@ -88,6 +90,7 @@ jobs:
           } finally {await browser.close();}
           NODE
       - name: Record result for independent verification
+        shell: bash
         if: always()
         env:
           JOB_RESULT: ${{ job.status }}

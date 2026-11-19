@@ -39,40 +39,10 @@ jobs:
           WP_ADMIN_PASSWORD: ${{ secrets.WP_ADMIN_PASSWORD }}
           WP_BUILD_FORCE: '1'
         run: node scripts/wordpress-build-trigger-e2e.mjs
-      - name: Locate production deploy
-        shell: bash
-        id: deploy
+      - name: Wait for ESC production deploy success
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          for attempt in {1..30}; do
-            payload="$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?event=repository_dispatch&per_page=30")"
-            id="$(jq -r --argjson after "$DISPATCH_AFTER_EPOCH" '[.workflow_runs[] | select(.path==".github/workflows/deploy.yml") | select((.created_at|fromdateiso8601)>=$after)] | sort_by(.created_at)|last|.id//empty' <<< "$payload")"
-            if [ -n "$id" ]; then
-              echo "run_id=$id" >> "$GITHUB_OUTPUT"
-              echo "DEPLOY_RUN=https://github.com/${GITHUB_REPOSITORY}/actions/runs/${id}"
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-      - name: Wait for production result
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
-        run: |
-          set -euo pipefail
-          for attempt in {1..175}; do
-            payload="$(curl -fsS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}")"
-            status="$(jq -r '.status' <<< "$payload")"
-            conclusion="$(jq -r '.conclusion//empty' <<< "$payload")"
-            echo "DEPLOY_STATUS ${DEPLOY_RUN_ID} ${status} ${conclusion:-pending}"
-            if [ "$status" = completed ]; then test "$conclusion" = success; exit $?; fi
-            sleep 10
-          done
-          exit 1
+        run: node scripts/wordpress-edu20-build-wait.mjs
       - name: Live HTML smoke
         run: |
           node --input-type=module <<'NODE'
@@ -94,7 +64,7 @@ jobs:
         if: always()
         env:
           JOB_RESULT: ${{ job.status }}
-          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
+          DEPLOY_RUN_ID: 'see-EDU20_DEPLOY_RUN-in-job-log'
         run: |
           set -euo pipefail
           mkdir -p checks
@@ -106,10 +76,10 @@ jobs:
             echo "deploy_run_id=${DEPLOY_RUN_ID}"
             echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > checks/wordpress-edu20-status.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add checks/wordpress-edu20-status.txt
-          if ! git diff --cached --quiet; then
-            git commit -m 'Record EDU20 result'
-            git push origin HEAD:main
-          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: edu20-publish-status
+          path: checks/wordpress-edu20-status.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -19,8 +19,22 @@ jobs:
     name: Build and Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      ENV_FILE: ${{ secrets.ENV_FILE }}
+      SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+      FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+      FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      ESC_FTPS_CA_PEM: ${{ secrets.ESC_FTPS_CA_PEM }}
+      ASTRO_FTP_TARGET: /domains/esc.vn/public_html/
+      ZIP_PATH: source/upload/escvn.zip
 
     steps:
+      - name: Checkout ESC production deployment scripts
+        uses: actions/checkout@v4
+        with:
+          path: actions-hub
+          persist-credentials: false
       - name: Validate required secrets
         shell: bash
         env:
@@ -48,7 +62,23 @@ jobs:
 
       - name: Show production source revision
         working-directory: source
-        run: echo "Deploying escvn-astro@master $(git rev-parse HEAD)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git symbolic-ref --short HEAD)" = master
+          echo "ESC_DEPLOY_COMMIT=$sha" >> "$GITHUB_ENV"
+          echo "Build source SHA: $sha (master)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify signed PHP staging and FTPS TLS before build
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          python3 -m py_compile actions-hub/scripts/esc-signed-unzip.py actions-hub/scripts/esc-ftps-upload.py actions-hub/scripts/esc-runtime-env-ftps.py
+          python3 actions-hub/scripts/esc-signed-unzip.py check
+          python3 actions-hub/scripts/esc-ftps-upload.py probe
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -73,9 +103,13 @@ jobs:
           pnpm install --frozen-lockfile --prefer-offline
           echo "- Dependency installation: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Make .env
+      - name: Make private build-time .env (never copied into ZIP)
         working-directory: source
-        run: echo "${{ secrets.ENV_FILE }}" > .env
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "$ENV_FILE" > .env
 
       - name: Restore and update Astro cache
         uses: actions/cache@v4
@@ -225,7 +259,7 @@ jobs:
           test -s dist/client/index.html
           echo "- Verified SSR entry and client index for escvn-astro/master: $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Package verified Astro output
+      - name: Package signed Astro release (no public runtime secrets)
         working-directory: source
         shell: bash
         timeout-minutes: 6
@@ -233,96 +267,65 @@ jobs:
           set -euo pipefail
           start=$SECONDS
           mkdir -p deploy upload
-          cp .env deploy/
-          cp -r dist/* deploy/
+          cp -a dist/. deploy/
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          sha=os.environ['ESC_DEPLOY_COMMIT']
+          if not re.fullmatch(r'[0-9a-f]{40}',sha):
+              raise RuntimeError('Missing immutable Astro production SHA')
+          Path('deploy/esc-release.json').write_text(json.dumps({
+              'branch':'master','commit':sha,'target':'esc.vn'},sort_keys=True))
+          PY
           (cd deploy && zip -q -6 -r ../upload/escvn.zip .)
           python3 - <<'PY'
+          import json
           from pathlib import Path
           from zipfile import ZipFile
-          archive = Path('upload/escvn.zip')
+          archive=Path('upload/escvn.zip')
           with ZipFile(archive) as bundle:
-              names = set(bundle.namelist())
-              for required in ('server/entry.mjs', 'client/index.html', '.env'):
+              names=set(bundle.namelist())
+              if any(Path(n.rstrip('/')).name in ('.env','.htpasswd') or n.startswith('private-runtime') for n in names):
+                  raise RuntimeError('Secret or credential file in release archive')
+              for required in ('server/entry.mjs','client/index.html','esc-release.json'):
                   if required not in names:
-                      raise RuntimeError(f'Missing existing ESC runtime artifact: {required}')
-              bad = bundle.testzip()
-              if bad:
-                  raise RuntimeError(f'Corrupted ZIP entry: {bad}')
-          print(f'ESC_RELEASE_ZIP_BYTES={archive.stat().st_size}')
+                      raise RuntimeError('Missing verified production artifact '+required)
+              if bundle.testzip() is not None:
+                  raise RuntimeError('Corrupt deployment archive')
+              if json.loads(bundle.read('esc-release.json')) != {
+                  'branch':'master','commit':__import__('os').environ['ESC_DEPLOY_COMMIT'],'target':'esc.vn'}:
+                  raise RuntimeError('Source SHA or target mismatch in ZIP')
+          print('ESC_RELEASE_ZIP_BYTES='+str(archive.stat().st_size))
           PY
-          echo "- ZIP (deflate 6): $(stat -c %s upload/escvn.zip) bytes in $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
-          rm -rf dist deploy
+          echo "- Signed ZIP (deflate 6): $(stat -c %s upload/escvn.zip) bytes in $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
+          rm -rf deploy
 
-      - name: Install reliable FTP client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq lftp
-
-      - name: Upload ESC production ZIP with resume and byte verification
-        working-directory: source
+      - name: Deploy protected runtime env via verified FTPS (not in ZIP)
         shell: bash
-        timeout-minutes: 10
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
+        timeout-minutes: 4
         run: |
           set -euo pipefail
           start=$SECONDS
-          protocol="${FTP_PROTOCOL:-ftp}"
-          case "$protocol" in ftp|ftps|sftp) ;; *) echo '::error::Invalid FTP_PROTOCOL'; exit 1;; esac
-          endpoint="$protocol://$FTP_SERVER"
-          remote_dir="/domains/esc.vn/public_html"
-          local_zip="$PWD/upload/escvn.zip"
-          test -s "$local_zip"
-          sha="$(sha256sum "$local_zip" | cut -d' ' -f1)"
-          # The content hash makes retries resumable without ever mixing two builds.
-          stage=".escvn-stage-${sha:0:32}.zip"
-          echo "Transferring archive with resumable FTP (SHA256: ${sha:0:16}...)."
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
-          set cmd:fail-exit yes
-          set net:max-retries 12
-          set net:timeout 45
-          set net:reconnect-interval-base 5
-          set ssl:verify-certificate no
-          cd "$remote_dir"
-          put -c "$local_zip" -o "$stage"
-          get -c "$stage" -o /tmp/escvn-deploy-roundtrip.zip
-          bye
-          LFTP
-          cmp "$local_zip" /tmp/escvn-deploy-roundtrip.zip
-          echo "FTP round-trip byte verification succeeded."
-          # Only after full byte verification may the archive used by unzip.php change.
-          # Web files are untouched until the separate unzip step.
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "$endpoint" <<LFTP
-          set cmd:fail-exit yes
-          set net:max-retries 5
-          set net:timeout 45
-          set ssl:verify-certificate no
-          cd "$remote_dir"
-          rm -f escvn.zip
-          mv "$stage" escvn.zip
-          bye
-          LFTP
-          echo "ESC release ZIP staged and activated for remote extraction."
-          echo "- FTP upload and round-trip verification: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
+          python3 actions-hub/scripts/esc-runtime-env-ftps.py
+          echo "- Verified protected runtime env: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload ZIP via Python FTPS with authenticated TLS
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          start=$SECONDS
+          python3 actions-hub/scripts/esc-ftps-upload.py upload
+          echo "- Python FTPS upload: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Trigger existing remote unzip and verify response
-        working-directory: source
+      - name: Activate signed Astro bundle using PHP staging and rollback
         shell: bash
         timeout-minutes: 6
         run: |
           set -euo pipefail
           start=$SECONDS
-          source .env
-          response="$(curl --fail-with-body --silent --show-error --max-time 300 "$WC_URL/unzip.php")"
-          if [[ "$response" != *"Giải nén thành công"* ]]; then
-            echo "::error::Legacy ESC unzip did not confirm a successful extraction"
-            exit 1
-          fi
-          echo "- Remote extraction confirmed: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
-          echo "BUILD_SUCCESS=PASS (compiled output and archive validated)" >> "$GITHUB_STEP_SUMMARY"
-          echo "DEPLOY_READY=PASS (legacy unzip response confirmed; live smoke remains separate)" >> "$GITHUB_STEP_SUMMARY"
+          python3 actions-hub/scripts/esc-signed-unzip.py unpack
+          echo "- Signed PHP activation: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
+          echo 'BUILD_SUCCESS=PASS (compiled SSR, WordPress data, ZIP and SHA marker verified)' >> "$GITHUB_STEP_SUMMARY"
+          echo 'DEPLOY_READY=PASS (HMAC signed PHP staging, checksum and rollback contract verified)' >> "$GITHUB_STEP_SUMMARY"
           echo "QA_PASS=NOT_CHECKED (run production smoke workflow separately)" >> "$GITHUB_STEP_SUMMARY"

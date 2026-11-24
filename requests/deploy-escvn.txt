@@ -99,3 +99,5 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-14: Fix Google Maps without Map ID, preserve HKD markers and registration coordinates. Astro master b1a2ce6b39466a98e2e431c2dfbba42c40c20a21.
 
 2026-11-14: Allow unpkg.com in HKD-only connect-src for Google MarkerClusterer; leave Google Cloud API Key restrictions unchanged. Astro master b167d56919b81d6756de4d9d7498b6fdfd4df539.
+
+2026-11-24: Run the approved ESC production build pipeline to verify PSE-style build metrics and artifact checks from escvn-astro/master 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676; retain FTP and unzip behavior, then check production smoke. Workflow revision 06726b1fd0cdc379051c92fed6c550d1bcb7d188.

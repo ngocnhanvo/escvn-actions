@@ -1,0 +1,41 @@
+name: ESC Production Transport Security Preflight (Read Only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/esc-transport-preflight.yml
+      - scripts/esc-signed-unzip.py
+      - scripts/esc-ftps-upload.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python static checks
+        run: python3 -m py_compile scripts/esc-signed-unzip.py scripts/esc-ftps-upload.py
+      - name: Inspect WordPress signed deploy endpoint without writing
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+        run: python3 scripts/esc-signed-unzip.py check
+  ftps-tls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Authenticate FTPS certificate and list remote production directory (no writes)
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          ESC_FTPS_CA_PEM: ${{ secrets.ESC_FTPS_CA_PEM }}
+        run: python3 scripts/esc-ftps-upload.py probe

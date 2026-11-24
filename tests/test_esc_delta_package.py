@@ -34,6 +34,7 @@ class DeltaTests(unittest.TestCase):
     def test_invalid_and_protected_assets(self):
         for name in ('index.html','robots.txt','llms.txt','../.env','a//b.webp','client/.env','x/../../passwd','space here.png'):
             self.assertFalse(delta.eligible(name), name)
+        self.assertFalse(delta.eligible('UPPER.JPG'))  # Same case-sensitive rules as PHP
         self.assertTrue(delta.eligible('images/a.webp'))
         with self.assertRaises(ValueError):
             delta.validate_remote({'../.env': {'size':1, 'sha256':'a'*64}})

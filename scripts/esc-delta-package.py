@@ -16,7 +16,7 @@ import sys
 import time
 
 SAFE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*")
-ASSET = re.compile(r"\.(?:html|css|js|json|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|eot|pdf|webmanifest)$", re.I)
+ASSET = re.compile(r"\.(?:html|css|js|json|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf|eot|pdf|webmanifest)$")
 META = {"index.html", "robots.txt", "sitemap.xml", "llms.txt"}
 LIMIT_FILES = 10000
 LIMIT_FILE_BYTES = 41943040

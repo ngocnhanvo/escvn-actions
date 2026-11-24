@@ -26,13 +26,16 @@ jobs:
           token: ${{ secrets.SOURCE_REPO_PAT }}
           path: backend
           persist-credentials: false
-      - name: Verify exactly the two signed PHP protocol sources
+      - name: Verify exactly the three approved PHP delta protocol sources
         shell: bash
         run: |
           set -euo pipefail
           php -l backend/unzip-v2.php
+          php -l backend/esc-delta.php
+          php backend/tests/esc-delta-regression.php
           test "$(cat backend/unzip-v2.ready)" = 'ESC_ASTRO_UNZIP_PROTOCOL=2'
-          python3 -m py_compile scripts/esc-ftps-upload.py scripts/esc-signed-unzip.py scripts/esc-unzip-v2-php-release.py
+          python3 -m py_compile scripts/esc-ftps-upload.py scripts/esc-signed-unzip.py scripts/esc-unzip-v2-php-release.py scripts/esc-delta-package.py
+          python3 -m unittest discover -s tests -p test_esc_delta_package.py
       - name: Publish approved signed protocol with FTPS checksum, rollback, and HMAC readback
         shell: bash
         env:

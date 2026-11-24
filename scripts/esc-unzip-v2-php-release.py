@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reversible FTPS promotion of existing escvn-php signed unzip-v2 endpoint.
 
-Only two allowlisted files, from escvn-php/master, are touched. Everything
+Only three allowlisted files, from escvn-php/master, are touched. Everything
 else in WordPress/public_html is preserved. Signed live readback is mandatory.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ SCRIPT = Path(__file__).with_name("esc-ftps-upload.py")
 spec = importlib.util.spec_from_file_location("esc_ftps_transport", SCRIPT)
 transport = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(transport)
-FILES = ("unzip-v2.php", "unzip-v2.ready")
+FILES = ("unzip-v2.php", "unzip-v2.ready", "esc-delta.php")
 
 
 def digest(data: bytes) -> str:
@@ -114,7 +114,7 @@ def main() -> None:
             reason = diagnostic[0] if diagnostic else "unknown readback failure"
             raise RuntimeError("Live signed preflight failed: " + reason[:180])
         release_ok = True
-        print("ESC_PHP_UNZIP_V2=PASS paths=2 signed_check=PASS external_key=installed")
+        print("ESC_PHP_UNZIP_V2=PASS paths=3 signed_check=PASS external_key=installed")
     except BaseException:
         if ftp:
             errors = 0

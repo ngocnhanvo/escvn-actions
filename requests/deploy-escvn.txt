@@ -101,3 +101,4 @@ Deploy verified FTP ZIP upload/unzip on esc.vn and smoke tests, then Chromium re
 2026-11-14: Allow unpkg.com in HKD-only connect-src for Google MarkerClusterer; leave Google Cloud API Key restrictions unchanged. Astro master b167d56919b81d6756de4d9d7498b6fdfd4df539.
 
 2026-11-24: Run the approved ESC production build pipeline to verify PSE-style build metrics and artifact checks from escvn-astro/master 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676; retain FTP and unzip behavior, then check production smoke. Workflow revision 06726b1fd0cdc379051c92fed6c550d1bcb7d188.
+2026-11-24: Verify Python FTPS TLS, separate protected runtime env, HMAC-signed PHP staging and rollback on existing production pipeline escvn-actions/main 3d83aa40c13f3e6ab9d5721edafc5152750c9989 and escvn-astro/master 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676; require production smoke PASS.

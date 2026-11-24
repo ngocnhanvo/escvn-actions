@@ -101,7 +101,9 @@ def main() -> None:
         check = subprocess.run([sys.executable, str(Path(__file__).with_name("esc-signed-unzip.py")), "check"],
                                capture_output=True, text=True, timeout=90)
         if check.returncode != 0:
-            raise RuntimeError("Live signed preflight failed; restoring previous WordPress files")
+            diagnostic = check.stderr.strip().splitlines()[-1:]
+            reason = diagnostic[0] if diagnostic else "unknown readback failure"
+            raise RuntimeError("Live signed preflight failed: " + reason[:180])
         release_ok = True
         print("ESC_PHP_UNZIP_V2=PASS paths=2 signed_check=PASS")
     except BaseException:
@@ -149,5 +151,6 @@ if __name__ == "__main__":
     try:
         main()
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired, *ftplib.all_errors) as exc:
-        print("::error::ESC WordPress signed unzip release failed: " + type(exc).__name__, file=sys.stderr)
+        reason = str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__
+        print("::error::ESC WordPress signed unzip release failed: " + reason[:220], file=sys.stderr)
         sys.exit(1)

@@ -76,7 +76,8 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          python3 -m py_compile actions-hub/scripts/esc-signed-unzip.py actions-hub/scripts/esc-ftps-upload.py actions-hub/scripts/esc-runtime-env-ftps.py
+          python3 -m py_compile actions-hub/scripts/esc-signed-unzip.py actions-hub/scripts/esc-ftps-upload.py actions-hub/scripts/esc-runtime-env-ftps.py actions-hub/scripts/esc-delta-package.py
+          python3 -m unittest discover -s actions-hub/tests -p test_esc_delta_package.py
           python3 actions-hub/scripts/esc-signed-unzip.py check
           python3 actions-hub/scripts/esc-ftps-upload.py probe
 
@@ -268,6 +269,9 @@ jobs:
           start=$SECONDS
           mkdir -p deploy upload
           cp -a dist/. deploy/
+          # Signed PHP inventory is checked before any compiled bytes are omitted.
+          # PHP restores and checks SHA-256 on the staging tree before activation.
+          python3 ../actions-hub/scripts/esc-delta-package.py deploy
           python3 - <<'PY'
           import json,os,re
           from pathlib import Path

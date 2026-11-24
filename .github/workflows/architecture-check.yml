@@ -89,7 +89,15 @@ jobs:
           # Build/deploy must be free of post-deploy HTTP retries.
           assert 'Smoke Test WebNext Production' not in deploy
           assert 'Smoke Test WebNext Spotlight on Homepage' not in deploy
-          assert 'Trigger Remote Unzip' in deploy
+          # Secure production staging supersedes the legacy unauthenticated unzip.
+          assert 'python3 actions-hub/scripts/esc-signed-unzip.py unpack' in deploy
+          assert 'python3 actions-hub/scripts/esc-ftps-upload.py upload' in deploy
+          assert 'python3 actions-hub/scripts/esc-runtime-env-ftps.py' in deploy
+          assert 'python3 ../actions-hub/scripts/esc-delta-package.py deploy' in deploy
+          assert 'ssl:verify-certificate no' not in deploy
+          assert 'cp .env deploy/' not in deploy
+          assert '/unzip.php' not in deploy
+          assert 'esc-release.json' in deploy
           # The independent workflow runs only after the deployment completed successfully.
           assert 'workflow_run:' in smoke
           assert 'Deploy ESC Astro Production' in smoke

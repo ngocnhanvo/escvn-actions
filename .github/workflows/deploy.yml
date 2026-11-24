@@ -53,7 +53,8 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.9
+          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,9 +63,15 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: source/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install frozen dependencies (pnpm store cache)
         working-directory: source
-        run: pnpm install --frozen-lockfile
+        shell: bash
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          start=$SECONDS
+          pnpm install --frozen-lockfile --prefer-offline
+          echo "- Dependency installation: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Make .env
         working-directory: source
@@ -78,12 +85,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-escvn-dot-cache-
 
-      - name: Build Project
+      - name: Build Astro production (preserve existing WordPress refresh policy)
         working-directory: source
+        shell: bash
+        timeout-minutes: 18
         env:
           cachePage: "false"
           cacheTablePress: "false"
-        run: pnpm run build-git
+        run: |
+          set -euo pipefail
+          start=$SECONDS
+          pnpm run build-git
+          echo "- Astro build: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate WebNext TablePress build data
         working-directory: source
@@ -201,17 +214,43 @@ jobs:
           console.log('WebNext homepage build contract passed.');
           NODE
 
-      - name: Zip Build Folder
+      - name: Validate compiled SSR before packaging
         working-directory: source
         shell: bash
+        timeout-minutes: 2
         run: |
           set -euo pipefail
+          node --check dist/server/entry.mjs
+          test -s dist/server/entry.mjs
+          test -s dist/client/index.html
+          echo "- Verified SSR entry and client index for escvn-astro/master: $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package verified Astro output
+        working-directory: source
+        shell: bash
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          start=$SECONDS
           mkdir -p deploy upload
           cp .env deploy/
           cp -r dist/* deploy/
-          cd deploy
-          zip -r ../upload/escvn.zip .
-          cd ..
+          (cd deploy && zip -q -6 -r ../upload/escvn.zip .)
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          archive = Path('upload/escvn.zip')
+          with ZipFile(archive) as bundle:
+              names = set(bundle.namelist())
+              for required in ('server/entry.mjs', 'client/index.html', '.env'):
+                  if required not in names:
+                      raise RuntimeError(f'Missing existing ESC runtime artifact: {required}')
+              bad = bundle.testzip()
+              if bad:
+                  raise RuntimeError(f'Corrupted ZIP entry: {bad}')
+          print(f'ESC_RELEASE_ZIP_BYTES={archive.stat().st_size}')
+          PY
+          echo "- ZIP (deflate 6): $(stat -c %s upload/escvn.zip) bytes in $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
           rm -rf dist deploy
 
       - name: Install reliable FTP client
@@ -222,6 +261,7 @@ jobs:
       - name: Upload ESC production ZIP with resume and byte verification
         working-directory: source
         shell: bash
+        timeout-minutes: 10
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -229,6 +269,7 @@ jobs:
           FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
         run: |
           set -euo pipefail
+          start=$SECONDS
           protocol="${FTP_PROTOCOL:-ftp}"
           case "$protocol" in ftp|ftps|sftp) ;; *) echo '::error::Invalid FTP_PROTOCOL'; exit 1;; esac
           endpoint="$protocol://$FTP_SERVER"
@@ -265,12 +306,23 @@ jobs:
           bye
           LFTP
           echo "ESC release ZIP staged and activated for remote extraction."
+          echo "- FTP upload and round-trip verification: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
 
-      - name: Trigger Remote Unzip
+      - name: Trigger existing remote unzip and verify response
         working-directory: source
         shell: bash
+        timeout-minutes: 6
         run: |
           set -euo pipefail
+          start=$SECONDS
           source .env
-          curl -fsS "$WC_URL/unzip.php"
+          response="$(curl --fail-with-body --silent --show-error --max-time 300 "$WC_URL/unzip.php")"
+          if [[ "$response" != *"Giải nén thành công"* ]]; then
+            echo "::error::Legacy ESC unzip did not confirm a successful extraction"
+            exit 1
+          fi
+          echo "- Remote extraction confirmed: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
+          echo "BUILD_SUCCESS=PASS (compiled output and archive validated)" >> "$GITHUB_STEP_SUMMARY"
+          echo "DEPLOY_READY=PASS (legacy unzip response confirmed; live smoke remains separate)" >> "$GITHUB_STEP_SUMMARY"
+          echo "QA_PASS=NOT_CHECKED (run production smoke workflow separately)" >> "$GITHUB_STEP_SUMMARY"

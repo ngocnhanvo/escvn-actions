@@ -86,7 +86,11 @@ def http_request(url: str, body: bytes | None = None, headers: dict | None = Non
 def post(config: dict[str, str], data: dict) -> dict:
     raw = json.dumps(data, separators=(",", ":"), sort_keys=True).encode("utf-8")
     timestamp = str(int(time.time()))
-    signature = hmac.new(config["token"].encode(), timestamp.encode() + b"\n" + raw,
+    # Domain-separated HMAC secret installed outside WordPress webroot, never
+    # the SOURCE_REPO_PAT itself. No PAT copied to shared hosting.
+    key = hmac.new(config["token"].encode(), b"esc-wordpress-signed-unzip-v2",
+                   hashlib.sha256).hexdigest().encode()
+    signature = hmac.new(key, timestamp.encode() + b"\n" + raw,
                          hashlib.sha256).hexdigest()
     status, body = http_request(config["backend"] + "/unzip-v2.php", raw, {
         "Content-Type": "application/json", "Cache-Control": "no-store",

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ftplib
 import hashlib
+import hmac
 import importlib.util
 import os
 from pathlib import Path
@@ -61,6 +62,11 @@ def main() -> None:
     live = root + "/public_html/"
     source = Path(os.environ.get("ESC_PHP_ROOT", "backend"))
     data = {name: (source/name).read_bytes() for name in FILES}
+    # Server-side secret is outside public_html. Derive it from the existing
+    # Actions token without storing the reusable GitHub PAT on hosting.
+    signing_key = hmac.new(os.environ["SOURCE_REPO_PAT"].encode(),
+                           b"esc-wordpress-signed-unzip-v2", hashlib.sha256).hexdigest()
+    data["hmac-key"] = (signing_key + "\n").encode()
     if data["unzip-v2.ready"] != b"ESC_ASTRO_UNZIP_PROTOCOL=2\n":
         raise ValueError("Invalid signed protocol marker")
     for name, payload in data.items():
@@ -76,7 +82,7 @@ def main() -> None:
         ftp = transport.connect()
         ftp.cwd(root)
         for name, payload in data.items():
-            dest = live + name
+            dest = root + "/.esc-deploy-v2-hmac" if name == "hmac-key" else live + name
             stage = root + "/.esc-unzip-v2-" + run_id + "-" + name + ".incoming"
             backup = root + "/.esc-unzip-v2-" + run_id + "-" + name + ".rollback"
             if exists(ftp, stage) or exists(ftp, backup):
@@ -87,13 +93,16 @@ def main() -> None:
                 raise RuntimeError("FTPS stage checksum mismatch: " + name)
             staged[name] = stage
             backups[name] = backup if exists(ftp, dest) else None
-        for name in FILES:
-            dest = live + name
+        # Install HMAC key before switching PHP handler; no public-root copy.
+        for name in ("hmac-key", *FILES):
+            dest = root + "/.esc-deploy-v2-hmac" if name == "hmac-key" else live + name
             if backups[name] is not None:
                 ftp.rename(dest, backups[name])
             # Include attempted file in rollback even if activation fails.
             installed.append(name)
             ftp.rename(staged[name], dest)
+            if name == "hmac-key":
+                ftp.sendcmd("SITE CHMOD 600 " + dest)
             if remote_sha(ftp, dest) != digest(data[name]):
                 raise RuntimeError("FTPS promoted source checksum mismatch: " + name)
         # Authenticated readback confirms correct frontend host, signed PHP
@@ -105,12 +114,12 @@ def main() -> None:
             reason = diagnostic[0] if diagnostic else "unknown readback failure"
             raise RuntimeError("Live signed preflight failed: " + reason[:180])
         release_ok = True
-        print("ESC_PHP_UNZIP_V2=PASS paths=2 signed_check=PASS")
+        print("ESC_PHP_UNZIP_V2=PASS paths=2 signed_check=PASS external_key=installed")
     except BaseException:
         if ftp:
             errors = 0
             for name in reversed(installed):
-                dest = live + name
+                dest = root + "/.esc-deploy-v2-hmac" if name == "hmac-key" else live + name
                 try:
                     if exists(ftp, dest):
                         ftp.delete(dest)
@@ -131,13 +140,14 @@ def main() -> None:
                     pass
             # Backups are deleted ONLY after signed readback was successful.
             if release_ok:
-                for name in FILES:
+                for name in ("hmac-key", *FILES):
                     path = backups.get(name)
                     if path:
                         try:
                             # If rollback happened, backup was moved back.
-                            if (exists(ftp, path) and exists(ftp, live + name)
-                                    and remote_sha(ftp, live + name) == digest(data[name])):
+                            dest = root + "/.esc-deploy-v2-hmac" if name == "hmac-key" else live + name
+                            if (exists(ftp, path) and exists(ftp, dest)
+                                    and remote_sha(ftp, dest) == digest(data[name])):
                                 ftp.delete(path)
                         except ftplib.all_errors:
                             pass

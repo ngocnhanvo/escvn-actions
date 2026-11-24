@@ -1,0 +1,45 @@
+name: ESC WordPress Signed Unzip v2 Release (FTP TLS Verified)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/esc-unzip-v2-php-release.yml
+      - scripts/esc-unzip-v2-php-release.py
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: esc-wordpress-signed-unzip-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: master
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: backend
+          persist-credentials: false
+      - name: Verify exactly the two signed PHP protocol sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l backend/unzip-v2.php
+          test "$(cat backend/unzip-v2.ready)" = 'ESC_ASTRO_UNZIP_PROTOCOL=2'
+          python3 -m py_compile scripts/esc-ftps-upload.py scripts/esc-signed-unzip.py scripts/esc-unzip-v2-php-release.py
+      - name: Publish approved signed protocol with FTPS checksum, rollback, and HMAC readback
+        shell: bash
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          ESC_FTPS_CA_PEM: ${{ secrets.ESC_FTPS_CA_PEM }}
+        run: python3 scripts/esc-unzip-v2-php-release.py

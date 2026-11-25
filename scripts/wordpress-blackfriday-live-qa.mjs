@@ -15,7 +15,7 @@ try {
    await heading.waitFor({state:'visible',timeout:20000});
    assert.equal(await heading.count(),1,'Black Friday card duplicated');
    assert.equal(await page.getByRole('heading',{name:previousTitle,exact:true}).count(),0,'EDU20 promotion was not replaced');
-   const card=heading.locator('xpath=ancestor::*[.//a[contains(normalize-space(.), "Đăng ký ngay")]]').first();
+   const card=heading.locator('xpath=../../..'); // Exact offer card, not the whole promotion grid
    assert.ok(await card.count(),'Black Friday card wrapper missing');
    const cta=card.getByRole('link',{name:'Đăng ký ngay'}).first();
    assert.equal(new URL(await cta.getAttribute('href'),'https://esc.vn').pathname,'/dang-ky-ten-mien','Registration CTA changed');

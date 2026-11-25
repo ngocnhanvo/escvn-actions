@@ -1,31 +1,35 @@
 # ESC.VN — Latest ChatGPT response
 
-- Date: 2026-11-25, Asia/Ho_Chi_Minh
-- Project: ESC.VN Member Cart TEST integration
-- Astro branch: github, current reviewed HEAD 0329466b5ed6ec3774307ca22fcb25a1d1d01d3a
-- Astro master remains untouched.
-- Result: PASS — Member TEST origin repair confirmed; browser cart domain flow PASS.
-- Scope still PARTIAL for full Member integration (service-only, mixed addons, order and webhook untested).
+- Time (Asia/Ho_Chi_Minh): 2026-11-25 14:03:21 +07
+- Project: ESC.VN Member Cart TEST on Cloudflare Tunnel
+- Astro repo: ngocnhanvo/escvn-astro
+- Branch: github
+- HEAD: ef23cbb039173ca728ccab44bcd3e57d7bb65b12
+- Master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
+- State: PARTIAL — local Astro rebuild and retest needed; 28 WordPress service records have no Member ID; some mapped SaaS products not sellable in Member TEST
 
-## Evidence
+## Final response to user
 
-1. GitHub Actions Playwright read-only tunnel/CORS run #45558266695, attempt 3, SUCCESS.
-   - https://esc-test.webnvn.com/ HTTP 200, /check-domain HTTP 200.
-   - Browser GET https://id.esc.vn/api/cart/check.php?d=esc.vn&years=1: HTTP 200, {ok:true,available:false}; response Access-Control-Allow-Origin: https://esc-test.webnvn.com.
-   - A server request without Origin correctly remains 403 origin_not_allowed as specified in vendor docs. No CSP or browser JS errors.
-2. GitHub Actions full synthetic browser flow #45562212829 SUCCESS, 15/15 checks PASS, all on Member TEST id.esc.vn via website Cloudflare Tunnel.
-   - Read-only domain check for known taken name and unique temporary available .com, confirmed Member authoritative price.
-   - Real UI clicked add domain, received Member add.php success, verified 64-hex localStorage key, header count 1, cart.php link, count.php and view.php contents.
-   - Updated same domain to 2 years without duplicate; view.php readback years 2.
-   - Invalid promo preview handled; Member checkout cart.php loaded HTTP 200 and showed test domain after network idle.
-   - remove.php cleanup plus view.php independent readback confirmed no residual test domain. No order placed; no payment; no production writes. Browser JS errors 0.
-   - First run #45562080041 failed only because the test checked cart.php too early (HTTP 200 but JS content not yet visible). Diagnostics added waitForLoadState(networkidle) and second run #45562212829 passed.
+Mình đã kiểm thử xong phần **giỏ dịch vụ và giỏ kết hợp** trên Member TEST: **27/27 kiểm tra PASS**. Hosting và Email giảm đúng 30% khi mua cùng tên miền; SSL, VPS và SaaS giữ giá. Giỏ chỉ có dịch vụ, tính tổng, status, mã ưu đãi không hợp lệ và xóa sạch dữ liệu thử đều PASS. Workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45563824167
 
-## Still not verified
-- Member TEST service-only cart for hosting/email/SSL/server/SaaS with actual allowlisted product IDs; mapping from WordPress ACF for concrete products.
-- Mixed domain+addon pricing and discounts, promo valid and invalid details across service types, orders, webhook delivery, and production Member origin.
-- Do NOT touch Astro master; no production deploy unless user approves.
-- Source instruction HUONG_DAN_NOI_API_GIO_HANG_ESC_VN (3).md explicitly requires browser frontend fetch, no Astro Node proxy.
+Mình kiểm thử từ **trang sản phẩm Astro**: Hosting, Email, SSL và VPS đều thêm giỏ thành công, hiển thị giá được Member trả về sau khi tải xong. SaaS Kaspersky chưa được nhận dạng trong bản Astro mà ông đang chạy; đã tìm ra WordPress phân loại sản phẩm vào danh mục "Cá nhân" (không được tự đổi cả danh mục này thành SaaS).
+
+Mình đã sửa nhánh `github` để phân loại **riêng các mã SaaS antivirus được Member TEST công bố**, có kiểm thử chống phân loại nhầm. Commit: https://github.com/ngocnhanvo/escvn-astro/commit/ef23cbb039173ca728ccab44bcd3e57d7bb65b12
+CI bản này SUCCESS, **8/8 unit test PASS và Astro build DEV PASS**: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45564401513
+
+Có hai nhóm công việc chưa thể tuyên bố hoàn tất: **28/135** sản phẩm dịch vụ WordPress đang thiếu `member_product_id` (Hosting 1, Email 2, SSL 17, Server 7, SaaS 1), không thể tự gán mã giả; và một số mã dù đã khai (như Email EM1 601000, Google Workspace 131600, Microsoft 365 132200) vẫn bị Member TEST trả `422 product_not_found`, cần đối chiếu trạng thái bán kèm với bên Member. Chưa tạo đơn, thanh toán hay kiểm thử webhook; không có dữ liệu giỏ TEST còn sót.
+
+**Đến bước ông pull code về máy và build lại** để mình xác minh SaaS Kaspersky trên tunnel:
+
+```bash
+git checkout github
+git pull origin github
+pnpm run build-cache
+```
+
+Khởi động lại Astro đang được Cloudflare Tunnel phục vụ, giữ nguyên `PUBLIC_MEMBER_CART_ENABLED=true` và `PUBLIC_MEMBER_CART_BASE=https://id.esc.vn` trong `.env.local`. Ông báo khi đã chạy bản mới, mình sẽ kiểm thử tiếp đúng phần còn lại; không lặp phần đã PASS.
+
+Không sửa `master`, không deploy production.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass

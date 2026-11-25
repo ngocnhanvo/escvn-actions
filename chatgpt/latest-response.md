@@ -2,49 +2,48 @@
 
 - Date: 2026-11-25 (Asia/Ho_Chi_Minh)
 - Project: ESC.VN Member order tracking after cart ordered
-- Astro repo: ngocnhanvo/escvn-astro
+- Astro source repository: ngocnhanvo/escvn-astro
 - Branch: github
-- HEAD: a804ce46c0c068f2d4709e5f43463be95e983932
-- Master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
-- GitHub Actions DEV QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45569927418 (SUCCESS, 19/19 unit tests, Astro DEV build PASS, no deploy)
-- State: CODE_READY / CI_PASS; LIVE_TUNNEL_QA_PENDING_USER_REBUILD
-- No Member TEST orders, wallet deductions, money writes, domain registrations, or production changes.
+- Astro HEAD: a804ce46c0c068f2d4709e5f43463be95e983932
+- Astro master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
+- Browser QA (TEST only): https://github.com/ngocnhanvo/escvn-actions/actions/runs/45571823829
+- Status: DONE — ordered-cart tracking DEV browser QA; pending actual real-order D26112501 token verification (not necessary for isolated mock QA).
 
-## User-facing response (including streamed opening)
+## User-facing response
 
-Mình đã sửa và commit lên **nhánh `github`** của `ngocnhanvo/escvn-astro`. Không thay đổi `master` hay production.
+### Kết quả kiểm thử bản mới: 19/19 PASS
 
-Bản sửa xử lý các trường hợp bên Member nêu:
+Mình đã kiểm thử trực tiếp https://esc-test.webnvn.com, bao gồm API Member TEST thật và luồng trạng thái đơn được mô phỏng an toàn.
 
-- Giữ mã theo dõi đơn riêng trong localStorage trước khi xóa giỏ `ordered`.
-- Giỏ về 0 nhưng vẫn tiếp tục polling `status.php` mỗi 60 giây khi tab đang hiển thị.
-- Hiển thị `pending`, `unpaid`, `paid`, `fulfilled`, `cancelled` theo dữ liệu Member; không coi `ordered` là đã thanh toán.
-- Khôi phục theo dõi sau khi tải lại trang, hỗ trợ nhiều đơn và giỏ mua mới.
-- Không xóa mã theo dõi khi lỗi mạng; ngừng polling khi đơn `fulfilled` hoặc `cancelled`.
-- Chống khởi tạo timer trùng trong cùng trang.
+| Nội dung kiểm thử | Kết quả |
+|---|---|
+| Website DEV và giao diện trạng thái đơn | PASS |
+| Request status.php thật từ trình duyệt Astro | PASS — HTTP 200 |
+| Member cho phép origin https://esc-test.webnvn.com | PASS |
+| Giỏ ordered về 0, vẫn giữ mã theo dõi | PASS — mock |
+| Hiển thị đơn D26112501 là pending, không phải đã thanh toán | PASS — mock |
+| Tải lại trang vẫn tiếp tục polling | PASS — mock |
+| Chuyển unpaid → paid → fulfilled | PASS — mock |
+| Ngừng polling khi fulfilled hoặc cancelled | PASS — mock |
+| Không polling khi tab ẩn | PASS |
+| Lỗi mạng vẫn giữ mã theo dõi | PASS |
+| Hiển thị trạng thái đơn tại /gio-hang | PASS |
+| Xóa sạch giỏ thử và kiểm tra lại | PASS |
 
-Mình cũng xử lý trường hợp Member cấp **mã giỏ mới ngay sau khi khách đặt đơn**, để không làm mất dấu giỏ cũ.
+Workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45571823829 — SUCCESS, 19/19 Playwright checks passed.
 
-Commit mới nhất: https://github.com/ngocnhanvo/escvn-astro/commit/a804ce46c0c068f2d4709e5f43463be95e983932.
+### Bằng chứng request từ website DEV
 
-**CI đã SUCCESS:** 19/19 unit test PASS và Astro DEV build PASS trên đúng commit `a804ce4`. Xem https://github.com/ngocnhanvo/escvn-actions/actions/runs/45569927418.
+- Page/frame: https://esc-test.webnvn.com/
+- Request: GET https://id.esc.vn/api/cart/status.php?c=<redacted>
+- Response HTTP 200
+- Response Access-Control-Allow-Origin: https://esc-test.webnvn.com
+- Member TEST service cart created temporarily, status open verified via API, then remove.php and view.php readback confirmed no lines remain.
 
-Ông cập nhật bản mới lên máy phục vụ Cloudflare Tunnel:
+**Giới hạn kiểm thử:** Đơn D26112501 và các trạng thái pending/unpaid/paid/fulfilled/cancelled được kiểm thử bằng mock trong trình duyệt; không thể xác minh đơn thật nếu không có mã giỏ 64-hex riêng cho đơn đó. Không tạo đơn, không ghi trạng thái thanh toán giả, không chuyển tiền, không trừ ví hay đăng ký tên miền thật. The two earlier workflow attempts were cancelled and failed due QA-script assertion issues; latest run #45571823829 is the successful corrected run. Astro application source was not changed during this retest.
 
-```bash
-git checkout github
-git pull origin github
-pnpm run build-cache
-```
-
-Sau đó restart Node/Astro server đang phục vụ `https://esc-test.webnvn.com`. Giữ nguyên `PUBLIC_MEMBER_CART_ENABLED=true`, `PUBLIC_MEMBER_CART_BASE=https://id.esc.vn`.
-
-**Giới hạn kiểm thử:** Luồng `D26112501` / 450.000đ / `pending` đã kiểm tra bằng mock/unit test cô lập, chưa gọi được đơn này trực tiếp vì API cần mã theo dõi 64-hex gắn với đơn; mã đơn `D26112501` không thay thế được. Chưa thể chứng minh request polling thực từ bản `a804ce4` trên tunnel trước khi ông build bản đó; sau khi site cập nhật mới kiểm thử Playwright. Không tạo đơn, thanh toán, trừ ví, hay đăng ký tên miền thật.
-
-**Source:** 4 file Astro changed: `src/lib/memberCart/client.ts`, `src/lib/memberCart/client.test.ts`, `src/astro/components/MemberCartPanel.astro`, `src/astroutils/Header/Cart.astro`.
-**Validation:** CI #45569927418 SUCCESS, 2 test files, 19 tests passed, build-git Complete, no FTP upload.
-**Next:** after owner confirms pull+build on local tunnel, verify active/hidden tab polling, reload, cart badge=0 and persisted order tracking via read-only Playwright. Never simulate financial transactions on live Member backend.
+Không sửa nhánh master, không deploy production. Checkpoint saved in escvn-actions.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass
-Trạng thái: PARTIAL — chưa hoàn tất
+Trạng thái: DONE — hoàn tất

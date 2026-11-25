@@ -1,0 +1,144 @@
+name: ESC Member TEST service and mixed cart QA (cleanup)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/esc-member-cart-service-flow-qa.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-service-flow-qa
+  cancel-in-progress: true
+jobs:
+  service-cart:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 9
+    steps:
+      - name: Install browser driver only
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Member TEST service-only and mixed cart
+        env:
+          SITE: https://esc-test.webnvn.com
+          MEMBER: https://id.esc.vn
+        run: |
+          cat >/tmp/esc-service-qa.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          import {randomBytes} from 'node:crypto';
+          const site=process.env.SITE, member=process.env.MEMBER;
+          if(site!=='https://esc-test.webnvn.com'||member!=='https://id.esc.vn')throw Error('TEST_ONLY_GUARD');
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1280,height:900},locale:'vi-VN'});
+          const results=[], errors=[], created=[], ids={
+            hosting:113400,ssl:100700,email:601000,server:112450,saas:131600
+          };
+          const report=(name,passed,detail={})=>results.push({name,status:passed?'PASS':'FAIL',detail});
+          let c='',domain='',didWrite=false;
+          const req=async(endpoint,params={},method='GET')=>page.evaluate(async({endpoint,params,method,member})=>{
+            const data=new URLSearchParams(params);
+            try{
+              const r=await fetch(member+'/api/cart/'+endpoint+(method==='GET'?'?'+data.toString():''),{
+                method,body:method==='POST'?data:undefined,credentials:'omit',cache:'no-store',
+                referrerPolicy:'no-referrer',signal:AbortSignal.timeout(20000)
+              });
+              return {status:r.status,payload:await r.json().catch(()=>null)};
+            }catch(e){return {status:0,error:String(e?.message||e).slice(0,90)}}
+          },{endpoint,params,method,member});
+          const add=async(params)=>{
+            const out=await req('add.php',{...params,c},'POST');
+            if(out.payload?.ok===true&&/^[0-9a-f]{64}$/i.test(out.payload.cart)){
+              c=out.payload.cart;didWrite=true;
+            }
+            return out;
+          };
+          const view=()=>req('view.php',{c});
+          const summary=out=>{
+            const v=out.payload;
+            return {status:out.status,ok:v?.ok??null,error:v?.error||null,count:v?.count,
+            items:v?.items?.map(x=>({domain:x.domain,years:x.years,total:x.total})),
+            addons:v?.addons?.map(x=>({type:x.type,id:x.product_id,total:x.total,price:x.price})),
+            total:v?.total,vat:v?.vat};
+          };
+          try{
+            const res=await page.goto(site+'/check-domain',{waitUntil:'domcontentloaded',timeout:25000});
+            report('SITE_READY',res?.status()===200);
+            if(res?.status()!==200)throw Error('SITE_UNAVAILABLE');
+            // IDs are grounded in the public Member TEST catalog and public Astro product mappings.
+            // Do not create orders or use production checkout.
+            for(const [type,id] of Object.entries(ids)){
+              const result=await add({type,product_id:String(id)});
+              report('ADD_SERVICE_'+type.toUpperCase(),result.status===200&&result.payload?.ok===true,
+                {status:result.status,error:result.payload?.error||null,msg:result.payload?.msg||null});
+              if(result.payload?.ok===true)created.push(type);
+            }
+            if(!c)throw Error('NO_MEMBER_CART_CREATED');
+            const one=await view();
+            report('SERVICE_ONLY_CART_VIEW',one.status===200&&one.payload?.ok===true,summary(one));
+            report('SERVICE_ONLY_COUNT_ZERO',one.payload?.count===0,{count:one.payload?.count});
+            const addons=one.payload?.addons||[];
+            for(const type of created){report('SERVICE_IN_ADDONS_'+type.toUpperCase(),addons.some(a=>a.type===type));}
+            const baseline=Object.fromEntries(addons.map(a=>[a.type,Number(a.total)]));
+            report('SERVICE_ONLY_POSITIVE_TOTAL',Number(one.payload?.total)>0&&addons.length>0,{total:one.payload?.total});
+            const status=await req('status.php',{c});
+            report('NEW_CART_STATUS',status.status===200&&status.payload?.ok===true&&status.payload?.cart_status==='open'&&status.payload?.order==null,
+              {http:status.status,cart_status:status.payload?.cart_status,hasOrder:!!status.payload?.order});
+            domain='escqa'+Date.now().toString(36)+randomBytes(3).toString('hex')+'.com';
+            const testDomain=await req('check.php',{d:domain,years:'1'});
+            report('UNIQUE_DOMAIN_AVAILABLE',testDomain.status===200&&testDomain.payload?.available===true,
+              {status:testDomain.status,available:testDomain.payload?.available??null});
+            if(testDomain.payload?.available===true){
+              const domainAdd=await add({domain,years:'1'});
+              report('ADD_DOMAIN_TO_SERVICE_CART',domainAdd.status===200&&domainAdd.payload?.ok===true,
+                {http:domainAdd.status,error:domainAdd.payload?.error||null});
+              if(domainAdd.payload?.ok===true){
+                const mixed=await view();
+                report('MIXED_CART_VIEW',mixed.status===200&&mixed.payload?.items?.some(i=>i.domain===domain),summary(mixed));
+                report('MIXED_COUNT_ONE',mixed.payload?.count===1,{count:mixed.payload?.count});
+                for(const type of created){
+                  const p=Number(mixed.payload?.addons?.find(a=>a.type===type)?.total);
+                  if(Number.isFinite(p)&&Number.isFinite(baseline[type])&&baseline[type]>0){
+                    const expected=['hosting','email'].includes(type)?0.7:1;
+                    const ratio=p/baseline[type];
+                    report('MIXED_PRICE_'+type.toUpperCase(),Math.abs(ratio-expected)<0.03,
+                      {base:baseline[type],mixed:p,ratio:Math.round(ratio*10000)/10000,expected});
+                  }
+                }
+                const totalItems=(mixed.payload?.items||[]).reduce((sum,i)=>sum+Number(i.total||0),0);
+                const totalAddons=(mixed.payload?.addons||[]).reduce((sum,i)=>sum+Number(i.total||0),0);
+                report('MIXED_TOTAL_RECONCILIATION',Math.abs(Number(mixed.payload?.total)-(totalItems+totalAddons))<=1,
+                  {memberTotal:mixed.payload?.total,items:totalItems,addons:totalAddons});
+                const preview=await req('view.php',{c,promo:'ESC_QA_NO_SUCH_PROMO_2026'});
+                report('INVALID_PROMO_NO_DISCOUNT',preview.status===200&&preview.payload?.ok===true&&preview.payload?.promo?.ok===false,
+                  {status:preview.status,msg:preview.payload?.promo?.msg||null});
+              }
+            }
+          }catch(e){errors.push(String(e?.message||e).slice(0,180))}
+          finally {
+            if(c&&didWrite){
+              const cleanup=[];
+              if(domain){
+                const d=await req('remove.php',{c,domain},'POST');
+                cleanup.push({type:'domain',status:d.status,ok:d.payload?.ok||false});
+              }
+              for(const type of [...created].reverse()){
+                const r=await req('remove.php',{c,type},'POST');
+                cleanup.push({type,status:r.status,ok:r.payload?.ok||false});
+              }
+              const final=await view();
+              const remaining=(final.payload?.items||[]).length+(final.payload?.addons||[]).length;
+              report('CLEANUP_READBACK',final.status===200&&remaining===0,{remaining,status:final.status,cleanup});
+            }
+            await browser.close();
+          }
+          console.log('SERVICE_QA_RESULTS',JSON.stringify(results));
+          console.log('SERVICE_QA_SUMMARY',JSON.stringify({
+            failures:results.filter(x=>x.status==='FAIL').map(x=>x.name),errors,
+            total:results.length,passed:results.filter(x=>x.status==='PASS').length,
+            ordersCreated:0,checkoutSubmitted:false,
+            serviceIds:Object.keys(ids)
+          }));
+          if(results.some(x=>x.status==='FAIL')||errors.length)process.exitCode=1;
+          JS
+          node /tmp/esc-service-qa.mjs

@@ -54,7 +54,7 @@ jobs:
           echo 'PUBLIC_MEMBER_CART_BASE=https://id.esc.vn' >> .env
       - name: Test Member cart API contract with mocked browser fetch
         working-directory: source
-        run: pnpm exec vitest run src/lib/memberCart/client.test.ts
+        run: pnpm exec vitest run src/lib/memberCart/client.test.ts scripts/inject-handler.member-cart-csp.test.ts
       - name: Build Astro DEV with Member TEST mode enabled
         working-directory: source
         run: pnpm run build-git

@@ -1,0 +1,95 @@
+name: Deploy ESC CoCart coupon callback
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/wordpress-cocart-coupon-deploy.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-wordpress-cocart-coupon-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-php
+          ref: 3a6d12b20d6bbae1a1e4870eb70614d9914d8193
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: backend
+          persist-credentials: false
+      - name: Verify source and PHP syntax
+        run: |
+          set -euo pipefail
+          test "$(git -C backend rev-parse HEAD)" = 3a6d12b20d6bbae1a1e4870eb70614d9914d8193
+          file=backend/wp-content/themes/vibe-code-theme/inc/cart/cart_endpoint.php
+          test "$(git hash-object "$file")" = bde34ca86a31d24595f2750ddc54423e67525efc
+          php -l "$file"
+      - name: Deploy only cart callback via verified FTPS
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          ESC_FTPS_CA_PEM: ${{ secrets.ESC_FTPS_CA_PEM }}
+        run: |
+          python3 - <<'PY'
+          import ftplib, hashlib, importlib.util, io, os, pathlib, uuid
+          from urllib.parse import urlsplit
+          spec = importlib.util.spec_from_file_location('transport', 'scripts/esc-ftps-upload.py')
+          transport = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(transport)
+          origins = [s.partition('=')[2].strip().strip("\\\"'") for s in os.environ['ENV_FILE'].splitlines() if s.strip().startswith('WC_URL=')]
+          if len(origins) != 1 or urlsplit(origins[0]).netloc != 'admin.esc.vn' or urlsplit(origins[0]).scheme != 'https':
+              raise RuntimeError('Incorrect WordPress destination')
+          relative = 'wp-content/themes/vibe-code-theme/inc/cart/cart_endpoint.php'
+          dest = '/domains/admin.esc.vn/public_html/' + relative
+          stage = '/domains/admin.esc.vn/.esc-coupon-' + uuid.uuid4().hex + '.incoming'
+          payload = pathlib.Path('backend', relative).read_bytes()
+          def blob(data):
+              return hashlib.sha1(('blob %d' % len(data)).encode() + bytes([0]) + data).hexdigest()
+          def read(ftp, name):
+              output = io.BytesIO()
+              ftp.retrbinary('RETR ' + name, output.write)
+              return output.getvalue()
+          ftp = transport.connect()
+          attempted = False
+          try:
+              old = read(ftp, dest)
+              if old == payload:
+                  print('DEPLOY_PASS already current; remote bytes verified')
+              else:
+                  if blob(old) != '9240893da46cd6e94b9886fd6fc80547f847e436':
+                      raise RuntimeError('Remote file differs from approved baseline; refusing overwrite')
+                  ftp.storbinary('STOR ' + stage, io.BytesIO(payload))
+                  if read(ftp, stage) != payload:
+                      raise RuntimeError('Staged bytes mismatch')
+                  attempted = True
+                  ftp.rename(stage, dest)
+                  if read(ftp, dest) != payload:
+                      raise RuntimeError('Remote readback mismatch')
+                  print('DEPLOY_PASS SHA256=' + hashlib.sha256(payload).hexdigest())
+          except BaseException:
+              if attempted:
+                  try:
+                      if read(ftp, dest) != old:
+                          ftp.storbinary('STOR ' + stage, io.BytesIO(old))
+                          ftp.rename(stage, dest)
+                      assert read(ftp, dest) == old
+                      print('ROLLBACK_PASS')
+                  except Exception:
+                      print('::error::Rollback requires manual review')
+              raise
+          finally:
+              try:
+                  ftp.delete(stage)
+              except ftplib.error_perm:
+                  pass
+              ftp.close()
+          PY

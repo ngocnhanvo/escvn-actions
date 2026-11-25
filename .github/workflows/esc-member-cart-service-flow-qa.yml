@@ -172,7 +172,7 @@ jobs:
               const memberType=product.member_service_type||null;
               const slug=product.slug?.vi||product.slug;
               const prefix=product.slugP?.vi||product.slugP||'san-pham';
-              const path='/'+String(prefix).replace(/^\\/+|\\/+$/g,'')+'/'+String(slug).replace(/^\\/+|\\/+$/g,'');
+              const path='/'+[prefix,slug].map(v=>String(v).split('/').filter(Boolean).join('/')).join('/');
               const res=await page.goto(site+path,{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
               const wrapper=page.locator('#data-content-wrapper');
               const renderedId=await wrapper.getAttribute('data-member-product-id').catch(()=>null);

@@ -35,6 +35,27 @@ try {
    assert.ok(!summaryRows.some(r=>/\bBF2026\b/.test(r)),'Obsolete BF2026 coupon remains in summary');
    assert.ok(/Giảm giá\s+70%\s+cho\s+Hosting và Email/.test(hostRow.replace(/\u00a0/g,' ')),'Hosting/Email summary spaces merged');
    assert.ok(/Giảm giá\s+30%\s+cho\s+VPS/.test(vpsRow.replace(/\u00a0/g,' ')),'VPS summary spaces merged');
+   // Critical regression: the list is flex; formatted text must be one
+   // wrapper, rather than separate flex siblings for every bold phrase.
+   const textLayout=await card.locator('li.mceEditable').evaluateAll(items=>items.filter(li=>!li.closest('.esc-modal-content')).map(li=>({
+    children:li.children.length,
+    wrapper:li.querySelector(':scope > span.bf2026-offer-text')?.outerHTML||null,
+    style:li.querySelector(':scope > span.bf2026-offer-text')?{
+      textAlign:getComputedStyle(li.querySelector(':scope > span.bf2026-offer-text')).textAlign,
+      flex:getComputedStyle(li.querySelector(':scope > span.bf2026-offer-text')).flex,
+      wordSpacing:getComputedStyle(li.querySelector(':scope > span.bf2026-offer-text')).wordSpacing,
+    }:null,
+   })));
+   assert.equal(textLayout.length,6,'Black Friday list should have 6 rows');
+   for(const row of textLayout){
+    assert.equal(row.children,2,'Formatted text must not be split into many flex items');
+    assert.ok(row.wrapper?.includes('bf2026-offer-text'),'Grouped text wrapper is missing');
+    assert.equal(row.style?.textAlign,'left','Offer text must be left-aligned');
+   }
+   for(const row of textLayout.slice(0,2)){
+    assert.ok(!row.wrapper.includes('&nbsp;'),'Nonbreaking spaces must not prevent natural line wrapping');
+   }
+   console.log('BF_TEXT_SPACING_PASS',JSON.stringify({viewport,rows:textLayout.length,grouped:true}));
    const email=card.locator('li.mceEditable a[href="mailto:cskh@esc.vn"]');
    assert.equal(await email.count(),1,'Email must be a mailto link in the card');
    const layout=await page.evaluate(()=>{

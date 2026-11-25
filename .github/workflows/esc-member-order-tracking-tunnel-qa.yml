@@ -37,7 +37,7 @@ jobs:
           const keyForTest=makeKey(),second=makeKey();
           const order={code:'D26112501',state:0,state_text:'pending',total:450000};
           const json=(body)=>({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify(body)});
-          const wait=async(page,expression,timeout=7000)=>page.waitForFunction(expression,null,{timeout});
+          const wait=async(page,expression,arg=null,timeout=7000)=>page.waitForFunction(expression,arg,{timeout});
           // Real Member TEST status request from the tunnel, using a disposable service-only cart.
           let temporaryKey='';
           const live=await browser.newContext({locale:'vi-VN'});

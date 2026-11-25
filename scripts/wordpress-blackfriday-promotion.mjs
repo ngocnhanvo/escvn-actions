@@ -52,7 +52,8 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
      &&norm(modal.textContent).includes('bfh2026')&&norm(modal.textContent).includes('bfv2026')
      &&!norm(list.textContent).includes('mã km: bf2026')&&!norm(modal.textContent).includes('mã km: bf2026')){
     const rows=[...list.children].map(x=>norm(x.textContent.replace(/^\s*✓\s*/,'')));
-    if(rows[4].startsWith('email:')&&rows[5].startsWith('liên hệ: 1900 2069')&&!rows[5].includes(';')){
+    if(rows[4].startsWith('email:')&&rows[5].startsWith('liên hệ: 1900 2069')&&!rows[5].includes(';')
+       && [...list.children].every(li=>li.querySelector(':scope > span.bf2026-offer-text') && li.children.length===2)){
       return {changed:false,html:original};
     }
   }
@@ -60,8 +61,8 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   const bullet=[...list.children].find(el=>el.classList.contains('mceEditable')&&el.querySelector('span')&&el.style.fontSize);
   if(!bullet)throw Error('Cannot inherit existing promotion card typography');
   const desired=[
-    'Giảm giá&nbsp;<strong>70%</strong>&nbsp;cho&nbsp;<strong>Hosting và Email</strong> – mã&nbsp;<strong>BFH2026</strong>',
-    'Giảm giá&nbsp;<strong>30%</strong>&nbsp;cho&nbsp;<strong>VPS</strong> – mã&nbsp;<strong>BFV2026</strong>',
+    'Giảm giá <strong>70%</strong> cho <strong>Hosting và Email</strong> – mã <strong>BFH2026</strong>',
+    'Giảm giá <strong>30%</strong> cho <strong>VPS</strong> – mã <strong>BFV2026</strong>',
     'Áp dụng: từ ngày 25-29/11/2026',
     'Hỗ trợ 24/7',
     'Email: <a href="mailto:cskh@esc.vn" style="color:inherit;text-decoration:underline">cskh@esc.vn</a>',
@@ -72,12 +73,17 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
    const li=bullet.cloneNode(true);
    const tick=li.querySelector('span');
    if(!tick)throw Error('Missing Black Friday checkmark icon');
-   const content=document.createElement('span');content.innerHTML=html;
-   li.replaceChildren(tick,...content.childNodes);
+   // Group all formatted text as one flex item: direct <strong> children were
+   // being spread across the row by the inherited promotion-card flex styles.
+   const content=document.createElement('span');
+   content.className='bf2026-offer-text';
+   content.style.cssText='display:block;flex:1;min-width:0;text-align:left;white-space:normal;word-spacing:normal';
+   content.innerHTML=html;
+   li.replaceChildren(tick,content);
    bullets.appendChild(li);
   }
   const firstModalList=[...modal.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('giảm')&&norm(li.textContent).includes('hosting')));
-  if(!firstModalList||firstModalList.children.length!==3||!norm(firstModalList.textContent).includes('bf2026')&&!norm(firstModalList.textContent).includes('bfh2026'))throw Error('Expected original Black Friday popup offer list');
+  if(!firstModalList||![2,3].includes(firstModalList.children.length)||!norm(firstModalList.textContent).includes('bf2026')&&!norm(firstModalList.textContent).includes('bfh2026'))throw Error('Unexpected Black Friday popup offer list');
   const createModalLi=html=>{const li=document.createElement('li');li.innerHTML=html;return li};
   const modalItems=[
    createModalLi('Giảm giá&nbsp;<strong>70%</strong>&nbsp;cho&nbsp;<strong>Hosting và Email</strong> – mã&nbsp;<strong>BFH2026</strong>'),
@@ -86,7 +92,8 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   const unchangedSummary=list.textContent;
   const unchangedModal=firstModalList.textContent;
   list.replaceChildren(bullets);
-  firstModalList.replaceChildren(...modalItems);
+  if(firstModalList.children.length===3)firstModalList.replaceChildren(...modalItems);
+  else if(!norm(firstModalList.textContent).includes('bfh2026')||!norm(firstModalList.textContent).includes('bfv2026'))throw Error('Existing two-code popup content differs');
   if(norm(existing.textContent).includes('mã km: bf2026'))throw Error('Single-code Black Friday promotion was not removed');
   if(!existing.textContent.includes('BFH2026')||!existing.textContent.includes('BFV2026'))throw Error('Black Friday separate coupon codes missing');
   if(list.children.length!==6||list.children[4].textContent.indexOf('Email:')<0||list.children[5].textContent.indexOf('Liên hệ:')<0)throw Error('Email/contact ordering incorrect');

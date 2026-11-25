@@ -1,49 +1,37 @@
 # ESC.VN — Latest ChatGPT response
 
 - Date: 2026-11-25 (Asia/Ho_Chi_Minh)
-- Project: ESC.VN Member order tracking after cart ordered
-- Astro source repository: ngocnhanvo/escvn-astro
+- Task: Fix checkout navigation on Astro DEV when a Member cart has already been converted to an unpaid order
+- Astro repo: ngocnhanvo/escvn-astro
 - Branch: github
-- Astro HEAD: a804ce46c0c068f2d4709e5f43463be95e983932
-- Astro master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
-- Browser QA (TEST only): https://github.com/ngocnhanvo/escvn-actions/actions/runs/45571823829
-- Status: DONE — ordered-cart tracking DEV browser QA; pending actual real-order D26112501 token verification (not necessary for isolated mock QA).
+- Astro HEAD: 678131114ba2286016259c8c39576b617f6a5b53
+- Astro master unchanged: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676
+- CI: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45573845227 — SUCCESS, 23/23 tests, Astro DEV build PASS, no deploy.
+- State: PARTIAL — source and CI complete, owner must pull/build local tunnel to verify actual click/navigation.
 
-## User-facing response
+## User-reported bug and expected behavior
 
-### Kết quả kiểm thử bản mới: 19/19 PASS
+Screenshot: /gio-hang on https://esc-test.webnvn.com displays tracking of pending order D26112502 for VND 72,000 and an empty buying cart, but 'Tiến hành thanh toán' pointed to Member domain finder instead of Member cart.php?c= the order's 64-hex key. Do not expose that token in logs or user-facing response. The key was supplied directly by user and must not be hardcoded.
 
-Mình đã kiểm thử trực tiếp https://esc-test.webnvn.com, bao gồm API Member TEST thật và luồng trạng thái đơn được mô phỏng an toàn.
+## Fix on Astro DEV github only
 
-| Nội dung kiểm thử | Kết quả |
-|---|---|
-| Website DEV và giao diện trạng thái đơn | PASS |
-| Request status.php thật từ trình duyệt Astro | PASS — HTTP 200 |
-| Member cho phép origin https://esc-test.webnvn.com | PASS |
-| Giỏ ordered về 0, vẫn giữ mã theo dõi | PASS — mock |
-| Hiển thị đơn D26112501 là pending, không phải đã thanh toán | PASS — mock |
-| Tải lại trang vẫn tiếp tục polling | PASS — mock |
-| Chuyển unpaid → paid → fulfilled | PASS — mock |
-| Ngừng polling khi fulfilled hoặc cancelled | PASS — mock |
-| Không polling khi tab ẩn | PASS |
-| Lỗi mạng vẫn giữ mã theo dõi | PASS |
-| Hiển thị trạng thái đơn tại /gio-hang | PASS |
-| Xóa sạch giỏ thử và kiểm tra lại | PASS |
+Commit https://github.com/ngocnhanvo/escvn-astro/commit/678131114ba2286016259c8c39576b617f6a5b53
 
-Workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45571823829 — SUCCESS, 19/19 Playwright checks passed.
+1. src/lib/memberCart/client.ts adds memberCheckoutTarget(hasItemsInBuyingCart) to select the buying cart (if it contains items), otherwise newest non-provisional pending/unpaid tracking order from esc_member_order_tracking_test, otherwise Member domain selection. It does not treat paid/fulfilled/cancelled as awaiting payment.
+2. src/astro/components/MemberCartPanel.astro updates checkout button href and label dynamically based on Member cart data and persisted tracking. It also adds an individual 'Tiếp tục thanh toán' Member cart.php?c= link for EACH pending/unpaid order. Defaults hidden until evaluated; no token hardcoded.
+3. src/lib/memberCart/client.test.ts adds four regression tests: correct order fallback when current buying cart cleared; new cart priority; paid/fulfilled/cancelled not payable; per-order independent destinations.
 
-### Bằng chứng request từ website DEV
+## Evidence and status
 
-- Page/frame: https://esc-test.webnvn.com/
-- Request: GET https://id.esc.vn/api/cart/status.php?c=<redacted>
-- Response HTTP 200
-- Response Access-Control-Allow-Origin: https://esc-test.webnvn.com
-- Member TEST service cart created temporarily, status open verified via API, then remove.php and view.php readback confirmed no lines remain.
-
-**Giới hạn kiểm thử:** Đơn D26112501 và các trạng thái pending/unpaid/paid/fulfilled/cancelled được kiểm thử bằng mock trong trình duyệt; không thể xác minh đơn thật nếu không có mã giỏ 64-hex riêng cho đơn đó. Không tạo đơn, không ghi trạng thái thanh toán giả, không chuyển tiền, không trừ ví hay đăng ký tên miền thật. The two earlier workflow attempts were cancelled and failed due QA-script assertion issues; latest run #45571823829 is the successful corrected run. Astro application source was not changed during this retest.
-
-Không sửa nhánh master, không deploy production. Checkpoint saved in escvn-actions.
+- CI #45573845227 SUCCESS, 2 test files, 23 tests PASS, full Astro DEV build completed 2026-11-25T08:13:45Z. The current Cloudflare Tunnel serves the owner's previous local build; browser click cannot be verified against new source until owner pulls build-cache and restarts Node/Astro.
+- Owner next:
+  git checkout github
+  git pull origin github
+  pnpm run build-cache
+  Restart local Astro Node server serving https://esc-test.webnvn.com
+- Once updated, run Playwright browser QA on https://esc-test.webnvn.com/gio-hang with seeded pending tracking and mocked Member status/count (no order/payment writes), confirm button href equals id.esc.vn/cart.php?c=<tracked key> and link for each pending order; test cart-priority scenario.
+- No changes to Astro master, WP/PHP master or Member backend. No deploy and no production transactions.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass
-Trạng thái: DONE — hoàn tất
+Trạng thái: PARTIAL — chưa hoàn tất

@@ -1,0 +1,67 @@
+name: ESC Member Cart DEV Tunnel QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/esc-member-cart-tunnel-qa.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-tunnel-qa
+  cancel-in-progress: true
+jobs:
+  tunnel-qa:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 8
+    steps:
+      - name: Install Playwright driver only
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Test public Cloudflare Tunnel and Member CORS read-only
+        env:
+          SITE: https://esc-test.webnvn.com
+        run: |
+          cat > /tmp/member-tunnel-qa.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          const site=process.env.SITE;
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1440,height:900},locale:'vi-VN',ignoreHTTPSErrors:false});
+          let failures=[];
+          try{
+            const jsErrors=[];
+            page.on('pageerror',e=>jsErrors.push(String(e.message).slice(0,240)));
+            const response=await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
+            console.log('TUNNEL_HOME',JSON.stringify({status:response?.status(),url:page.url(),title:await page.title()}));
+            if(!response||response.status()>=400)failures.push('TUNNEL_HOME_HTTP');
+            let links=await page.locator('a[href]').evaluateAll(els=>els.map(el=>({text:(el.textContent||'').trim().slice(0,65),href:el.getAttribute('href')})).filter(x=>/domain|tên miền|giỏ hàng|cart|check/i.test(x.href+' '+x.text)).slice(0,18));
+            console.log('DISCOVERED_LINKS',JSON.stringify(links));
+            const domainLink=links.find(x=>/checkdomain|check-domain/i.test(x.href||''))?.href || '/check-domain';
+            let target=new URL(domainLink,site);
+            if(target.origin!==new URL(site).origin)target=new URL('/check-domain',site);
+            const domain=await page.goto(target.href,{waitUntil:'domcontentloaded',timeout:25000});
+            console.log('DOMAIN_PAGE',JSON.stringify({status:domain?.status(),url:page.url(),title:await page.title(),form:await page.locator('#domain-search-form').count(),actionButtons:await page.locator('.btn-domain-action').count()}));
+            if(!domain||domain.status()>=400||!await page.locator('#domain-search-form').count())failures.push('DOMAIN_PAGE_UNAVAILABLE');
+            // Call the domain-check endpoint from the browser so it sends the real tunnel Origin.
+            const result=await page.evaluate(async()=>{
+              try{
+                const response=await fetch('https://id.esc.vn/api/cart/check.php?d=esc.vn&years=1',{credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(16000)});
+                const data=await response.json().catch(()=>({}));
+                return {network:'ok',status:response.status,ok:data.ok??null,error:data.error??null,available:data.available??null,allowOrigin:response.headers.get('access-control-allow-origin')};
+              }catch(e){return {network:'error',reason:String(e.message||e).slice(0,180)}}
+            });
+            console.log('MEMBER_TEST_ORIGIN_CHECK',JSON.stringify(result));
+            if(result.network!=='ok'||result.status!==200||result.ok!==true)failures.push('MEMBER_TEST_CORS_OR_ORIGIN');
+            console.log('BROWSER_JS_ERRORS',JSON.stringify(jsErrors.slice(0,12)));
+            if(jsErrors.length)failures.push('BROWSER_JS_ERRORS');
+            console.log('TUNNEL_QA_SUMMARY',JSON.stringify({failures,checks:3,cartWrites:0,ordersCreated:0}));
+          }catch(e){
+            failures.push('BROWSER_NAVIGATION_ERROR');
+            console.log('TUNNEL_QA_EXCEPTION',String(e.message||e).slice(0,400));
+          }finally{
+            await browser.close();
+          }
+          if(failures.length)process.exitCode=1;
+          JS
+          node /tmp/member-tunnel-qa.mjs

@@ -3,3 +3,4 @@ code_hosting=BFH2026
 code_vps=BFV2026
 replace=BF2026
 banner=/wp-content/uploads/2026/11/ESC_BlackFriday_Web_1350x400.webp
+retry=20261125-list-scope

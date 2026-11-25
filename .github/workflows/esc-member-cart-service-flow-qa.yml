@@ -32,7 +32,7 @@ jobs:
           const browser=await chromium.launch({headless:true});
           const page=await browser.newPage({viewport:{width:1280,height:900},locale:'vi-VN'});
           const results=[], errors=[], created=[], ids={
-            hosting:113400,ssl:100700,email:601000,server:112450,saas:131600
+            hosting:113400,ssl:100700,email:132600,server:112450,saas:132200
           };
           const report=(name,passed,detail={})=>results.push({name,status:passed?'PASS':'FAIL',detail});
           let c='',domain='',didWrite=false;
@@ -65,7 +65,8 @@ jobs:
             const res=await page.goto(site+'/check-domain',{waitUntil:'domcontentloaded',timeout:25000});
             report('SITE_READY',res?.status()===200);
             if(res?.status()!==200)throw Error('SITE_UNAVAILABLE');
-            // IDs are grounded in the public Member TEST catalog and public Astro product mappings.
+            // IDs are grounded in both the public Member TEST registration catalog and public Astro product mappings.
+            // Previously tested email 601000 and SaaS 131600 were rejected 422 by Member TEST.
             // Do not create orders or use production checkout.
             for(const [type,id] of Object.entries(ids)){
               const result=await add({type,product_id:String(id)});

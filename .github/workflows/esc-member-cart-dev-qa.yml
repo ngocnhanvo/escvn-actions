@@ -1,0 +1,69 @@
+name: ESC Member Cart Astro DEV QA (NO DEPLOY)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/esc-member-cart-dev-qa.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-dev-qa
+  cancel-in-progress: true
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_SHA: 4c44d75778dc6a4baefb6eae7be19884535d0d25
+      PUBLIC_MEMBER_CART_ENABLED: 'true'
+      PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ngocnhanvo/escvn-astro
+          ref: github
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          persist-credentials: false
+          path: source
+      - name: Verify exactly the reviewed development commit
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git -C source symbolic-ref --short HEAD)" = github
+          echo "SOURCE_SHA=$EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "ENV=Member TEST; no FTP, no production deploy" >> "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+      - name: Configure read-only WordPress data for build
+        working-directory: source
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          test -n "$ENV_FILE"
+          printf '%s\n' "$ENV_FILE" > .env
+          echo 'PUBLIC_MEMBER_CART_ENABLED=true' >> .env
+          echo 'PUBLIC_MEMBER_CART_BASE=https://id.esc.vn' >> .env
+      - name: Test Member cart API contract with mocked browser fetch
+        working-directory: source
+        run: pnpm exec vitest run src/lib/memberCart/client.test.ts
+      - name: Build Astro DEV with Member TEST mode enabled
+        working-directory: source
+        run: pnpm run build-git
+      - name: Check built feature references and source boundary
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Rq 'id.esc.vn' dist/client/assets/
+          grep -Rq 'member-cart-panel' dist/client/ || grep -Rq 'member-cart-panel' dist/server/
+          test ! -e .git/refs/heads/master
+          echo 'MEMBER_TEST_BUILD_PASS; no FTP upload or CMS order created' >> "$GITHUB_STEP_SUMMARY"

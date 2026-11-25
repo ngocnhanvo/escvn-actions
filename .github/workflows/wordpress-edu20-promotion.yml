@@ -21,7 +21,8 @@ jobs:
       - name: Validate request
         run: |
           grep -Fqx 'slug=khuyen-mai' requests/wordpress-blackfriday-promotion.txt
-          grep -Fqx 'code=BF2026' requests/wordpress-blackfriday-promotion.txt
+          grep -Fqx 'code_hosting=BFH2026' requests/wordpress-blackfriday-promotion.txt
+          grep -Fqx 'code_vps=BFV2026' requests/wordpress-blackfriday-promotion.txt
       - name: Install Playwright
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
       - name: Check publisher and production tracking script syntax
@@ -57,10 +58,10 @@ jobs:
             const page=await browser.newPage();
             await page.goto('https://esc.vn/khuyen-mai',{waitUntil:'domcontentloaded',timeout:60000});
             const html=await page.content();
-            for(const s of ['BLACK FRIDAY – SĂN DEAL VÀNG GIÁ KỊCH SÀN','BF2026','Hosting và Email','25-29/11/2026','eCloud1']) assert.ok(html.includes(s),'Missing '+s);
+            for(const s of ['BLACK FRIDAY – SĂN DEAL VÀNG GIÁ KỊCH SÀN','BFH2026','BFV2026','Hosting và Email','25-29/11/2026','eCloud1']) assert.ok(html.includes(s),'Missing '+s);
             const heading=page.getByRole('heading',{name:'BLACK FRIDAY – SĂN DEAL VÀNG GIÁ KỊCH SÀN',exact:true});
             assert.ok(await heading.count(),'Promotion heading missing');
-            console.log('BF2026_LIVE_PASS');
+            console.log('BF_SPLIT_LIVE_PASS');
           } finally {await browser.close();}
           NODE
       - name: Record result for independent verification
@@ -74,7 +75,7 @@ jobs:
           mkdir -p checks
           {
             echo 'scope=wordpress:khuyen-mai'
-            echo 'promotion=BF2026'
+            echo 'promotion=BFH2026,BFV2026'
             echo "result=${JOB_RESULT}"
             echo "run_id=${GITHUB_RUN_ID}"
             echo "deploy_run_id=${DEPLOY_RUN_ID}"

@@ -20,9 +20,21 @@ try {
    const cta=card.getByRole('link',{name:'Đăng ký ngay'}).first();
    assert.equal(new URL(await cta.getAttribute('href'),'https://esc.vn').pathname,'/dang-ky-ten-mien','Registration CTA changed');
    const summary=await card.innerText();
-   for(const fragment of ['70%','Hosting và Email','30%','VPS','BF2026','25-29/11/2026','Hỗ trợ 24/7','1900 2069','cskh@esc.vn']){
+   for(const fragment of ['70%','Hosting và Email','30%','VPS','BFH2026','BFV2026','25-29/11/2026','Hỗ trợ 24/7','1900 2069','cskh@esc.vn']){
     assert.ok(summary.includes(fragment),'Summary missing '+fragment);
    }
+   const summaryRows=await card.locator('li.mceEditable').evaluateAll(items=>items.filter(li=>li.closest('.bf2026-promotion-description')===null).map(li=>li.innerText.trim().replace(/^✓\s*/,'')));
+   const findRow=prefix=>summaryRows.findIndex(r=>r.startsWith(prefix));
+   assert.ok(findRow('Email:')>=0,'Summary email is not a separate row');
+   assert.ok(findRow('Liên hệ:')===findRow('Email:')+1,'Email must be immediately before contact phone');
+   assert.ok(summaryRows.find(r=>r.startsWith('Liên hệ:'))==='Liên hệ: 1900 2069','Contact phone must not end with semicolon');
+   const hostRow=summaryRows.find(r=>r.includes('BFH2026'))||'';
+   const vpsRow=summaryRows.find(r=>r.includes('BFV2026'))||'';
+   assert.ok(hostRow.includes('70%')&&hostRow.includes('Hosting và Email'),'Hosting/Email coupon and discount mismatch');
+   assert.ok(vpsRow.includes('30%')&&vpsRow.includes('VPS'),'VPS coupon and discount mismatch');
+   assert.ok(!summaryRows.some(r=>/\bBF2026\b/.test(r)),'Obsolete BF2026 coupon remains in summary');
+   assert.ok(/Giảm giá\s+70%\s+cho\s+Hosting và Email/.test(hostRow.replace(/\u00a0/g,' ')),'Hosting/Email summary spaces merged');
+   assert.ok(/Giảm giá\s+30%\s+cho\s+VPS/.test(vpsRow.replace(/\u00a0/g,' ')),'VPS summary spaces merged');
    const email=card.locator('li.mceEditable a[href="mailto:cskh@esc.vn"]');
    assert.equal(await email.count(),1,'Email must be a mailto link in the card');
    const layout=await page.evaluate(()=>{
@@ -39,7 +51,7 @@ try {
      if(Math.min(a.right,b.right)-Math.max(a.left,b.left)>4 &&
         Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>4)overlap.push([i,j]);
     }));
-    const promoLi=[...card?.querySelectorAll('li.mceEditable')||[]].find(el=>el.textContent.includes('BF2026'));
+    const promoLi=[...card?.querySelectorAll('li.mceEditable')||[]].find(el=>el.textContent.includes('BFH2026'));
     const oldLi=[...other?.querySelectorAll('li.mceEditable')||[]].find(el=>el.style.fontSize&&el.querySelector('span'));
     const style=el=>el?{font:getComputedStyle(el).fontFamily,size:getComputedStyle(el).fontSize,color:getComputedStyle(el).color,line:getComputedStyle(el).lineHeight}:null;
     const foot=document.querySelector('footer');
@@ -78,12 +90,14 @@ try {
    const details=await card.innerText();
    for(const fragment of [
     'Kính gửi Quý khách hàng','BLACK FRIDAY - SĂN DEAL VÀNG GIÁ KỊCH SÀN','70%',
-    'Hosting và Email','30%','VPS (*)','BF2026','Cách thức tham gia',
+    'Hosting và Email','30%','VPS (*)','BFH2026','BFV2026','Cách thức tham gia',
     'Truy cập website','Lựa chọn dịch vụ mình cần đăng ký','Tiến hành đặt hàng và thanh toán',
     'ESC tiến hành cấp phát sau khi nhận được đơn hàng','Thời gian áp dụng',
     '25-29/11/2026','Thông tin liên hệ','1900 2069','cskh@esc.vn',
     'eCloud1 trở lên','Phòng Kinh doanh','Công ty TNHH Giải Pháp Trực Tuyến',
    ])assert.ok(details.includes(fragment),'Modal detail missing: '+fragment);
+   assert.ok(details.includes('BFH2026')&&details.includes('BFV2026'),'Popup missing coupon codes');
+   assert.ok(!/\bBF2026\b/.test(details),'Popup still advertises obsolete BF2026');
    const modal=card.locator('.esc-modal-content');
    assert.ok(await modal.isVisible(),'Black Friday modal did not open');
    const banner=modal.locator('img[alt="ESC Black Friday 2026 – Săn deal vàng giá kịch sàn"]');

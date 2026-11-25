@@ -39,7 +39,9 @@ jobs:
                 const typed=products.filter(x=>x&&typeof x==='object'&&!!x.member_service_type);
                 const shape=x=>({wpId:x._id||x.id,memberId:x.member_product_id||null,type:x.member_service_type||null,slug:typeof x.slug==='string'?x.slug:x.slug?.vi||null,title:typeof x.itemName==='string'?x.itemName:x.itemName?.vi||null});
                 const groups=Object.fromEntries(['hosting','email','ssl','server','saas'].map(type=>[type,{total:typed.filter(x=>x.member_service_type===type).length,mapped:typed.filter(x=>x.member_service_type===type&&Number(x.member_product_id)>0).length,samples:typed.filter(x=>x.member_service_type===type).slice(0,12).map(shape)}]));
-                return {http:r.status,shape:Array.isArray(val)?'array':Object.keys(val||{}).slice(0,12),count:products.length,mappedCount:products.filter(x=>x&&typeof x==='object'&&Number(x.member_product_id)>0).length,typedCount:typed.length,groups};
+                const exactIds=[132000,132600,130400,601000,132200,131600,500000,113400,100700,112450];
+                const exactMatches=products.filter(x=>exactIds.includes(Number(x.member_product_id))).map(shape);
+                return {http:r.status,shape:Array.isArray(val)?'array':Object.keys(val||{}).slice(0,12),count:products.length,mappedCount:products.filter(x=>x&&typeof x==='object'&&Number(x.member_product_id)>0).length,typedCount:typed.length,groups,exactMatches};
               }catch(e){return {error:String(e.message||e)}}
             });
             output.products=json;

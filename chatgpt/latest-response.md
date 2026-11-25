@@ -1,38 +1,28 @@
 # ESC.VN — Latest ChatGPT response
 
-- Time (Asia/Ho_Chi_Minh): 2026-11-19, 22:54
-- Project: ESC.VN — Reviewed Member product identifiers (high/medium confidence)
-- Repository: ngocnhanvo/escvn-actions
-- Branch: main
-- State: PARTIAL — 47/49 requested mappings updated, 2 license-ambiguous mappings deferred
-- Source: 2c4c2d3da37dbfedf8e6e9c2776be4be0675aae5
-- Import: SUCCESS #44558505148 (47 UPDATED, 0 UNCHANGED, 0 ERROR, 0 CONFLICT)
-- Independent WordPress audit: SUCCESS #44503486720 (attempt 8)
+- Date (Asia/Ho_Chi_Minh): 2026-11-25
+- Project: ESC.VN — Member Cart API integration
+- Astro repo: ngocnhanvo/escvn-astro
+- Astro branch: github
+- Astro HEAD: 4c44d75778dc6a4baefb6eae7be19884535d0d25
+- Production master untouched: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676
+- Actions repo: ngocnhanvo/escvn-actions@main
+- State: CODE_READY / CI_PASS; PUBLIC_TUNNEL_QA_PENDING
 
----
+## Changes
 
-## Kết quả cập nhật ACF Member Product IDs
+- Browser Member cart TEST API client at src/lib/memberCart/client.ts: add.php, check.php, count.php, view.php, remove.php, status.php. LocalStorage opaque 64-hex cart key isolated for TEST; no price supplied by client.
+- Config src/lib/memberCart/config.ts, Member ID mapping from WordPress ACF, categories to Member service types. Feature enabled automatically in Astro DEV, or explicitly PUBLIC_MEMBER_CART_ENABLED=true in local built DEV; default target https://id.esc.vn.
+- Domain search uses Member check API prices/status; product detail uses Member service ID; header cart badge/status and navigation to Member; cart SSR renders MemberCartPanel with line items/addons, remove, total, promotion preview and checkout URL.
+- Member client contract tests 6/6 PASS; no actual test orders or member production requests.
+- Existing Astro development verification #45553746114 SUCCESS (on source 0e96c13, preceding panel/tests).
+- Targeted Member TEST QA #45554572661 SUCCESS (exact source 4c44d757, 6 unit tests, production-mode Astro DEV build with Member TEST enabled, artifact guards).
+- Earlier run #45554034203 failed only from incorrect artifact path, not build or tests; workflow corrected.
 
-- Đã rà soát 49 ứng viên từ Excel đánh giá 202 mã Member thiếu ánh xạ: 36 CAO, 13 TRUNG BÌNH.
-- Đã nhập **47** bản ghi WooCommerce công khai của ESC.VN (36 CAO + 11 TRUNG BÌNH). `acf.tld` được điền nguyên `product_name`/Mã SP Member trong `products (3).csv`; `acf.member_product_id` lấy `product_id` của CSV.
-- Từng record: xác thực mã Member và ID, đúng tên sản phẩm WordPress, từ chối giá trị ACF cũ xung đột/trùng chủ; chỉ điền trường đang trống, đọc lại cả hai ACF sau khi ghi.
-- Workflow #44558505148: 47 UPDATED, 0 UNCHANGED, 0 ERROR, 0 CONFLICT, temporary_created=0.
-- Independent audit attempt 8 (đọc trực tiếp WordPress): 47/47 mã vừa gán là `EXACT_KEY`, đúng WP ID và Member ID. Tổng toàn CSV 596 dòng: **441 EXACT_KEY**, **155 UNMATCHED**, 0 AMBIGUOUS, 554 sản phẩm WordPress đang xuất bản.
-- Hai mã TRUNG BÌNH chưa gán vì chưa xác minh được đúng license/SKU:
-  - `GlobalSignSANsSSL` (Member Product ID 103100): WordPress có gói 1 domain (ID 770) và 1 sub domain (ID 771).
-  - `GlobalSignWildcardSSL` (Member Product ID 102400): WordPress có hai sản phẩm GlobalSign Wildcard DV riêng (ID 947, ID 1369), một gói OV (ID 769 đã thuộc Member ID khác).
-- Các mã trung bình đã chọn gồm Plesk Server 10/30/Unlimited, WPStandard khác WPsStandard, SSL DV/EV, SPAC, v.v. Những gói này đã ghi theo suy luận được chủ dự án cho phép; cần rà soát SKU/license Member nếu có thông tin mới.
-- Không tạo/xóa Product/Variation, không sửa frontend Astro hoặc backend PHP, không kích hoạt Astro production build.
+## Next user-dependent step
 
-Evidence:
-- [Import PASS #44558505148](https://github.com/ngocnhanvo/escvn-actions/actions/runs/44558505148)
-- [Independent audit attempt 8](https://github.com/ngocnhanvo/escvn-actions/actions/runs/44503486720)
-- [Source-commit request PASS #44558477322](https://github.com/ngocnhanvo/source-commit-actions/actions/runs/44558477322)
-
-## Phản hồi dự định gửi
-
-Đã cập nhật **47/49** mã độ tin cậy cao/trung bình vào WordPress ESC.VN. Mã định danh lấy đúng `product_name`/Mã SP Member, còn `member_product_id` lấy `product_id` từ CSV. Workflow và kiểm toán độc lập đều PASS: 47 cập nhật, 0 lỗi/xung đột; tổng CSV đã khớp **441/596**, còn **155** chưa khớp. Hai trường hợp `GlobalSignSANsSSL` và `GlobalSignWildcardSSL` cần xác minh gói cấp phép nên không tự điền. Bảng Excel được tạo trong chat để tra cứu 49 dòng.
+User needs to pull escvn-astro github locally and make the Cloudflare Tunnel site publicly reachable. Verify Member TEST sat_sites allows the exact tunnel origin, e.g. https://esc-test.webnvn.com. Run Playwright live after tunnel public: domain available/unavailable, prices, adding/updating domain, mixed addons/only-addon cart, badge, status, preview promo, redirect, errors/429, without creating actual orders. Code may require fixes based on tunnel QA. Do not modify master or deploy production without explicit owner approval.
 
 Chế độ code: auto-build
-Cổng ghi source: source-commit-actions
+Cổng ghi source: bypass
 Trạng thái: PARTIAL — chưa hoàn tất

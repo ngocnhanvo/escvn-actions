@@ -189,6 +189,7 @@ jobs:
               if(body?.ok&&/^[a-f0-9]{64}$/i.test(body.cart)){key=body.cart;added.push(type);}
               record('ASTRO_UI_ADD_'+type,responseResult.status()===200&&body?.ok===true,
                 {status:responseResult.status(),error:body?.error||null});
+              await page.waitForFunction(()=>/[0-9]/.test(document.querySelector('#member-service-price')?.textContent||''),null,{timeout:10000}).catch(()=>{});
               const marker=await page.locator('#member-service-price').innerText().catch(()=>'');
               record('MEMBER_PRICE_AFTER_ADD_'+type,body?.ok===true&&/[0-9]/.test(marker),{length:marker.length});
             }

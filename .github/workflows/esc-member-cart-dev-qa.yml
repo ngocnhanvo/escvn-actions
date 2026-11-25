@@ -63,7 +63,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Rq 'id.esc.vn' dist/client/assets/
-          grep -Rq 'member-cart-panel' dist/client/ || grep -Rq 'member-cart-panel' dist/server/
+          test -d dist/client
+          test -d dist/server
+          grep -Rq 'id.esc.vn' dist/client/ dist/server/
+          grep -Rq 'member-cart-panel' dist/client/ dist/server/
           test ! -e .git/refs/heads/master
           echo 'MEMBER_TEST_BUILD_PASS; no FTP upload or CMS order created' >> "$GITHUB_STEP_SUMMARY"

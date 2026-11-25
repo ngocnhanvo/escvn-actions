@@ -143,3 +143,80 @@ jobs:
           if(results.some(x=>x.status==='FAIL')||errors.length)process.exitCode=1;
           JS
           node /tmp/esc-service-qa.mjs
+      - name: Verify Astro product detail add-to-cart for mapped Member services
+        env:
+          SITE: https://esc-test.webnvn.com
+        run: |
+          cat >/tmp/esc-service-ui.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          const site=process.env.SITE;
+          if(site!=='https://esc-test.webnvn.com')throw Error('TEST_ONLY_GUARD');
+          const browser=await chromium.launch({headless:true});
+          const ctx=await browser.newContext({locale:'vi-VN'});
+          const page=await ctx.newPage();
+          const mapping={hosting:113400,email:132600,ssl:100700,server:112450,saas:500000};
+          const report=[],errors=[],added=[];
+          let key='';
+          const record=(name,ok,detail={})=>report.push({name,status:ok?'PASS':'FAIL',detail});
+          try{
+            const init=await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
+            if(init?.status()!==200)throw Error('SITE_NOT_READY');
+            const data=await page.evaluate(async()=>{
+              const r=await fetch('/data/cms-products.json',{cache:'no-store'});
+              return r.json();
+            });
+            if(!Array.isArray(data))throw Error('PUBLIC_PRODUCT_DATA_NOT_ARRAY');
+            for (const [type,id] of Object.entries(mapping)){
+              const product=data.find(x=>Number(x.member_product_id)===id);
+              if(!product){record('PRODUCT_MAPPING_'+type,false,{id,error:'NO_ASTRO_PRODUCT'});continue;}
+              const memberType=product.member_service_type||null;
+              const slug=product.slug?.vi||product.slug;
+              const prefix=product.slugP?.vi||product.slugP||'san-pham';
+              const path='/'+String(prefix).replace(/^\\/+|\\/+$/g,'')+'/'+String(slug).replace(/^\\/+|\\/+$/g,'');
+              const res=await page.goto(site+path,{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
+              const wrapper=page.locator('#data-content-wrapper');
+              const renderedId=await wrapper.getAttribute('data-member-product-id').catch(()=>null);
+              const renderedType=await wrapper.getAttribute('data-member-service-type').catch(()=>null);
+              const valid=!!res&&res.status()===200&&Number(renderedId)===id&&renderedType===type;
+              record('PRODUCT_PAGE_MAPPING_'+type,valid,{status:res?.status()||0,path,memberId:renderedId,memberType:renderedType});
+              if(!valid)continue;
+              const btn=page.locator('#main-action-btn');
+              if(!await btn.count()) {record('PRODUCT_BUTTON_'+type,false);continue;}
+              const response=page.waitForResponse(r=>r.url().includes('id.esc.vn/api/cart/add.php')&&r.request().method()==='POST',{timeout:20000});
+              await btn.click();
+              const responseResult=await response;
+              const body=await responseResult.json().catch(()=>null);
+              if(body?.ok&&/^[a-f0-9]{64}$/i.test(body.cart)){key=body.cart;added.push(type);}
+              record('ASTRO_UI_ADD_'+type,responseResult.status()===200&&body?.ok===true,
+                {status:responseResult.status(),error:body?.error||null});
+              const marker=await page.locator('#member-service-price').innerText().catch(()=>'');
+              record('MEMBER_PRICE_AFTER_ADD_'+type,body?.ok===true&&/[0-9]/.test(marker),{length:marker.length});
+            }
+          }catch(e){errors.push(String(e?.message||e).slice(0,200));}
+          finally{
+            try{
+              if(key){
+                await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
+                const cleaned=[];
+                for(const type of added.reverse()){
+                  const r=await page.evaluate(async({type,key})=>{
+                    const response=await fetch('https://id.esc.vn/api/cart/remove.php',{method:'POST',body:new URLSearchParams({c:key,type}),credentials:'omit',cache:'no-store'});
+                    return {http:response.status,json:await response.json().catch(()=>null)}
+                  },{type,key});
+                  cleaned.push({type,http:r.http,ok:r.json?.ok===true});
+                }
+                const final=await page.evaluate(async key=>{
+                  const r=await fetch('https://id.esc.vn/api/cart/view.php?c='+encodeURIComponent(key),{credentials:'omit',cache:'no-store'});
+                  return {http:r.status,json:await r.json().catch(()=>null)}
+                },key);
+                record('UI_CART_CLEANUP',cleaned.every(x=>x.http===200&&x.ok===true)&&final.http===200&&(final.json?.addons||[]).length===0,
+                  {remaining:(final.json?.addons||[]).length,cleaned});
+              }
+            }catch(e){errors.push('CLEANUP_FAILED '+String(e?.message||e).slice(0,160))}
+            await browser.close();
+          }
+          console.log('UI_SERVICE_RESULTS',JSON.stringify(report));
+          console.log('UI_SERVICE_SUMMARY',JSON.stringify({passed:report.filter(x=>x.status==='PASS').length,total:report.length,failures:report.filter(x=>x.status==='FAIL').map(x=>x.name),errors,ordersCreated:0}));
+          if(report.some(x=>x.status==='FAIL')||errors.length)process.exitCode=1;
+          JS
+          node /tmp/esc-service-ui.mjs

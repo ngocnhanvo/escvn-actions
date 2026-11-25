@@ -1,0 +1,83 @@
+name: Verify ESC Vietnam domain VAT in live cart
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/wordpress-vn-domain-tax-qa.yml']
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify mixed isolated cart tax and cleanup
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          python3 -u - <<'PY'
+          import os,json,urllib.request,urllib.parse,base64,decimal
+          cfg={}
+          for line in os.environ['ENV_FILE'].splitlines():
+              k,sep,v=line.partition('=')
+              if sep: cfg[k.strip()]=v.strip().strip(chr(34)+chr(39))
+          origin=cfg['WC_URL'].rstrip('/')
+          assert origin=='https://admin.esc.vn'
+          auth='Basic '+base64.b64encode((cfg['WOO_KEY']+':'+cfg['WOO_SECRET']).encode()).decode()
+          D=decimal.Decimal
+          def req(path,params=None,body=None,admin=False,front=False):
+              url=('https://esc.vn' if front else origin)+path+('?' + urllib.parse.urlencode(params) if params else '')
+              headers={'Accept':'application/json','User-Agent':'ESC-Tax-QA/1.0'}
+              if admin: headers['Authorization']=auth
+              if body is not None: headers['Content-Type']='application/json'
+              r=urllib.request.Request(url,headers=headers,data=json.dumps(body).encode() if body is not None else None)
+              with urllib.request.urlopen(r,timeout=30) as f: return json.loads(f.read())
+          targets=[(51235,51237,'none'),(1331,46621,'none'),(1328,51793,'none'),(998,46610,'taxable')]
+          for parent,vid,expected in targets:
+              p=req('/wp-json/wc/v3/products/'+str(parent)+'/variations/'+str(vid),admin=True)
+              assert p['tax_status']==expected and p['tax_class']=='', 'Unexpected product tax status'
+              print('VARIATION',vid,p['price'],expected)
+          base='/wp-json/cocart/v2/cart'
+          key=None
+          def summarize(d):
+              assert isinstance(d,dict) and not d.get('code')
+              return {k:d.get('totals',{}).get(k) for k in ['subtotal','subtotal_tax','total_tax','discount_total','total']}
+          try:
+              for parent,vid,expected in targets:
+                  d=req(base+'/add-item',{'cart_key':key} if key else None,{'id':str(vid),'quantity':'1','item_data':{'_name':'ESC QA VAT '+str(vid)}})
+                  if not key: key=d.get('cart_key')
+                  assert key and d.get('cart_key')==key,'Isolated cart key mismatch'
+              d=req(base,{'cart_key':key})
+              items=d['items']
+              if isinstance(items,dict): items=list(items.values())
+              assert len(items)==4,'Unexpected number of cart items'
+              expected_tax={'51237':False,'46621':False,'51793':False,'46610':True}
+              checked=set()
+              for item in items:
+                  vid=str(item.get('id'))
+                  if vid not in expected_tax: vid=str(item.get('variation_id'))
+                  if vid not in expected_tax:
+                      name=str(item.get('name',''))
+                      data=item.get('cart_item_data') or {}
+                      marker=str(data.get('_name','')) if isinstance(data,dict) else ''
+                      for candidate in expected_tax:
+                          if marker.endswith(candidate) or name.endswith('QA VAT '+candidate): vid=candidate;break
+                  assert vid in expected_tax,'Unknown variation in isolated cart'
+                  totals=item['totals']
+                  tax=D(str(totals.get('tax',totals.get('total_tax',totals.get('subtotal_tax','0')))))
+                  print('ITEM_TAX',vid,str(tax))
+                  assert (tax>0)==expected_tax[vid],'Incorrect VAT for variation '+vid
+                  checked.add(vid)
+              assert len(checked)==4
+              print('CART_TOTALS',json.dumps(summarize(d)))
+              snap=req('/api/cart/snapshot',{'cart_key':key},front=True)
+              assert snap.get('ok') is True
+              assert summarize(snap['data'])==summarize(d),'Astro snapshot totals mismatch'
+              print('LIVE_CART_PASS vn_variations=3 international_variations=1 astro_snapshot=PASS')
+          finally:
+              if key:
+                  req(base+'/clear',{'cart_key':key},{})
+                  empty=req(base,{'cart_key':key})
+                  assert not empty.get('items'),'Temporary cart not empty'
+                  print('CART_CLEANUP_PASS')
+          PY

@@ -91,7 +91,11 @@ jobs:
             check('PROMO_PREVIEW',promo.http===200&&promo.json?.ok===true&&promo.json?.promo?.ok===false,'HTTP '+promo.http);
             const checkout=await context.newPage();
             const checkoutResponse=await checkout.goto(member+'/cart.php?c='+key,{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
+            await checkout.waitForLoadState('networkidle',{timeout:12000}).catch(()=>{});
             const checkoutText=await checkout.locator('body').innerText().catch(()=>'');
+            const checkoutFields=await checkout.locator('input[name],select[name]').evaluateAll(els=>els.slice(0,30).map(e=>({tag:e.tagName,name:e.getAttribute('name'),type:e.getAttribute('type')}))).catch(()=>[]);
+            const checkoutFrames=checkout.frames().map(f=>{try{return new URL(f.url()).pathname}catch{return ''}}).slice(0,8);
+            console.log('MEMBER_CHECKOUT_DIAGNOSTIC',JSON.stringify({status:checkoutResponse?.status()||0,urlPath:new URL(checkout.url()).pathname,title:await checkout.title(),textSample:checkoutText.slice(0,420),bodyLength:checkoutText.length,framePaths:checkoutFrames,fields:checkoutFields}));
             check('MEMBER_CHECKOUT_PAGE',!!checkoutResponse&&checkoutResponse.status()<400&&checkoutText.toLowerCase().includes(domain),'HTTP '+(checkoutResponse?.status()||0));
             await checkout.close();
           }catch(e){

@@ -3,3 +3,4 @@ campaign=BF2026
 replace=EDU20
 build_run=45535452621
 qa_retry=exact-card-popup
+verify_split_codes_after_deploy=45537688936

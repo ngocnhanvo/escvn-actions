@@ -48,6 +48,15 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   if(!modal?.textContent.includes('eCloud1'))throw Error('Black Friday popup structure differs');
   const list=[...existing.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('mã km: bf2026')||norm(li.textContent).includes('bfh2026')));
   if(!list||list.children.length!==6)throw Error('Expected exactly six Black Friday summary lines');
+  if(norm(list.textContent).includes('bfh2026')&&norm(list.textContent).includes('bfv2026')
+     &&norm(modal.textContent).includes('bfh2026')&&norm(modal.textContent).includes('bfv2026')
+     &&!norm(list.textContent).includes('mã km: bf2026')&&!norm(modal.textContent).includes('mã km: bf2026')){
+    const rows=[...list.children].map(x=>norm(x.textContent));
+    if(rows[4].startsWith('email:')&&rows[5].startsWith('liên hệ: 1900 2069')&&!rows[5].includes(';')){
+      return {changed:false,html:original};
+    }
+  }
+
   const bullet=[...list.children].find(el=>el.classList.contains('mceEditable')&&el.querySelector('span')&&el.style.fontSize);
   if(!bullet)throw Error('Cannot inherit existing promotion card typography');
   const desired=[

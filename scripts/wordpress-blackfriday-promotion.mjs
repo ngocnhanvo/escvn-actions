@@ -45,8 +45,44 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   const existing=blackFriday[0].parentElement?.parentElement?.parentElement;
   const modal=existing?.querySelector('.esc-modal-content');
   const items=[...existing?.querySelectorAll('li.mceEditable')||[]].map(el=>norm(el.textContent));
-  if(!modal?.textContent.includes('eCloud1')||!modal?.textContent.includes('BF2026')||!items.some(x=>x.includes('bf2026')))throw Error('Black Friday card exists but details differ');
-  return {changed:false,html:original};
+  if(!modal?.textContent.includes('eCloud1'))throw Error('Black Friday popup structure differs');
+  const list=[...existing.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('mã km: bf2026')||norm(li.textContent).includes('bfh2026')));
+  if(!list||list.children.length!==6)throw Error('Expected exactly six Black Friday summary lines');
+  const bullet=[...list.children].find(el=>el.classList.contains('mceEditable')&&el.querySelector('span')&&el.style.fontSize);
+  if(!bullet)throw Error('Cannot inherit existing promotion card typography');
+  const desired=[
+    'Giảm giá&nbsp;<strong>70%</strong>&nbsp;cho&nbsp;<strong>Hosting và Email</strong> – mã&nbsp;<strong>BFH2026</strong>',
+    'Giảm giá&nbsp;<strong>30%</strong>&nbsp;cho&nbsp;<strong>VPS</strong> – mã&nbsp;<strong>BFV2026</strong>',
+    'Áp dụng: từ ngày 25-29/11/2026',
+    'Hỗ trợ 24/7',
+    'Email: <a href="mailto:cskh@esc.vn" style="color:inherit;text-decoration:underline">cskh@esc.vn</a>',
+    'Liên hệ: 1900 2069'
+  ];
+  const bullets=document.createDocumentFragment();
+  for(const html of desired){
+   const li=bullet.cloneNode(true);
+   const tick=li.querySelector('span');
+   if(!tick)throw Error('Missing Black Friday checkmark icon');
+   const content=document.createElement('span');content.innerHTML=html;
+   li.replaceChildren(tick,...content.childNodes);
+   bullets.appendChild(li);
+  }
+  const firstModalList=[...modal.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('giảm')&&norm(li.textContent).includes('hosting')));
+  if(!firstModalList||firstModalList.children.length!==3||!norm(firstModalList.textContent).includes('bf2026')&&!norm(firstModalList.textContent).includes('bfh2026'))throw Error('Expected original Black Friday popup offer list');
+  const createModalLi=html=>{const li=document.createElement('li');li.innerHTML=html;return li};
+  const modalItems=[
+   createModalLi('Giảm giá&nbsp;<strong>70%</strong>&nbsp;cho&nbsp;<strong>Hosting và Email</strong> – mã&nbsp;<strong>BFH2026</strong>'),
+   createModalLi('Giảm giá&nbsp;<strong>30%</strong>&nbsp;cho&nbsp;<strong>VPS (*)</strong> – mã&nbsp;<strong>BFV2026</strong>')
+  ];
+  const unchangedSummary=list.textContent;
+  const unchangedModal=firstModalList.textContent;
+  list.replaceChildren(bullets);
+  firstModalList.replaceChildren(...modalItems);
+  if(norm(existing.textContent).includes('mã km: bf2026'))throw Error('Single-code Black Friday promotion was not removed');
+  if(!existing.textContent.includes('BFH2026')||!existing.textContent.includes('BFV2026'))throw Error('Black Friday separate coupon codes missing');
+  if(list.children.length!==6||list.children[4].textContent.indexOf('Email:')<0||list.children[5].textContent.indexOf('Liên hệ:')<0)throw Error('Email/contact ordering incorrect');
+  const html=root.innerHTML;
+  return {changed:html!==original,html};
  }
  if(previous.length!==1||blackFriday.length!==0)throw Error('Expected exactly one EDU20 card to replace; refusing to change unrelated promotions');
  const heading=previous[0],header=heading.parentElement,inside=header?.parentElement,card=inside?.parentElement;
@@ -163,10 +199,11 @@ try{
   await page.goto(origin+'/wp-admin/post.php?post='+id+'&action=edit',{waitUntil:'domcontentloaded',timeout:60000});
  }
  const saved=await page.locator('textarea#content').inputValue();
- for(const fragment of [title,detailTitle,image,'BF2026','70%','30%','25-29/11/2026','eCloud1','cskh@esc.vn','DEAL HOT KHÔNG THỂ BỎ LỠ'])assert.ok(saved.includes(fragment),'Post-save fragment missing: '+fragment);
+ for(const fragment of [title,detailTitle,image,'BFH2026','BFV2026','70%','30%','25-29/11/2026','eCloud1','cskh@esc.vn','DEAL HOT KHÔNG THỂ BỎ LỠ'])assert.ok(saved.includes(fragment),'Post-save fragment missing: '+fragment);
  assert.ok(!saved.includes(previousTitle),'Former EDU20 card title remains');
+ assert.ok(!saved.includes('>BF2026<'),'Obsolete BF2026 coupon remains');
  const pageData=(await (await context.request.get(origin+'/wp-json/wp/v2/pages/'+id,{timeout:45000})).json());
  assert.equal(pageData.status,'publish','Promotion Page unexpectedly unpublished');
- assert.ok(pageData.content.rendered.includes('BF2026'),'WordPress REST readback did not contain Black Friday content');
+ assert.ok(pageData.content.rendered.includes('BFH2026')&&pageData.content.rendered.includes('BFV2026'),'WordPress REST readback missing split Black Friday coupons');
  console.log('BF2026_CMS_PASS',JSON.stringify({page_id:id,changed:Number(out.changed),skipped_unchanged:Number(!out.changed),temporary_created:0,cleanup_remaining:0}));
 }finally{await context.close();await browser.close();}

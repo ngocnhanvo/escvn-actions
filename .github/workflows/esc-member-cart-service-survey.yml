@@ -55,6 +55,16 @@ jobs:
             const member=await page.goto('https://id.esc.vn/domain/checkdomain_smart.php',{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
             output.memberPage={http:member?.status()||0,title:await page.title().catch(()=>''),path:new URL(page.url()).pathname};
             output.memberOffers=await page.locator('select option,input[name],a[href],button[data-product-id]').evaluateAll(els=>els.map(el=>({tag:el.tagName,name:el.getAttribute('name'),productId:el.getAttribute('data-product-id'),value:el.tagName==='OPTION'?el.getAttribute('value'):null,text:(el.textContent||'').trim().slice(0,70),href:el.tagName==='A'?el.getAttribute('href'):null})).filter(x=>/hosting|ssl|email|server|saas|product|vps|cloud|cart|dịch vụ/i.test((x.name||'')+' '+(x.text||'')+' '+(x.href||''))).slice(0,60)).catch(()=>[]);
+            output.memberRegistrationCatalog={};
+            for (const path of ['/domain/hostsearch.php','/domain/saassearch.php','/domain/serversearch.php']){
+              const r=await page.goto('https://id.esc.vn'+path,{waitUntil:'domcontentloaded',timeout:20000}).catch(()=>null);
+              output.memberRegistrationCatalog[path]={
+                http:r?.status()||0,
+                title:await page.title().catch(()=>''),
+                options:await page.locator('select option').evaluateAll(els=>els.filter(el=>(el.getAttribute('value')||'').length>0).slice(0,60).map(el=>({value:el.value,text:(el.textContent||'').trim().slice(0,90),select:el.closest('select')?.getAttribute('name')||''}))).catch(()=>[]),
+                inputNames:await page.locator('input[name]').evaluateAll(els=>els.slice(0,25).map(el=>({name:el.getAttribute('name'),value:el.getAttribute('value')}))).catch(()=>[])
+              };
+            }
             console.log('SERVICE_SURVEY',JSON.stringify(output));
           }catch(e){console.log('SURVEY_ERROR',String(e.message||e))}
           finally{await browser.close()}

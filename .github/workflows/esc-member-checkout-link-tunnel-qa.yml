@@ -1,0 +1,120 @@
+name: ESC Member Checkout Link Live DEV Browser QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/esc-member-checkout-link-tunnel-qa.yml
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-checkout-link-tunnel-qa
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 8
+    steps:
+      - name: Install matching Playwright driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Verify button destinations on Cloudflare Tunnel without any Member writes
+        run: |
+          cat > /tmp/member-checkout-link-qa.mjs <<'JS'
+          import { chromium } from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          import { randomBytes } from 'node:crypto';
+          const site='https://esc-test.webnvn.com',member='https://id.esc.vn';
+          const browser=await chromium.launch({headless:true});
+          const results=[],errors=[];
+          const newKey=()=>randomBytes(32).toString('hex');
+          const assert=(name,ok,detail={})=>results.push({name,result:ok?'PASS':'FAIL',detail});
+          const makeContext=async({orders=[],buyingKey='',addOn=false,click=false,scenario=''})=>{
+            const ctx=await browser.newContext({locale:'vi-VN',viewport:{width:1280,height:900}});
+            const page=await ctx.newPage();
+            const orderMap=new Map(orders.map(x=>[x.key,x]));
+            let apiCalls=0;
+            await page.addInitScript(({orders,buyingKey})=>{
+              try{
+                localStorage.removeItem('esc_member_cart_test');
+                localStorage.removeItem('esc_member_order_tracking_test');
+                if(buyingKey)localStorage.setItem('esc_member_cart_test',buyingKey);
+                if(orders.length)localStorage.setItem('esc_member_order_tracking_test',JSON.stringify(orders));
+              }catch{}
+            },{orders,buyingKey});
+            await page.route(/^https:\/\/id\.esc\.vn\/api\/cart\//,async route=>{
+              apiCalls++;
+              const uri=new URL(route.request().url()),basename=uri.pathname.split('/').at(-1);
+              let payload={ok:true};
+              if(basename==='status.php'){
+                const order=orderMap.get(uri.searchParams.get('c'));
+                payload={ok:true,cart_status:order?'ordered':'open',order:order?{code:order.code,state:0,state_text:order.stateText,total:72000}:null};
+              }else if(basename==='count.php')payload={ok:true,status:'open',count:0};
+              else if(basename==='view.php')payload={ok:true,status:'open',count:0,items:[],addons:addOn?[{type:'hosting',product_id:113400,name:'TEST HOSTING',total:72000}]:[],total:addOn?72000:0};
+              else payload={ok:false,error:'test_guard'};
+              await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify(payload)});
+            });
+            if(click){
+              await page.route(/^https:\/\/id\.esc\.vn\/cart\.php\?c=/,async route=>{
+                await route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>Member TEST navigation intercepted</title><p>Checkout URL verified without submitting an order.</p>'});
+              });
+            }
+            try{
+              const nav=await page.goto(site+'/gio-hang',{waitUntil:'domcontentloaded',timeout:30000});
+              assert(scenario+'_PAGE_OK',nav?.status()===200,{http:nav?.status()||0});
+              await page.locator('#member-cart-checkout').waitFor({state:'visible',timeout:18000});
+              if(addOn)await page.locator('#member-cart-content').waitFor({state:'visible',timeout:18000});
+              // Allow Member view.php to settle: an empty cart may have a pending-order CTA.
+              else await page.locator('#member-cart-state').waitFor({state:'visible',timeout:18000});
+              await page.waitForTimeout(300);
+              const href=await page.locator('#member-cart-checkout').getAttribute('href');
+              const label=(await page.locator('#member-cart-checkout').innerText()).trim();
+              const perOrder=await page.locator('#member-order-tracking-list a[href]').evaluateAll(els=>els.map(el=>({href:el.href,text:el.textContent||''})));
+              return {ctx,page,href,label,perOrder,apiCalls};
+            }catch(e){await ctx.close();throw e}
+          };
+          try{
+            const a=newKey();
+            const o={key:a,code:'QA_PENDING',stateText:'pending',createdAt:Date.now()};
+            const p=await makeContext({scenario:'PENDING',orders:[o],click:true});
+            const expected=member+'/cart.php?c='+a;
+            assert('PENDING_CHECKOUT_USES_TRACKING_KEY',p.href===expected&&p.label.includes('QA_PENDING'),{correctHref:p.href===expected,label:p.label,secretRedacted:true});
+            assert('PENDING_INDIVIDUAL_PAYMENT_LINK',p.perOrder.length===1&&p.perOrder[0].href===expected,{links:p.perOrder.length,correctHref:p.perOrder[0]?.href===expected});
+            try{
+              await Promise.all([p.page.waitForURL(u=>u.origin===member&&u.pathname==='/cart.php',{timeout:15000}),p.page.locator('#member-cart-checkout').click()]);
+              const redirected=new URL(p.page.url());
+              assert('PENDING_REAL_CLICK_NAVIGATES_TO_MEMBER_CART',redirected.origin===member&&redirected.pathname==='/cart.php'&&redirected.searchParams.get('c')===a,{origin:redirected.origin,path:redirected.pathname,matchKey:redirected.searchParams.get('c')===a});
+            }catch(e){errors.push('CLICK '+String(e.message||e).slice(0,130))}
+            await p.ctx.close();
+            const b=newKey(),c=newKey();
+            const multi=await makeContext({scenario:'MULTI_UNPAID',orders:[
+              {key:b,code:'QA_ORDER_A',stateText:'pending',createdAt:Date.now()-1000},
+              {key:c,code:'QA_ORDER_B',stateText:'unpaid',createdAt:Date.now()}
+            ]});
+            assert('MULTI_ORDER_MAIN_BUTTON_LATEST_UNPAID',multi.href===member+'/cart.php?c='+c&&multi.label.includes('QA_ORDER_B'),{correct:multi.href===member+'/cart.php?c='+c,label:multi.label});
+            assert('MULTI_ORDER_SEPARATE_PAYMENT_LINKS',multi.perOrder.length===2&&multi.perOrder[0].href===member+'/cart.php?c='+b&&multi.perOrder[1].href===member+'/cart.php?c='+c,{links:multi.perOrder.length,correctOrder:multi.perOrder.length===2&&multi.perOrder[0].href.endsWith(b)&&multi.perOrder[1].href.endsWith(c)});
+            await multi.ctx.close();
+            const finalized=await makeContext({scenario:'FINALIZED',orders:[
+              {key:newKey(),code:'QA_PAID',stateText:'paid',createdAt:Date.now()-2000},
+              {key:newKey(),code:'QA_FULFILLED',stateText:'fulfilled',createdAt:Date.now()-1000},
+              {key:newKey(),code:'QA_CANCELLED',stateText:'cancelled',createdAt:Date.now()}
+            ]});
+            assert('FINALIZED_NO_PAY_AGAIN',finalized.href===member+'/domain/checkdomain_smart.php'&&finalized.perOrder.length===0,{returnsDomainFinder:finalized.href===member+'/domain/checkdomain_smart.php',individualPayLinks:finalized.perOrder.length,label:finalized.label});
+            await finalized.ctx.close();
+            const keyBuying=newKey(),keyOld=newKey();
+            const active=await makeContext({scenario:'NEW_BUYING_CART',orders:[{key:keyOld,code:'QA_PREVIOUS_ORDER',stateText:'pending',createdAt:Date.now()-1000}],buyingKey:keyBuying,addOn:true});
+            assert('NEW_BUYING_CART_PRIORITY',active.href===member+'/cart.php?c='+keyBuying,{correct:active.href===member+'/cart.php?c='+keyBuying,label:active.label});
+            assert('OLD_ORDER_REMAINS_PAYABLE_IN_LIST',active.perOrder.length===1&&active.perOrder[0].href===member+'/cart.php?c='+keyOld,{linkCount:active.perOrder.length,correct:active.perOrder[0]?.href===member+'/cart.php?c='+keyOld});
+            await active.ctx.close();
+            const empty=await makeContext({scenario:'EMPTY'});
+            assert('EMPTY_CART_NO_ORDERS_DOMAIN_FINDER',empty.href===member+'/domain/checkdomain_smart.php',{correct:empty.href===member+'/domain/checkdomain_smart.php',label:empty.label});
+            await empty.ctx.close();
+          }catch(e){errors.push('E2E '+String(e.message||e).slice(0,240))}
+          finally{await browser.close()}
+          const failures=results.filter(x=>x.result==='FAIL').map(x=>x.name);
+          console.log('CHECKOUT_LINK_RESULTS',JSON.stringify(results));
+          console.log('CHECKOUT_LINK_SUMMARY',JSON.stringify({total:results.length,passed:results.length-failures.length,failures,errors,ordersCreated:0,memberWrites:0,payments:0}));
+          if(failures.length||errors.length)process.exitCode=1;
+          JS
+          node /tmp/member-checkout-link-qa.mjs

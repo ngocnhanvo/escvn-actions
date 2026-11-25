@@ -1,0 +1,108 @@
+name: ESC Member TEST polling status browser QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/esc-member-cart-polling-tunnel-qa.yml]
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-polling-tunnel-qa
+  cancel-in-progress: true
+jobs:
+  polling:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 8
+    steps:
+      - name: Install browser JS driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Verify current tunnel polling with real open cart and mocked ordered state
+        env:
+          SITE: https://esc-test.webnvn.com
+          MEMBER: https://id.esc.vn
+        run: |
+          cat >/tmp/esc-polling-qa.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          import {randomBytes} from 'node:crypto';
+          const site=process.env.SITE, member=process.env.MEMBER;
+          if(site!=='https://esc-test.webnvn.com'||member!=='https://id.esc.vn')throw Error('DEV_TEST_ONLY_GUARD');
+          const browser=await chromium.launch({headless:true});
+          const results=[], errors=[];
+          const record=(test,ok,details={})=>results.push({test,status:ok?'PASS':'FAIL',details});
+          const tmp=await browser.newContext();
+          const p=await tmp.newPage();
+          let cartKey='';
+          try{
+            const opened=await p.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
+            record('TUNNEL_HTTP_200',opened?.status()===200,{http:opened?.status()||0});
+            if(opened?.status()!==200)throw Error('TUNNEL_NOT_READY');
+            const add=await p.evaluate(async member=>{
+              const r=await fetch(member+'/api/cart/add.php',{method:'POST',body:new URLSearchParams({type:'hosting',product_id:'113400'}),credentials:'omit',cache:'no-store'});
+              return {http:r.status,value:await r.json().catch(()=>null)};
+            },member);
+            if(add.http===200&&add.value?.ok===true&&/^[a-f0-9]{64}$/i.test(add.value.cart))cartKey=add.value.cart;
+            record('TEST_SERVICE_CART_CREATED',!!cartKey,{http:add.http,error:add.value?.error||null});
+            if(cartKey){
+              const status=await p.evaluate(async({member,c})=>{
+                const r=await fetch(member+'/api/cart/status.php?c='+encodeURIComponent(c),{cache:'no-store',credentials:'omit'});
+                return {http:r.status,value:await r.json().catch(()=>null)};
+              },{member,c:cartKey});
+              record('REAL_STATUS_PHP_OPEN',status.http===200&&status.value?.ok===true&&status.value.cart_status==='open'&&status.value.order===null,
+                {http:status.http,status:status.value?.cart_status,orderAbsent:status.value?.order===null});
+            }
+          }catch(e){errors.push('REAL_API '+String(e.message||e).slice(0,170))}
+          finally{
+            if(cartKey){
+              try{
+                const cleanup=await p.evaluate(async({member,c})=>{
+                  const r=await fetch(member+'/api/cart/remove.php',{method:'POST',body:new URLSearchParams({c,type:'hosting'}),credentials:'omit',cache:'no-store'});
+                  const removed=await r.json().catch(()=>null);
+                  const v=await fetch(member+'/api/cart/view.php?c='+encodeURIComponent(c),{credentials:'omit',cache:'no-store'});
+                  const view=await v.json().catch(()=>null);
+                  return {removeHttp:r.status,removeOk:removed?.ok,viewHttp:v.status,addons:view?.addons?.length,items:view?.items?.length};
+                },{member,c:cartKey});
+                record('REAL_CART_CLEANUP',cleanup.removeHttp===200&&cleanup.removeOk===true&&cleanup.viewHttp===200&&cleanup.addons===0&&cleanup.items===0,cleanup);
+              }catch(e){errors.push('CLEANUP '+String(e.message||e).slice(0,170))}
+            }
+            await tmp.close();
+          }
+          for(const scenario of ['open','ordered','hidden']){
+            const key=randomBytes(32).toString('hex');
+            const ctx=await browser.newContext();
+            await ctx.addInitScript(({key})=>{try{localStorage.setItem('esc_member_cart_test',key)}catch{}},{key});
+            const page=await ctx.newPage();
+            let polls=0,countCalls=0;
+            if(scenario==='hidden'){
+              await page.addInitScript(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});});
+            }
+            await page.route('https://id.esc.vn/api/cart/count.php?**',async route=>{
+              countCalls++;
+              await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify({ok:true,count:1,status:'open'})});
+            });
+            await page.route('https://id.esc.vn/api/cart/status.php?**',async route=>{
+              polls++;
+              await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify({ok:true,cart_status:scenario==='ordered'?'ordered':'open',order:scenario==='ordered'?{code:'QA_MOCK',state:1,state_text:'unpaid'}:null})});
+            });
+            try{
+              await page.clock.install({time:new Date('2026-11-25T07:00:00Z')});
+              const nav=await page.goto(site+'/',{waitUntil:'load',timeout:30000});
+              record('MOCK_'+scenario.toUpperCase()+'_PAGE',nav?.status()===200,{http:nav?.status()||0});
+              await page.waitForTimeout(100);
+              await page.clock.fastForward(61_000);
+              await page.waitForTimeout(100);
+              const stored=await page.evaluate(()=>localStorage.getItem('esc_member_cart_test'));
+              record('MOCK_'+scenario.toUpperCase()+'_POLLING',scenario==='hidden'?(polls===0&&stored===key):(polls===1&&stored===(scenario==='ordered'?null:key)),
+                {polls,hasStoredKey:!!stored,countCalls});
+            }catch(e){errors.push('MOCK_'+scenario.toUpperCase()+' '+String(e.message||e).slice(0,170))}
+            finally{await ctx.close()}
+          }
+          await browser.close();
+          const failures=results.filter(x=>x.status==='FAIL').map(x=>x.test);
+          console.log('POLLING_QA_RESULTS',JSON.stringify(results));
+          console.log('POLLING_QA_SUMMARY',JSON.stringify({total:results.length,passed:results.length-failures.length,failures,errors,actualOrdersCreated:0,webhooksSent:0}));
+          if(failures.length||errors.length)process.exitCode=1;
+          JS
+          node /tmp/esc-polling-qa.mjs

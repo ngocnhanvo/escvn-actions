@@ -1,0 +1,188 @@
+name: ESC Member ordered cart tracking browser QA (TEST only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/esc-member-order-tracking-tunnel-qa.yml
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-order-tracking-tunnel-qa
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 10
+    steps:
+      - name: Install matching Playwright JS package
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Verify live status and isolated ordered lifecycle in DEV browser
+        env:
+          SITE: https://esc-test.webnvn.com
+          MEMBER: https://id.esc.vn
+        run: |
+          cat >/tmp/ordered-tracking-qa.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          import {randomBytes} from 'node:crypto';
+          const site=process.env.SITE,base=process.env.MEMBER;
+          if(site!=='https://esc-test.webnvn.com'||base!=='https://id.esc.vn')throw Error('DEV_TEST_ONLY');
+          const browser=await chromium.launch({headless:true});
+          const results=[],errors=[];
+          const record=(test,ok,detail={})=>results.push({test,result:ok?'PASS':'FAIL',detail});
+          const makeKey=()=>randomBytes(32).toString('hex');
+          const keyForTest=makeKey(),second=makeKey();
+          const order={code:'D26112501',state:0,state_text:'pending',total:450000};
+          const json=(body)=>({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify(body)});
+          const wait=async(page,expression,timeout=7000)=>page.waitForFunction(expression,null,{timeout});
+          // Real Member TEST status request from the tunnel, using a disposable service-only cart.
+          let temporaryKey='';
+          const live=await browser.newContext({locale:'vi-VN'});
+          const livePage=await live.newPage();
+          const actualRequests=[];
+          livePage.on('request',r=>{
+            if(r.url().startsWith(base+'/api/cart/status.php?'))
+              actualRequests.push({method:r.method(),origin:r.headers()['origin']||'',frame:r.frame()?.url().split('?')[0]||'',path:new URL(r.url()).pathname});
+          });
+          try{
+            const home=await livePage.goto(site+'/',{waitUntil:'domcontentloaded',timeout:30000});
+            record('PUBLIC_TUNNEL_READY',home?.status()===200,{http:home?.status()||0});
+            if(home?.status()!==200)throw Error('TUNNEL_NOT_AVAILABLE');
+            record('UPDATED_ORDER_STATUS_UI',await livePage.locator('.js-member-order-status').count()>0);
+            const add=await livePage.evaluate(async base=>{
+              const r=await fetch(base+'/api/cart/add.php',{method:'POST',body:new URLSearchParams({type:'hosting',product_id:'113400'}),credentials:'omit',cache:'no-store'});
+              return {status:r.status,result:await r.json().catch(()=>null)};
+            },base);
+            if(add.status===200&&add.result?.ok&&/^[a-f0-9]{64}$/i.test(add.result.cart))temporaryKey=add.result.cart;
+            record('TEMP_MEMBER_CART',!!temporaryKey,{http:add.status,error:add.result?.error||null});
+            if(temporaryKey){
+              const status=await livePage.evaluate(async({base,c})=>{
+                const r=await fetch(base+'/api/cart/status.php?c='+encodeURIComponent(c),{credentials:'omit',cache:'no-store'});
+                return {status:r.status,result:await r.json().catch(()=>null)};
+              },{base,c:temporaryKey});
+              record('LIVE_MEMBER_STATUS_OPEN',status.status===200&&status.result?.ok===true&&status.result.cart_status==='open',{http:status.status,cartStatus:status.result?.cart_status||null});
+              record('BROWSER_STATUS_REQUEST_ORIGIN',actualRequests.some(x=>x.method==='GET'&&x.origin===site&&x.frame.startsWith(site)&&x.path==='/api/cart/status.php'),{
+                count:actualRequests.length,origins:[...new Set(actualRequests.map(x=>x.origin))],frames:[...new Set(actualRequests.map(x=>x.frame))],path:'/api/cart/status.php',keyRedacted:true
+              });
+            }
+          }catch(e){errors.push('LIVE '+String(e.message||e).slice(0,180))}
+          finally{
+            if(temporaryKey){
+              try{
+                const cleanup=await livePage.evaluate(async({base,c})=>{
+                  const r=await fetch(base+'/api/cart/remove.php',{method:'POST',body:new URLSearchParams({c,type:'hosting'}),cache:'no-store',credentials:'omit'});
+                  const rm=await r.json().catch(()=>null);
+                  const v=await fetch(base+'/api/cart/view.php?c='+encodeURIComponent(c),{credentials:'omit',cache:'no-store'});
+                  const view=await v.json().catch(()=>null);
+                  return {remove:r.status,ok:rm?.ok,view:v.status,items:view?.items?.length,addons:view?.addons?.length};
+                },{base,c:temporaryKey});
+                record('LIVE_TEST_CART_REMOVED',cleanup.remove===200&&cleanup.ok===true&&cleanup.view===200&&cleanup.items===0&&cleanup.addons===0,cleanup);
+              }catch(e){errors.push('LIVE_CLEANUP '+String(e.message||e).slice(0,170))}
+            }
+            await live.close();
+          }
+
+          // Isolated browser contract test: fake Member response only, no order/payment writes.
+          const ctx=await browser.newContext({locale:'vi-VN'});
+          const page=await ctx.newPage();
+          const requests=[];
+          let state='pending', abortNext=false, countResponseStatus='ordered';
+          await page.addInitScript(({key})=>{
+            if(!sessionStorage.getItem('esc_qa_seeded')){
+              localStorage.setItem('esc_member_cart_test',key);
+              sessionStorage.setItem('esc_qa_seeded','1');
+            }
+          },{key:keyForTest});
+          await page.route('https://id.esc.vn/api/cart/count.php?**',async route=>route.fulfill(json({ok:true,count:countResponseStatus==='open'?1:0,status:countResponseStatus})));
+          await page.route('https://id.esc.vn/api/cart/status.php?**',async route=>{
+            const req=route.request();
+            requests.push({path:new URL(req.url()).pathname,method:req.method(),origin:req.headers()['origin']||'',frame:req.frame()?.url().split('?')[0]||'',state});
+            if(abortNext){abortNext=false;await route.abort('failed');return;}
+            await route.fulfill(json({ok:true,cart_status:'ordered',order:{...order,state_text:state}}));
+          });
+          try{
+            await page.clock.install({time:new Date('2026-11-25T07:00:00.000Z')});
+            const nav=await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:30000});
+            record('ORDERED_PAGE_200',nav?.status()===200,{http:nav?.status()||0});
+            await wait(page,()=>!localStorage.getItem('esc_member_cart_test')&&
+              JSON.parse(localStorage.getItem('esc_member_order_tracking_test')||'[]')[0]?.stateText==='pending');
+            const summary=await page.evaluate(()=>({
+              buyingKey:localStorage.getItem('esc_member_cart_test'),
+              orders:JSON.parse(localStorage.getItem('esc_member_order_tracking_test')||'[]').map(x=>({code:x.code,state:x.stateText,hasKey:/^[a-f0-9]{64}$/i.test(x.key)})),
+              badge:document.querySelector('.js-cart-badge')?.textContent?.trim(),
+              badgeHidden:document.querySelector('.js-cart-badge')?.classList.contains('hidden'),
+              label:document.querySelector('.js-member-order-status')?.textContent||''
+            }));
+            record('ORDERED_CART_ZERO_TRACKING_PERSISTED',summary.buyingKey===null&&summary.orders.length===1&&summary.orders[0].hasKey&&summary.orders[0].code==='D26112501'&&summary.orders[0].state==='pending'&&summary.badge==='0'&&summary.badgeHidden===true,{orders:summary.orders,badge:summary.badge,hidden:summary.badgeHidden});
+            record('PENDING_NOT_PAID',summary.label.includes('Chờ xử lý')&&!summary.label.includes('Đã thanh toán'),{label:summary.label});
+            record('STATUS_REQUEST_AFTER_ORDERED',requests.some(x=>x.method==='GET'&&x.origin===site&&x.frame.startsWith(site)&&x.path==='/api/cart/status.php'),{
+              count:requests.length,origins:[...new Set(requests.map(x=>x.origin))],frames:[...new Set(requests.map(x=>x.frame))],path:'/api/cart/status.php',tokenRedacted:true
+            });
+            const countBeforeReload=requests.length;
+            await page.reload({waitUntil:'domcontentloaded',timeout:30000});
+            await wait(page,()=>document.querySelector('.js-member-order-status')?.textContent?.includes('Chờ xử lý'));
+            await wait(page,()=>JSON.parse(localStorage.getItem('esc_member_order_tracking_test')||'[]')[0]?.stateText==='pending');
+            record('ORDER_TRACKING_SURVIVES_RELOAD',(await page.evaluate(()=>localStorage.getItem('esc_member_cart_test')))===null&&requests.length>countBeforeReload,{
+              statusCallsAfterReload:requests.length-countBeforeReload,trackingPersisted:true
+            });
+            for(const next of ['unpaid','paid','fulfilled']){
+              state=next;
+              await page.clock.fastForward(61_000);
+              const label=next==='unpaid'?'Chưa thanh toán':next==='paid'?'Đã thanh toán, chờ hoàn tất':'Đã hoàn tất';
+              await wait(page,l=>document.querySelector('.js-member-order-status')?.textContent?.includes(l),label);
+              const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('esc_member_order_tracking_test')||'[]')[0]?.stateText);
+              record('MOCK_STATE_'+next.toUpperCase(),saved===next,{status:saved,display:label});
+            }
+            const terminalCalls=requests.length;
+            await page.clock.fastForward(121_000);
+            await page.waitForTimeout(50);
+            record('FULFILLED_STOPS_POLLING',requests.length===terminalCalls,{before:terminalCalls,after:requests.length});
+            const cartLink=page.locator('.js-cart-navigation').first();
+            const cartHref=await cartLink.getAttribute('href');
+            if(cartHref){
+              const cartPage=await page.goto(new URL(cartHref,site).href,{waitUntil:'domcontentloaded',timeout:30000});
+              await wait(page,()=>document.querySelector('#member-order-tracking-list')?.textContent?.includes('Đã hoàn tất'));
+              record('ORDER_TRACKING_VISIBLE_ON_CART_PAGE',cartPage?.status()===200,{http:cartPage?.status()||0});
+            }else record('ORDER_TRACKING_VISIBLE_ON_CART_PAGE',false,{reason:'missing cart link'});
+          }catch(e){errors.push('ORDER_FLOW '+String(e.message||e).slice(0,220))}
+          finally{await ctx.close()}
+
+          // Hidden page cannot make follow-up requests; terminal cancelled also stops.
+          for(const type of ['hidden','cancelled','network']){
+            const context=await browser.newContext({locale:'vi-VN'}),p=await context.newPage();
+            const key=makeKey();let calls=0,simulateError=type==='network';
+            await p.addInitScript(({key})=>{
+              localStorage.setItem('esc_member_order_tracking_test',JSON.stringify([{key,createdAt:Date.now(),stateText:'pending',code:'QA_MOCK'}]));
+            },{key});
+            if(type==='hidden')await p.addInitScript(()=>{
+              Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});
+              Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+            });
+            await p.route('https://id.esc.vn/api/cart/status.php?**',async route=>{
+              calls++;
+              if(simulateError){simulateError=false;await route.abort('failed');return;}
+              await route.fulfill(json({ok:true,cart_status:'ordered',order:{code:'QA_MOCK',state:0,state_text:type==='cancelled'?'cancelled':'pending'}}));
+            });
+            try{
+              await p.clock.install({time:new Date('2026-11-25T07:00:00Z')});
+              const nav=await p.goto(site+'/',{waitUntil:'domcontentloaded',timeout:30000});
+              if(nav?.status()!==200)throw Error('PAGE_'+nav?.status());
+              await p.clock.fastForward(121_000);
+              await p.waitForTimeout(70);
+              const tracked=await p.evaluate(()=>JSON.parse(localStorage.getItem('esc_member_order_tracking_test')||'[]'));
+              if(type==='hidden')record('HIDDEN_PAGE_NO_POLL',calls===0&&tracked[0]?.stateText==='pending',{calls});
+              if(type==='cancelled')record('CANCELLED_STOPS_POLL',calls===1&&tracked[0]?.stateText==='cancelled',{calls,status:tracked[0]?.stateText});
+              if(type==='network')record('NETWORK_ERROR_RETAINS_TRACKING',calls>=1&&tracked[0]?.key===key,{calls,tracked:tracked.length});
+            }catch(e){errors.push(type+' '+String(e.message||e).slice(0,180))}
+            finally{await context.close()}
+          }
+          await browser.close();
+          const failed=results.filter(x=>x.result!=='PASS').map(x=>x.test);
+          console.log('ORDER_TRACKING_RESULTS',JSON.stringify(results));
+          console.log('ORDER_TRACKING_SUMMARY',JSON.stringify({tests:results.length,passed:results.length-failed.length,failed,errors,ordersCreated:0,liveCartCleaned:true,financialWrites:0}));
+          if(failed.length||errors.length)process.exitCode=1;
+          JS
+          node /tmp/ordered-tracking-qa.mjs

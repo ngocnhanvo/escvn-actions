@@ -54,6 +54,13 @@ jobs:
               }catch(e){return {error:String(e.message||e)}}
             });
             output.wpRest=wp;
+            output.kasperskyWp=await page.evaluate(async()=>{
+              try{
+                const r=await fetch('https://admin.esc.vn/wp-json/wp/v2/product/775',{signal:AbortSignal.timeout(12000)});
+                const d=await r.json();
+                return {http:r.status,id:d.id,title:d.title?.rendered,memberId:d.acf?.member_product_id,categories:d.product_categories?.map(x=>({id:x.id,name:x.name,slug:x.slug}))||[],rawCategoryIds:d.product_cat||[]};
+              }catch(e){return {error:String(e.message||e)}}
+            });
             const member=await page.goto('https://id.esc.vn/domain/checkdomain_smart.php',{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
             output.memberPage={http:member?.status()||0,title:await page.title().catch(()=>''),path:new URL(page.url()).pathname};
             output.memberOffers=await page.locator('select option,input[name],a[href],button[data-product-id]').evaluateAll(els=>els.map(el=>({tag:el.tagName,name:el.getAttribute('name'),productId:el.getAttribute('data-product-id'),value:el.tagName==='OPTION'?el.getAttribute('value'):null,text:(el.textContent||'').trim().slice(0,70),href:el.tagName==='A'?el.getAttribute('href'):null})).filter(x=>/hosting|ssl|email|server|saas|product|vps|cloud|cart|dịch vụ/i.test((x.name||'')+' '+(x.text||'')+' '+(x.href||''))).slice(0,60)).catch(()=>[]);

@@ -1,0 +1,4 @@
+slug=khuyen-mai
+code=BF2026
+replace=EDU20
+banner=/wp-content/uploads/2026/11/ESC_BlackFriday_Web_1350x400.webp

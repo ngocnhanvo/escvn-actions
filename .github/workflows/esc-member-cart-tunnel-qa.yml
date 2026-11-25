@@ -19,6 +19,32 @@ jobs:
     steps:
       - name: Install Playwright driver only
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Diagnose Member TEST connectivity and origin without writing data
+        env:
+          SITE: https://esc-test.webnvn.com
+        run: |
+          node --input-type=module <<'JS'
+          const origin=process.env.SITE;
+          for (const url of [
+            'https://id.esc.vn/',
+            'https://id.esc.vn/api/cart/check.php?d=esc.vn&years=1',
+          ]) {
+            for(const label of ['WITHOUT_ORIGIN','WITH_TUNNEL_ORIGIN']) {
+              try {
+                const r=await fetch(url,{
+                  headers:label==='WITH_TUNNEL_ORIGIN'?{Origin:origin}:{},
+                  redirect:'manual',
+                  signal:AbortSignal.timeout(12000)
+                });
+                const raw=(await r.text()).slice(0,400);
+                let body;try{body=JSON.parse(raw)}catch{body={snippet:raw.slice(0,120)}}
+                console.log('CONNECTIVITY',JSON.stringify({path:new URL(url).pathname,label,status:r.status,location:r.headers.get('location'),allowOrigin:r.headers.get('access-control-allow-origin'),error:body.error||null,ok:body.ok??null}));
+              } catch(e) {
+                console.log('CONNECTIVITY_ERROR',JSON.stringify({path:new URL(url).pathname,label,error:String(e.cause?.code||e.message).slice(0,160)}));
+              }
+            }
+          }
+          JS
       - name: Test public Cloudflare Tunnel and Member CORS read-only
         env:
           SITE: https://esc-test.webnvn.com
@@ -32,6 +58,9 @@ jobs:
           try{
             const jsErrors=[];
             page.on('pageerror',e=>jsErrors.push(String(e.message).slice(0,240)));
+            page.on('console',m=>{if(m.type()==='error')console.log('BROWSER_CONSOLE',m.text().slice(0,180));});
+            page.on('requestfailed',r=>{if(r.url().includes('id.esc.vn'))console.log('MEMBER_REQUEST_FAILED',JSON.stringify({url:r.url().split('?')[0],reason:r.failure()?.errorText||''}));});
+            page.on('response',r=>{if(r.url().includes('id.esc.vn'))console.log('MEMBER_RESPONSE',JSON.stringify({url:r.url().split('?')[0],status:r.status(),allowOrigin:r.headers()['access-control-allow-origin']||null}));});
             const response=await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
             console.log('TUNNEL_HOME',JSON.stringify({status:response?.status(),url:page.url(),title:await page.title()}));
             if(!response||response.status()>=400)failures.push('TUNNEL_HOME_HTTP');

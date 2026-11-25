@@ -46,7 +46,7 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   const modal=existing?.querySelector('.esc-modal-content');
   const items=[...existing?.querySelectorAll('li.mceEditable')||[]].map(el=>norm(el.textContent));
   if(!modal?.textContent.includes('eCloud1'))throw Error('Black Friday popup structure differs');
-  const list=[...existing.querySelectorAll('ul')].find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('mã km: bf2026')||norm(li.textContent).includes('bfh2026')));
+  const list=[...existing.querySelectorAll('ul')].filter(ul=>!modal.contains(ul)).find(ul=>[...ul.children].some(li=>norm(li.textContent).includes('mã km: bf2026')||norm(li.textContent).includes('bfh2026')));
   if(!list||list.children.length!==6)throw Error('Expected exactly six Black Friday summary lines');
   if(norm(list.textContent).includes('bfh2026')&&norm(list.textContent).includes('bfv2026')
      &&norm(modal.textContent).includes('bfh2026')&&norm(modal.textContent).includes('bfv2026')

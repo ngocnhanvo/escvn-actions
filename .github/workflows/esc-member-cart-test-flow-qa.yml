@@ -1,0 +1,121 @@
+name: ESC Member Cart TEST browser flow and cleanup
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/esc-member-cart-test-flow-qa.yml
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-test-flow-qa
+  cancel-in-progress: true
+jobs:
+  test-browser:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 9
+    steps:
+      - name: Install matching browser driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Test Member TEST only with unique temporary domain and guaranteed cleanup
+        env:
+          SITE: https://esc-test.webnvn.com
+          MEMBER: https://id.esc.vn
+        run: |
+          cat > /tmp/member-test-flow.mjs <<'JS'
+          import { chromium } from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          import { randomBytes } from 'node:crypto';
+          const site=process.env.SITE, member=process.env.MEMBER;
+          if(site!=='https://esc-test.webnvn.com'||member!=='https://id.esc.vn')throw Error('TEST_ORIGIN_GUARD');
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:1440,height:900},locale:'vi-VN',ignoreHTTPSErrors:false});
+          const page=await context.newPage();
+          const errors=[],results=[],failed=[];
+          page.on('pageerror',e=>errors.push(String(e.message).slice(0,160)));
+          page.on('console',msg=>{if(msg.type()==='error')errors.push('console: '+msg.text().slice(0,130))});
+          const check=(name,ok,detail='')=>{results.push({name,status:ok?'PASS':'FAIL',detail});if(!ok)failed.push(name)};
+          const request=async(path,params={},method='GET')=>page.evaluate(async({member,path,params,method})=>{
+            const qs=new URLSearchParams(params);
+            const url=member+'/api/cart/'+path+(method==='GET'?'?'+qs:'');
+            try{
+              const r=await fetch(url,{method,body:method==='POST'?qs:undefined,credentials:'omit',cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(20000)});
+              const json=await r.json().catch(()=>null);
+              return {http:r.status,json};
+            }catch(e){return {http:0,json:null,error:String(e.message||e).slice(0,100)}}
+          },{member,path,params,method});
+          const label='escqat'+Date.now().toString(36)+randomBytes(3).toString('hex');
+          const domain=label+'.com';
+          let key='',wasAdded=false,cleanupOk=false;
+          try{
+            const home=await page.goto(site+'/check-domain',{waitUntil:'domcontentloaded',timeout:25000});
+            check('DOMAIN_PAGE',home?.status()===200&&await page.locator('#domain-search-input').count()===1);
+            if(!home||home.status()!==200)throw Error('domain page unavailable');
+            const taken=await request('check.php',{d:'esc.vn',years:'1'});
+            check('EXISTING_DOMAIN',taken.http===200&&taken.json?.ok===true&&taken.json.available===false, 'HTTP '+taken.http);
+            const probe=await request('check.php',{d:domain,years:'1'});
+            check('UNIQUE_DOMAIN_CHECK',probe.http===200&&probe.json?.ok===true&&probe.json.available===true,JSON.stringify({http:probe.http,available:probe.json?.available,error:probe.json?.error||probe.error}));
+            check('AUTHORITATIVE_MEMBER_PRICE',typeof probe.json?.total==='number'&&probe.json?.total>0&&typeof probe.json?.total_formatted==='string');
+            if(probe.json?.available!==true)throw Error('synthetic domain not available');
+            const input=page.locator('#domain-search-input');
+            await input.fill(label);
+            await Promise.all([page.waitForURL(url=>url.searchParams.has('id'),{timeout:20000}),input.press('Enter')]);
+            const row=page.locator('.domain-item-wrapper[data-tld=".com"]').first();
+            await row.waitFor({state:'visible',timeout:25000});
+            const button=row.locator('.btn-domain-action');
+            await page.waitForFunction(()=>{const b=document.querySelector('.domain-item-wrapper[data-tld=".com"] .btn-domain-action');return b&&!b.disabled&&/chọn|select/i.test(b.textContent||'')},null,{timeout:25000});
+            const expected=page.waitForResponse(r=>r.url().includes('id.esc.vn/api/cart/add.php')&&r.request().method()==='POST',{timeout:25000});
+            await button.click();
+            const addResponse=await expected;
+            const add=await addResponse.json().catch(()=>null);
+            if(add?.cart&&/^[a-f0-9]{64}$/i.test(add.cart)){key=add.cart;wasAdded=true}
+            check('ASTRO_UI_ADD_DOMAIN',addResponse.status()===200&&add?.ok===true&&wasAdded,'HTTP '+addResponse.status());
+            if(!wasAdded)throw Error('add did not produce a valid test cart key');
+            await page.waitForFunction(()=>document.querySelector('.js-cart-badge')?.textContent?.trim()==='1',{timeout:15000});
+            check('HEADER_BADGE',await page.locator('.js-cart-badge').first().textContent()==='1');
+            const cartLink=await page.locator('a.js-cart-navigation').first().getAttribute('href');
+            check('MEMBER_CART_LINK',cartLink?.startsWith('https://id.esc.vn/cart.php?c=')===true);
+            const stored=await page.evaluate(()=>localStorage.getItem('esc_member_cart_test'));
+            check('BROWSER_CART_KEY',stored===key);
+            const count=await request('count.php',{c:key});
+            check('MEMBER_CART_COUNT',count.http===200&&count.json?.status==='open'&&count.json?.count===1);
+            const view=await request('view.php',{c:key});
+            check('MEMBER_CART_VIEW',view.http===200&&view.json?.ok===true&&view.json?.items?.some(i=>i.domain===domain)&&Number(view.json?.total)>0);
+            const change=await request('add.php',{c:key,domain,years:'2'},'POST');
+            check('UPDATE_YEARS',change.http===200&&change.json?.ok===true&&change.json?.count===1);
+            const updated=await request('view.php',{c:key});
+            check('UPDATED_YEAR_READBACK',updated.http===200&&updated.json?.items?.find(i=>i.domain===domain)?.years===2);
+            const promo=await request('view.php',{c:key,promo:'ESC_QA_NONEXISTENT_2026'});
+            check('PROMO_PREVIEW',promo.http===200&&promo.json?.ok===true&&promo.json?.promo?.ok===false,'HTTP '+promo.http);
+            const checkout=await context.newPage();
+            const checkoutResponse=await checkout.goto(member+'/cart.php?c='+key,{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
+            const checkoutText=await checkout.locator('body').innerText().catch(()=>'');
+            check('MEMBER_CHECKOUT_PAGE',!!checkoutResponse&&checkoutResponse.status()<400&&checkoutText.toLowerCase().includes(domain),'HTTP '+(checkoutResponse?.status()||0));
+            await checkout.close();
+          }catch(e){
+            failed.push('E2E_EXCEPTION');
+            console.log('E2E_EXCEPTION',String(e.message||e).slice(0,220));
+          }finally{
+            if(wasAdded&&key){
+              try{
+                if(page.isClosed())throw Error('test page closed before cleanup');
+                if(!page.url().startsWith(site))await page.goto(site+'/check-domain',{waitUntil:'domcontentloaded',timeout:20000});
+                const remove=await request('remove.php',{c:key,domain},'POST');
+                const finalView=await request('view.php',{c:key});
+                const residual=(finalView.json?.items||[]).some(i=>i.domain===domain);
+                cleanupOk=remove.http===200&&remove.json?.ok===true&&finalView.http===200&&!residual;
+                check('CLEANUP_REMOVE_AND_READBACK',cleanupOk,JSON.stringify({removeHttp:remove.http,viewHttp:finalView.http,residual}));
+              }catch(e){failed.push('CLEANUP_ERROR');console.log('CLEANUP_ERROR',String(e.message||e).slice(0,180))}
+            }else{
+              check('NO_TEST_CART_CREATED',true);
+            }
+            await browser.close();
+          }
+          console.log('TEST_RESULTS',JSON.stringify(results));
+          console.log('BROWSER_ERRORS',JSON.stringify(errors.slice(0,12)));
+          console.log('TEST_SUMMARY',JSON.stringify({failed,cartWrites:wasAdded?2:0,cleanupOk:wasAdded?cleanupOk:null,ordersCreated:0,environment:'Member TEST'}));
+          if(failed.length)process.exitCode=1;
+          JS
+          node /tmp/member-test-flow.mjs

@@ -45,7 +45,7 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   const existing=blackFriday[0].parentElement?.parentElement?.parentElement;
   const modal=existing?.querySelector('.esc-modal-content');
   const items=[...existing?.querySelectorAll('li.mceEditable')||[]].map(el=>norm(el.textContent));
-  assert.ok(modal?.textContent.includes('eCloud1')&&modal?.textContent.includes('BF2026')&&items.some(x=>x.includes('bf2026')),'Black Friday card exists but details differ');
+  if(!modal?.textContent.includes('eCloud1')||!modal?.textContent.includes('BF2026')||!items.some(x=>x.includes('bf2026')))throw Error('Black Friday card exists but details differ');
   return {changed:false,html:original};
  }
  if(previous.length!==1||blackFriday.length!==0)throw Error('Expected exactly one EDU20 card to replace; refusing to change unrelated promotions');
@@ -56,7 +56,7 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
  const beforeHeaders=[...grid.children].map(w=>w.querySelector('h2')?.textContent.trim());
  if(beforeHeaders.filter(x=>x===previousTitle).length!==1)throw Error('EDU20 promotion is not unique within grid');
  const cta=[...card.querySelectorAll('a')].find(a=>norm(a.textContent)==='đăng ký ngay');
- assert.ok(cta,'Registration CTA missing on original card');
+ if(!cta)throw Error('Registration CTA missing on original card');
  const target=new URL(cta.getAttribute('href'),origin).pathname;
  if(target!=='/dang-ky-ten-mien')throw Error('Original registration URL differs; refusing to change CTA');
  const modal=card.querySelector('.esc-modal-content');

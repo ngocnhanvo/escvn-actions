@@ -1,0 +1,60 @@
+name: ESC Member TEST service mapping survey (READ ONLY)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/esc-member-cart-service-survey.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-member-cart-service-survey
+  cancel-in-progress: true
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 8
+    steps:
+      - name: Install Playwright driver
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+      - name: Survey only public Product and Member TEST offerings
+        run: |
+          cat > /tmp/esc-member-survey.mjs <<'JS'
+          import {chromium} from '/__w/escvn-actions/escvn-actions/node_modules/playwright/index.mjs';
+          const site='https://esc-test.webnvn.com';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1365,height:900}});
+          const output={};
+          try {
+            const home=await page.goto(site+'/',{waitUntil:'domcontentloaded',timeout:25000});
+            output.site={http:home?.status(),title:await page.title()};
+            output.productLinks=await page.locator('a[href]').evaluateAll(els=>[...new Set(els.map(el=>el.getAttribute('href')).filter(x=>/san-pham|hosting|ssl|email|vps|cloud/i.test(x||'')))].slice(0,65));
+            const json=await page.evaluate(async()=>{
+              try {
+                const r=await fetch('/data/cms-products.json',{cache:'no-store',signal:AbortSignal.timeout(12000)});
+                const val=await r.json();
+                const products=Array.isArray(val)?val:Array.isArray(val?.data)?val.data:Array.isArray(val?.products)?val.products:Object.values(val||{});
+                const sample=products.filter(x=>x&&typeof x==='object'&&('member_product_id' in x||'member_service_type' in x)).slice(0,45).map(x=>({wpId:x._id||x.id,memberId:x.member_product_id||null,type:x.member_service_type||null,slug:typeof x.slug==='string'?x.slug:x.slug?.vi||null,title:typeof x.itemName==='string'?x.itemName:x.itemName?.vi||null}));
+                return {http:r.status,shape:Array.isArray(val)?'array':Object.keys(val||{}).slice(0,12),count:products.length,mappedCount:products.filter(x=>x&&typeof x==='object'&&Number(x.member_product_id)>0).length,typedCount:products.filter(x=>x&&typeof x==='object'&&!!x.member_service_type).length,sample};
+              }catch(e){return {error:String(e.message||e)}}
+            });
+            output.products=json;
+            const wp=await page.evaluate(async()=>{
+              try {
+                const r=await fetch('https://admin.esc.vn/wp-json/wp/v2/product?status=publish&per_page=100&page=1',{signal:AbortSignal.timeout(15000)});
+                const val=await r.json();
+                const items=Array.isArray(val)?val:[];
+                return {http:r.status,count:items.length,acfMember:items.filter(x=>Number(x.acf?.member_product_id)>0).length,categories:items.slice(0,8).map(x=>({id:x.id,slug:x.slug,memberId:x.acf?.member_product_id||null,categoryIds:x.product_categories?.map(c=>c.id)||[]}))};
+              }catch(e){return {error:String(e.message||e)}}
+            });
+            output.wpRest=wp;
+            const member=await page.goto('https://id.esc.vn/domain/checkdomain_smart.php',{waitUntil:'domcontentloaded',timeout:25000}).catch(()=>null);
+            output.memberPage={http:member?.status()||0,title:await page.title().catch(()=>''),path:new URL(page.url()).pathname};
+            output.memberOffers=await page.locator('select option,input[name],a[href],button[data-product-id]').evaluateAll(els=>els.map(el=>({tag:el.tagName,name:el.getAttribute('name'),productId:el.getAttribute('data-product-id'),value:el.tagName==='OPTION'?el.getAttribute('value'):null,text:(el.textContent||'').trim().slice(0,70),href:el.tagName==='A'?el.getAttribute('href'):null})).filter(x=>/hosting|ssl|email|server|saas|product|vps|cloud|cart|dịch vụ/i.test((x.name||'')+' '+(x.text||'')+' '+(x.href||''))).slice(0,60)).catch(()=>[]);
+            console.log('SERVICE_SURVEY',JSON.stringify(output));
+          }catch(e){console.log('SURVEY_ERROR',String(e.message||e))}
+          finally{await browser.close()}
+          JS
+          node /tmp/esc-member-survey.mjs

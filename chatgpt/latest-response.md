@@ -1,26 +1,27 @@
 # ESC.VN — Latest ChatGPT response
 
-- Date (Asia/Ho_Chi_Minh): 2026-11-25
-- Project: ESC.VN — Member Cart browser integration via Cloudflare Tunnel
-- Astro repo: ngocnhanvo/escvn-astro
-- Astro development branch: github
-- Astro development HEAD: 0329466b5ed6ec3774307ca22fcb25a1d1d01d3a
-- Astro master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
-- Actions repo: ngocnhanvo/escvn-actions@main
-- State: PARTIAL — LOCAL_REBUILD_AND_MEMBER_TEST_ORIGIN_ALLOWLIST_REQUIRED
+- Date: 2026-11-25 (Asia/Ho_Chi_Minh)
+- Project: ESC.VN Member Cart TEST via Cloudflare Tunnel
+- Astro repository: ngocnhanvo/escvn-astro
+- Astro branch: github
+- Astro HEAD: 0329466b5ed6ec3774307ca22fcb25a1d1d01d3a
+- Astro master unchanged: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676
+- State: PARTIAL — BLOCKED_BY_MEMBER_TEST_ORIGIN_ALLOWLIST
 
-## Evidence and results
-- Public Cloudflare Tunnel https://esc-test.webnvn.com homepage HTTP 200, /check-domain HTTP 200, domain form present, 39 action buttons, cart badge link points to Member TEST.
-- Playwright live QA #45558154208 FAIL due direct browser fetch to https://id.esc.vn/api/cart/check.php?d=esc.vn&years=1 returning Failed to fetch. No cart write / orders.
-- Diagnostics #45558266695: id.esc.vn homepage HTTPS 200; check.php returns HTTP 403 error origin_not_allowed with Origin https://esc-test.webnvn.com. Browser console independently shows CSP violation connect-src disallowing id.esc.vn. No JavaScript uncaught exceptions.
-- Fixed Astro CSP on github only at scripts/inject-handler.js: add exactly https://id.esc.vn and https://member.esc.vn to connect-src (not script-src or frame-src). CSP regression test at scripts/inject-handler.member-cart-csp.test.ts. First CSP test used import.meta.url under jsdom and failed; fixed to resolve(process.cwd(), path). Source commit HEAD 0329466b5ed6ec3774307ca22fcb25a1d1d01d3a.
-- CI #45558686802 SUCCESS: 2 test files, 8 tests passed, Astro DEV build with Member TEST enabled completed, artifact guard passed. NO DEPLOY, NO ORDER.
-- Prior 6 client tests plus baseline build passed #45554572661.
+## User report and live QA
+- User said local branch github was pulled, built with pnpm run build-cache, and Member TEST origin allowlist configured; requested retest.
+- Reran existing read-only Playwright QA workflow 45558266695, attempt 2; FAILED precisely on Member TEST API.
+- Homepage https://esc-test.webnvn.com/ HTTP 200, /check-domain HTTP 200, domain form present and 39 action buttons.
+- CSP no longer blocks id.esc.vn. Actual browser console is CORS because server response lacks Access-Control-Allow-Origin.
+- Independent Node GET https://id.esc.vn/api/cart/check.php?d=esc.vn&years=1 with Origin https://esc-test.webnvn.com returned HTTP 403 JSON {"ok":false,"error":"origin_not_allowed"}. Same 403 without Origin. Member homepage HTTP 200.
+- Member API origin is still NOT authorized on Member TEST; only Member TEST administrator can fix sat_sites / site allowlist and verify request Origin. No Astro code change needed on this evidence, no production writes.
+- Because Member check.php is blocked, domain price check/add/remove cart, promo and Member redirect cannot be meaningfully validated end-to-end yet. No cart writes or test orders performed.
+- Existing Astro CSP fix/test CI passed: 45558686802, 8/8 unit tests, build PASS.
 
-## Next steps and blockers
-1. Owner pull latest Astro github commit (0329466b), rerun pnpm run build-cache on own computer (PUBLIC_MEMBER_CART_ENABLED=true and PUBLIC_MEMBER_CART_BASE=https://id.esc.vn in .env.local), restart Astro process exposing Cloudflare Tunnel. CSP is injected into SSR entry.mjs during build, so rebuild is required.
-2. Member TEST administrator needs to configure sat_sites to allow exact Origin https://esc-test.webnvn.com. Without this, member API returns 403 origin_not_allowed, independently of the Astro fix.
-3. Once both done, run live Playwright QA for checking a domain, pricing, adding/removing TEST cart, count badge and Member cart redirect and addon flows, no real order/payment. Do not modify Astro master or Member production without explicit instruction.
+## Next
+- Verify Member TEST site allowlist has exact origin https://esc-test.webnvn.com and is configured on id.esc.vn (not member.esc.vn production). Test endpoint with Origin should return appropriate CORS and non-403.
+- Then rerun Playwright QA; if read-only passes, run isolated Member TEST cart interactions and cleanup, without creating real order or payment.
+- Astro must remain on github; master untouched.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass

@@ -1,0 +1,4 @@
+slug=khuyen-mai
+campaign=BF2026
+replace=EDU20
+build_run=45535452621

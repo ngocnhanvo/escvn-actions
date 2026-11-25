@@ -62,7 +62,8 @@ jobs:
                 http:r?.status()||0,
                 title:await page.title().catch(()=>''),
                 options:await page.locator('select option').evaluateAll(els=>els.filter(el=>(el.getAttribute('value')||'').length>0).slice(0,60).map(el=>({value:el.value,text:(el.textContent||'').trim().slice(0,90),select:el.closest('select')?.getAttribute('name')||''}))).catch(()=>[]),
-                inputNames:await page.locator('input[name]').evaluateAll(els=>els.slice(0,25).map(el=>({name:el.getAttribute('name'),value:el.getAttribute('value')}))).catch(()=>[])
+                inputNames:await page.locator('input[name]').evaluateAll(els=>els.slice(0,25).map(el=>({name:el.getAttribute('name'),value:el.getAttribute('value')}))).catch(()=>[]),
+                choiceLabels:await page.locator('input[name="gtlds[]"]').evaluateAll(els=>els.slice(0,45).map(el=>({value:el.value,text:(el.closest('label')?.innerText||el.parentElement?.innerText||'').trim().replace(/\\s+/g,' ').slice(0,120)}))).catch(()=>[])
               };
             }
             console.log('SERVICE_SURVEY',JSON.stringify(output));

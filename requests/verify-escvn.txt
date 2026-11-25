@@ -71,3 +71,5 @@ CV Gallery pagination QA 2026-10-16: test server-side 12/card pages, URL navigat
 2026-10-19 ESC CV M80 export fix: Astro github 6ba4f4bbe6d45658cfee8021b466f5e34b9eddb3. Replaces inaccurate html2canvas native CSS Grid painting with browser-native same-origin SVG foreignObject raster, preserving the actual Builder layout; fallback to html2canvas for unsupported clients. Verify unit, TS, SSR/build, no production deploy yet.
 
 2026-10-19 ESC CV Studio preview UX: Astro github ead8d4005d483ec31a672b14c0fc64ce3d0a8777. Rename PDF/PNG download actions to open in new tab; native browser PDF/image viewer via local object URLs, preopen tab synchronously to avoid popup blockers. Keep source ZIP download unchanged; validate Vitest, Astro check, build SSR. No production deploy until QA.
+
+2026-11-25 Member cart TEST integration QA: source_repo=ngocnhanvo/escvn-astro, branch=github, head=0e96c13ebd7d13927f199740487affed83986e38. Validate Astro syntax, unit tests, build-git and SSR smoke. No production deploy, no order.

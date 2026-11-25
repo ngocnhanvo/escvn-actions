@@ -1,25 +1,35 @@
-# ESC.VN — Latest ChatGPT response
+# Phản hồi ChatGPT mới nhất — ESC.VN
 
-- Time (Asia/Ho_Chi_Minh): 2026-11-25 14:03:21 +07
-- Project: ESC.VN Member Cart TEST on Cloudflare Tunnel
-- Astro repo: ngocnhanvo/escvn-astro
-- Branch: github
-- HEAD: ef23cbb039173ca728ccab44bcd3e57d7bb65b12
-- Master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (unchanged)
-- State: PARTIAL — local Astro rebuild and retest needed; 28 WordPress service records have no Member ID; some mapped SaaS products not sellable in Member TEST
+- Thời điểm: 2026-11-25 14:14:31 +07 (Asia/Ho_Chi_Minh)
+- Repo: ngocnhanvo/escvn-astro
+- Nhánh: github
+- Commit: 5468505fae449d49597db84adbe951253b43805e
+- Nhánh master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 (không thay đổi)
+- CI: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45565998474 — SUCCESS, 10/10 tests và build DEV PASS
+- Browser QA: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45564294270 — rerun SUCCESS, 16/16 UI checks, sản phẩm Kaspersky SaaS PASS; dữ liệu thử đã cleanup
+- Trạng thái: PARTIAL — cần chủ sở hữu pull/build lại bản polling; chưa test tạo đơn/webhook.
 
-## Final response to user
+## Nội dung phản hồi cuối cùng
 
-Mình đã kiểm thử xong phần **giỏ dịch vụ và giỏ kết hợp** trên Member TEST: **27/27 kiểm tra PASS**. Hosting và Email giảm đúng 30% khi mua cùng tên miền; SSL, VPS và SaaS giữ giá. Giỏ chỉ có dịch vụ, tính tổng, status, mã ưu đãi không hợp lệ và xóa sạch dữ liệu thử đều PASS. Workflow: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45563824167
+Mình đã đối chiếu ảnh, tài liệu Member và code Astro mới nhất. **Mình đề xuất DEV dùng polling qua `status.php`, chưa dùng webhook.**
 
-Mình kiểm thử từ **trang sản phẩm Astro**: Hosting, Email, SSL và VPS đều thêm giỏ thành công, hiển thị giá được Member trả về sau khi tải xong. SaaS Kaspersky chưa được nhận dạng trong bản Astro mà ông đang chạy; đã tìm ra WordPress phân loại sản phẩm vào danh mục "Cá nhân" (không được tự đổi cả danh mục này thành SaaS).
+Tình trạng thực tế lúc bắt đầu:
+- Frontend đã gọi `count.php` khi tải trang hoặc quay lại website để đồng bộ giỏ hàng và xóa cart key khi giỏ đã chuyển sang `ordered`.
+- Code có hàm gọi `status.php`, nhưng chưa có cơ chế polling định kỳ.
+- Chưa có endpoint nhận webhook và khóa ký webhook trên DEV.
+- Tài liệu cho phép dùng `status.php` khi không nhận webhook.
 
-Mình đã sửa nhánh `github` để phân loại **riêng các mã SaaS antivirus được Member TEST công bố**, có kiểm thử chống phân loại nhầm. Commit: https://github.com/ngocnhanvo/escvn-astro/commit/ef23cbb039173ca728ccab44bcd3e57d7bb65b12
-CI bản này SUCCESS, **8/8 unit test PASS và Astro build DEV PASS**: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45564401513
+**Bản ông vừa build đã PASS**: Playwright qua Cloudflare Tunnel xác minh 16/16 kiểm tra thao tác giỏ hàng từ trang sản phẩm PASS, bao gồm Kaspersky Anti-Virus (SaaS) thêm giỏ và hiển thị giá Member; mọi dòng thử đã được xóa sạch. Workflow https://github.com/ngocnhanvo/escvn-actions/actions/runs/45564294270
 
-Có hai nhóm công việc chưa thể tuyên bố hoàn tất: **28/135** sản phẩm dịch vụ WordPress đang thiếu `member_product_id` (Hosting 1, Email 2, SSL 17, Server 7, SaaS 1), không thể tự gán mã giả; và một số mã dù đã khai (như Email EM1 601000, Google Workspace 131600, Microsoft 365 132200) vẫn bị Member TEST trả `422 product_not_found`, cần đối chiếu trạng thái bán kèm với bên Member. Chưa tạo đơn, thanh toán hay kiểm thử webhook; không có dữ liệu giỏ TEST còn sót.
+Mình đã bổ sung polling `status.php` trên nhánh DEV `github`: tối đa mỗi 60 giây khi tab hiển thị và có giỏ; khi Member trả `ordered`, `expired` hoặc `none` frontend xóa mã giỏ cũ và cập nhật UI; tab nền không gọi định kỳ; lỗi mạng không xóa giỏ. Không cần webhook URL/secret.
 
-**Đến bước ông pull code về máy và build lại** để mình xác minh SaaS Kaspersky trên tunnel:
+**CI bản polling đã SUCCESS:** 10/10 unit test và Astro build DEV PASS, run https://github.com/ngocnhanvo/escvn-actions/actions/runs/45565998474, commit https://github.com/ngocnhanvo/escvn-astro/commit/5468505fae449d49597db84adbe951253b43805e.
+
+**Nội dung ông gửi phía Member:**
+
+> Bên mình chốt DEV dùng polling `GET /api/cart/status.php?c=<cart_key>` từ frontend Astro, không dùng webhook ở giai đoạn này. Polling khi tab đang hoạt động, tối đa mỗi 60 giây; `count.php` được dùng khi tải lại hoặc quay lại website. Khi giỏ chuyển `ordered`, site bỏ cart key và cập nhật trạng thái giỏ. Vì vậy bên Member chưa cần cấu hình URL nhận webhook hay khóa ký cho DEV. Nếu sau này cần đồng bộ đơn đã thanh toán/hoàn tất mà không phụ thuộc trình duyệt, hai bên sẽ thiết kế và cấu hình webhook riêng.
+
+**Cần pull/build thêm lần nữa** vì commit polling được tạo sau lần pull trước:
 
 ```bash
 git checkout github
@@ -27,9 +37,7 @@ git pull origin github
 pnpm run build-cache
 ```
 
-Khởi động lại Astro đang được Cloudflare Tunnel phục vụ, giữ nguyên `PUBLIC_MEMBER_CART_ENABLED=true` và `PUBLIC_MEMBER_CART_BASE=https://id.esc.vn` trong `.env.local`. Ông báo khi đã chạy bản mới, mình sẽ kiểm thử tiếp đúng phần còn lại; không lặp phần đã PASS.
-
-Không sửa `master`, không deploy production.
+Giữ `PUBLIC_MEMBER_CART_ENABLED=true` và `PUBLIC_MEMBER_CART_BASE=https://id.esc.vn` trong `.env.local`, restart server tunnel. Chưa tạo đơn thực tế và chưa kiểm thử webhook. Không sửa master, không deploy production.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass

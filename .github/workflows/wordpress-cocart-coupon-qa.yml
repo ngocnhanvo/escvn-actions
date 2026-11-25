@@ -1,0 +1,95 @@
+name: QA ESC CoCart coupon production
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/wordpress-cocart-coupon-qa.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-cocart-coupon-qa
+  cancel-in-progress: false
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read actual coupon and test isolated production cart
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          python3 - <<'PY'
+          import os, json, base64, urllib.request, urllib.parse, urllib.error
+          cfg={}
+          for line in os.environ['ENV_FILE'].splitlines():
+              k, sep, v=line.partition('=')
+              if sep: cfg[k.strip()]=v.strip().strip(chr(34)+chr(39))
+          origin=cfg.get('WC_URL','').rstrip('/')
+          assert origin=='https://admin.esc.vn', 'Unexpected WC_URL'
+          key=cfg.get('WOO_KEY','')
+          secret=cfg.get('WOO_SECRET','')
+          assert key and secret, 'Missing WooCommerce API credentials'
+          auth='Basic '+base64.b64encode((key+':'+secret).encode()).decode()
+          def request(path, params=None, body=None, admin=False, frontend=False):
+              base='https://esc.vn' if frontend else origin
+              url=base+path+('?' + urllib.parse.urlencode(params) if params else '')
+              headers={'Accept':'application/json','User-Agent':'ESC-Coupon-QA/1.0'}
+              if admin: headers['Authorization']=auth
+              if body is not None: headers['Content-Type']='application/json'
+              req=urllib.request.Request(url, headers=headers, data=json.dumps(body).encode() if body is not None else None)
+              try:
+                  with urllib.request.urlopen(req, timeout=25) as r:
+                      data=json.loads(r.read())
+                      return r.status,data
+              except urllib.error.HTTPError as e:
+                  try: data=json.loads(e.read())
+                  except Exception: data={}
+                  return e.code,data
+          code='bfv2026'
+          status,coupons=request('/wp-json/wc/v3/coupons',{'code':code},admin=True)
+          print('COUPON_LOOKUP_HTTP',status)
+          assert status==200 and isinstance(coupons,list) and len(coupons)==1, 'Coupon readback unavailable'
+          c=coupons[0]
+          auto=next((m['value'] for m in c.get('meta_data',[]) if m['key']=='_wc_auto_apply'),'not_exposed')
+          print('COUPON',json.dumps({k:c.get(k) for k in ['id','code','discount_type','amount','date_expires','product_ids','excluded_product_ids','product_categories','excluded_product_categories','exclude_sale_items','minimum_amount','maximum_amount','usage_limit','usage_count','individual_use']}), 'auto_apply='+str(auto))
+          status,products=request('/wp-json/wc/v3/products',{'search':'ECLOUD VPS 1','per_page':100},admin=True)
+          assert status==200 and isinstance(products,list), 'Product search failed'
+          matches=[p for p in products if p.get('name','').strip().lower()=='ecloud vps 1']
+          assert len(matches)==1,'Expected unique VPS 1'
+          p=matches[0]
+          print('PRODUCT',json.dumps({k:p.get(k) for k in ['id','name','type','price','on_sale','categories','purchasable']}))
+          product_id=p['id']
+          if p['type']=='variable':
+              status,vs=request('/wp-json/wc/v3/products/'+str(product_id)+'/variations',{'per_page':100},admin=True)
+              assert status==200 and isinstance(vs,list),'Variation lookup failed'
+              matches=[v for v in vs if v.get('purchasable') and str(v.get('price'))=='5820000']
+              if not matches: matches=[v for v in vs if v.get('purchasable') and v.get('price')]
+              assert matches,'No purchasable variation'
+              product_id=matches[0]['id']
+              print('VARIATION',product_id,'price',matches[0]['price'])
+          base='/wp-json/cocart/v2/cart'
+          cartkey=None
+          def summarize(label,status,d):
+              d=d.get('data',d) if isinstance(d,dict) else {}
+              print(label,json.dumps({'http':status,'error_code':d.get('code'),'coupons':[(x.get('coupon') or x.get('code')) if isinstance(x,dict) else x for x in (d.get('coupons') or [])],'totals':{k:v for k,v in (d.get('totals') or {}).items() if k in ['subtotal','discount_total','discount_tax','total','total_tax']}}))
+          try:
+              status,d=request(base+'/add-item',body={'id':str(product_id),'quantity':'1','item_data':{'_name':'ESC QA VPS 1'}})
+              cartkey=d.get('cart_key')
+              summarize('ADD',status,d)
+              assert status in (200,201) and cartkey,'Cart creation failed'
+              status,d=request(base+'/update',{'cart_key':cartkey},{'namespace':'sync-coupons-db','data':{'coupons':[]}})
+              summarize('AUTO_SYNC',status,d)
+              status,d=request('/api/cart',{'cart_key':cartkey},frontend=True)
+              summarize('ASTRO_SYNC',status,d)
+              status,d=request(base+'/update',{'cart_key':cartkey},{'namespace':'sync-coupons','data':{'coupons':[code]}})
+              summarize('MANUAL_SYNC',status,d)
+              status,d=request(base,{'cart_key':cartkey})
+              summarize('READBACK',status,d)
+          finally:
+              if cartkey:
+                  status,d=request(base+'/clear',{'cart_key':cartkey},{})
+                  print('CART_CLEANUP_HTTP',status)
+                  status,d=request(base,{'cart_key':cartkey})
+                  assert status==200 and not d.get('items'),'Temporary cart not empty'
+                  print('CART_CLEANUP_PASS')
+          PY

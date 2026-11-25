@@ -1,0 +1,71 @@
+name: ESC Astro DEV environment preflight (read-only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/esc-dev-environment-preflight.yml']
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check DEV configuration readiness without exposing credentials
+        env:
+          SOURCE_REPO_PAT: ${{ secrets.SOURCE_REPO_PAT }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          ENV_FILE_DEV: ${{ secrets.ENV_FILE_DEV }}
+          FTP_SERVER_DEV: ${{ secrets.FTP_SERVER_DEV }}
+          FTP_USERNAME_DEV: ${{ secrets.FTP_USERNAME_DEV }}
+          FTP_PASSWORD_DEV: ${{ secrets.FTP_PASSWORD_DEV }}
+          ESC_FTPS_CA_PEM_DEV: ${{ secrets.ESC_FTPS_CA_PEM_DEV }}
+        run: |
+          python3 -u - <<'PY'
+          import os, ssl, ftplib, urllib.request, urllib.parse
+          def settings(raw):
+              result={}
+              for line in raw.splitlines():
+                  k,sep,v=line.partition('=')
+                  if sep: result[k.strip()]=v.strip().strip(chr(34)+chr(39))
+              return result
+          def origin_ok(value, expected):
+              return value.rstrip('/')==expected
+          required=['SOURCE_REPO_PAT','ENV_FILE']
+          dev=['ENV_FILE_DEV','FTP_SERVER_DEV','FTP_USERNAME_DEV','FTP_PASSWORD_DEV']
+          for name in required+dev:
+              print('CONFIG',name,'PRESENT' if os.environ.get(name,'').strip() else 'MISSING')
+          current=settings(os.environ.get('ENV_FILE',''))
+          print('PROD_ENV_TARGET','PASS' if origin_ok(current.get('WC_URL_CLIENT',''),'https://esc.vn') else 'FAIL')
+          print('BUILD_TEST_CONFIG','PASS' if all(os.environ.get(k,'').strip() for k in required) else 'MISSING')
+          cfg=settings(os.environ.get('ENV_FILE_DEV',''))
+          env_ok=origin_ok(cfg.get('WC_URL_CLIENT',''),'https://esc-test.webnvn.com')
+          backend_ok=origin_ok(cfg.get('WC_URL',''),'https://admin.esc.vn')
+          print('DEV_FRONTEND_TARGET','PASS' if env_ok else 'NOT_CONFIGURED_OR_MISMATCH')
+          print('DEV_BACKEND_TARGET','PASS_SHARED_PRODUCTION_READS' if backend_ok else 'NOT_CONFIGURED_OR_DIFFERENT')
+          try:
+              with urllib.request.urlopen('https://esc-test.webnvn.com/',timeout=15) as r:
+                  final=urllib.parse.urlsplit(r.geturl()).hostname
+                  print('DEV_HTTP',r.status,'EXPECTED_ORIGIN' if final=='esc-test.webnvn.com' else 'REDIRECT_OTHER_ORIGIN')
+          except Exception as e: print('DEV_HTTP_UNVERIFIED',type(e).__name__)
+          if not all(os.environ.get(k,'').strip() for k in dev) or not env_ok:
+              print('DEV_FTPS','NOT_TESTED_MISSING_OR_MISMATCHED_CONFIG')
+              print('DEV_DEPLOY_READY','NO')
+          else:
+              try:
+                  ctx=ssl.create_default_context()
+                  ca=os.environ.get('ESC_FTPS_CA_PEM_DEV','')
+                  if ca: ctx.load_verify_locations(cadata=ca)
+                  ctx.minimum_version=ssl.TLSVersion.TLSv1_2
+                  with ftplib.FTP_TLS(context=ctx,timeout=20) as ftp:
+                      ftp.connect(os.environ['FTP_SERVER_DEV'].strip())
+                      ftp.login(os.environ['FTP_USERNAME_DEV'],os.environ['FTP_PASSWORD_DEV'])
+                      ftp.prot_p()
+                      ftp.cwd('/domains/esc-test.webnvn.com/public_html/')
+                      print('DEV_FTPS','READ_ONLY_TARGET_ACCESS_PASS')
+                  print('DEV_DEPLOY_READY','TARGET_ACCESS_ONLY')
+              except Exception as e:
+                  print('DEV_FTPS','FAIL',type(e).__name__)
+                  print('DEV_DEPLOY_READY','NO')
+          print('NO_SOURCE_OR_REMOTE_WRITES')
+          PY

@@ -1,0 +1,85 @@
+name: Apply approved ESC Vietnam domain tax status
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/wordpress-vn-domain-tax-apply.yml']
+permissions:
+  contents: read
+concurrency:
+  group: esc-vn-domain-tax-write
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify approved scope, update only parent tax status, read back every variation
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          python3 -u - <<'PY'
+          import os,json,base64,urllib.request,urllib.parse,concurrent.futures,time
+          manifest=json.loads(r'''[{"id":51235,"name":".vinhlong.vn","variations":[51246,51245,51244,51243,51242,51241,51240,51239,51238,51237]},{"id":51220,"name":".tuyenquang.vn","variations":[51232,51231,51230,51229,51228,51227,51226,51225,51224,51223]},{"id":51201,"name":".hue.vn","variations":[51219,51218,51217,51216,51215,51214,51213,51212,51211,51210]},{"id":51178,"name":".thanhphohochiminh.vn","variations":[51196,51195,51194,51193,51192,51191,51190,51189,51188,51187]},{"id":51162,"name":".thanhhoa.vn","variations":[51175,51174,51173,51172,51171,51170,51169,51168,51167,51166]},{"id":51149,"name":".thainguyen.vn","variations":[51159,51158,51157,51156,51155,51154,51153,51152,51151,51150]},{"id":51134,"name":".tayninh.vn","variations":[51147,51146,51145,51144,51143,51142,51141,51140,51139,51138]},{"id":51089,"name":".sonla.vn","variations":[51101,51100,51099,51098,51097,51096,51095,51094,51093,51092]},{"id":51061,"name":".quangtri.vn","variations":[51084,51083,51082,51081,51080,51079,51078,51077,51076,51075]},{"id":51047,"name":".quangninh.vn","variations":[51057,51056,51055,51054,51053,51052,51051,51050,51049,51048]},{"id":51030,"name":".quangngai.vn","variations":[51045,51044,51043,51042,51041,51040,51039,51038,51037,51036]},{"id":51016,"name":".phutho.vn","variations":[51027,51026,51025,51024,51023,51022,51021,51020,51019,51018]},{"id":50971,"name":".ninhbinh.vn","variations":[50991,50990,50989,50988,50987,50986,50985,50984,50983,50982]},{"id":50960,"name":".nghean.vn","variations":[50970,50969,50968,50967,50966,50965,50964,50963,50962,50961]},{"id":50948,"name":".laocai.vn","variations":[50959,50958,50957,50956,50955,50954,50953,50952,50951,50950]},{"id":50921,"name":".langson.vn","variations":[50936,50935,50934,50933,50932,50931,50930,50929,50928,50927]},{"id":50904,"name":".lamdong.vn","variations":[50917,50916,50915,50914,50913,50912,50911,50910,50909,50908]},{"id":50885,"name":".laichau.vn","variations":[50901,50900,50899,50898,50897,50896,50895,50894,50893,50892]},{"id":50872,"name":".khanhhoa.vn","variations":[50882,50881,50880,50879,50878,50877,50876,50875,50874,50873]},{"id":50777,"name":".hungyen.vn","variations":[50869,50868,50867,50866,50865,50864,50863,50862,50861,50860]},{"id":50764,"name":".hatinh.vn","variations":[50774,50773,50772,50771,50770,50769,50768,50767,50766,50765]},{"id":50751,"name":".haiphong.vn","variations":[50761,50760,50759,50758,50757,50756,50755,50754,50753,50752]},{"id":50738,"name":".gialai.vn","variations":[50748,50747,50746,50745,50744,50743,50742,50741,50740,50739]},{"id":50725,"name":".dongthap.vn","variations":[50735,50734,50733,50732,50731,50730,50729,50728,50727,50726]},{"id":50699,"name":".dongnai.vn","variations":[50709,50708,50707,50706,50705,50704,50703,50702,50701,50700]},{"id":50683,"name":".dienbien.vn","variations":[50694,50693,50692,50691,50690,50689,50688,50687,50686,50685]},{"id":50658,"name":".danang.vn","variations":[50678,50677,50676,50675,50674,50673,50672,50671,50670,50669]},{"id":50631,"name":".daklak.vn","variations":[50645,50644,50643,50642,50641,50640,50639,50638,50637,50636]},{"id":50616,"name":".caobang.vn","variations":[50628,50627,50626,50625,50624,50623,50622,50621,50620,50619]},{"id":50593,"name":".cantho.vn","variations":[50605,50604,50603,50602,50601,50600,50599,50598,50597,50596]},{"id":50579,"name":".camau.vn","variations":[50590,50589,50588,50587,50586,50585,50584,50583,50582,50581]},{"id":50536,"name":".bacninh.vn","variations":[50568,50567,50566,50565,50564,50563,50562,50561,50560,50559]},{"id":50501,"name":".angiang.vn","variations":[50528,50527,50526,50525,50524,50523,50522,50521,50520,50517]},{"id":50419,"name":".hanoi.vn","variations":[50430,50429,50428,50427,50426,50425,50424,50423,50422,50421]},{"id":1331,"name":"Tên miền .id.vn","variations":[46630,46629,46628,46627,46626,46625,46624,46623,46622,46621]},{"id":1328,"name":"Tên miền .name.vn","variations":[51802,51801,51800,51799,51798,51797,51796,51795,51794,51793]}]''')
+          cfg={}
+          for line in os.environ['ENV_FILE'].splitlines():
+              k,sep,v=line.partition('=')
+              if sep: cfg[k.strip()]=v.strip().strip(chr(34)+chr(39))
+          origin=cfg['WC_URL'].rstrip('/')
+          assert origin=='https://admin.esc.vn'
+          auth='Basic '+base64.b64encode((cfg['WOO_KEY']+':'+cfg['WOO_SECRET']).encode()).decode()
+          def req(path,params=None,body=None):
+              url=origin+'/wp-json/wc/v3/'+path+('?' + urllib.parse.urlencode(params) if params else '')
+              h={'Authorization':auth,'Accept':'application/json','User-Agent':'ESC-Tax-Apply/1.0'}
+              if body is not None: h['Content-Type']='application/json'
+              r=urllib.request.Request(url,headers=h,data=json.dumps(body).encode() if body is not None else None,method='PUT' if body is not None else 'GET')
+              with urllib.request.urlopen(r,timeout=45) as f: return json.loads(f.read())
+          fields='id,name,type,status,price,regular_price,sale_price,tax_status,tax_class,categories,variations'
+          vf='id,status,price,regular_price,sale_price,tax_status,tax_class,attributes'
+          def snapshot(m):
+              p=req('products/'+str(m['id']),{'_fields':fields})
+              v=req('products/'+str(m['id'])+'/variations',{'per_page':100,'_fields':vf})
+              assert p['id']==m['id'] and p['name']==m['name'] and p['type']=='variable' and p['status']=='publish', 'Parent identity changed'
+              assert 175 in [c['id'] for c in p['categories']], 'Category changed'
+              assert set(p['variations'])==set(m['variations'])=={i['id'] for i in v}, 'Variation scope changed'
+              assert p['tax_status'] in ('taxable','none') and p['tax_class']=='', 'Unexpected tax configuration'
+              assert all(i['tax_status']==p['tax_status'] and i['tax_class']=='' for i in v), 'Unexpected variation tax configuration'
+              return p,sorted(v,key=lambda i:i['id'])
+          def controls():
+              return [req('products/'+str(i),{'_fields':fields}) for i in (997,998,999,1000,867,868)]
+          def without_tax_status(obj):
+              return {k:v for k,v in obj.items() if k!='tax_status'}
+          assert len(manifest)==36 and sum(len(m['variations']) for m in manifest)==360
+          control_before=controls()
+          with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+              before=list(pool.map(snapshot,manifest))
+          print('PREFLIGHT_PASS parents=36 variations=360',flush=True)
+          changed=0
+          skipped=0
+          errors=[]
+          for m,(p,vs) in zip(manifest,before):
+              try:
+                  current=req('products/'+str(m['id']),{'_fields':fields})
+                  assert current==p, 'Concurrent change detected'
+                  if p['tax_status']=='taxable':
+                      result=req('products/'+str(m['id']),body={'tax_status':'none'})
+                      assert result['id']==m['id'] and result['tax_status']=='none'
+                      changed+=1
+                  else: skipped+=1
+                  new,nvs=snapshot(m)
+                  assert new['tax_status']=='none' and all(i['tax_status']=='none' for i in nvs)
+                  assert without_tax_status(new)==without_tax_status(p), 'Other parent fields changed'
+                  assert [without_tax_status(i) for i in nvs]==[without_tax_status(i) for i in vs], 'Other variation fields changed'
+                  print('VERIFIED',m['id'],m['name'],'variations=10','old='+p['tax_status'],flush=True)
+              except Exception as e:
+                  errors.append(m['id'])
+                  print('ERROR',m['id'],type(e).__name__,str(e)[:180],flush=True)
+                  break
+          print('WRITE_SUMMARY changed='+str(changed)+' skipped_unchanged='+str(skipped)+' errors='+str(len(errors))+' temporary_created=0 cleanup_remaining=0',flush=True)
+          assert not errors, 'Stopped after first write/readback error'
+          with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+              after=list(pool.map(snapshot,manifest))
+          assert all(p['tax_status']=='none' and all(v['tax_status']=='none' for v in vs) for p,vs in after)
+          assert controls()==control_before, 'Control products changed'
+          print('READBACK_PASS parents=36 variations=360 controls=6',flush=True)
+          PY

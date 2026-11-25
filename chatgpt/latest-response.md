@@ -1,51 +1,53 @@
 # ESC.VN — Phản hồi ChatGPT mới nhất
 
-- Ngày: 2026-11-25 (Asia/Ho_Chi_Minh)
-- Project: ESC.VN
-- Repository: ngocnhanvo/escvn-astro
-- Branch: github
-- Commit: 5468505fae449d49597db84adbe951253b43805e
-- Master: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676 — unchanged
-- Playwright status polling: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45567207447 — 10/10 PASS
-- Browser UI service: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45564294270 — 16/16 PASS
-- Member mixed service cart: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45563824167 — 27/27 PASS
+- Ngày (Asia/Ho_Chi_Minh): 2026-11-25
+- Astro repo: ngocnhanvo/escvn-astro
+- Nhánh: github
+- HEAD đã xác minh: 5468505fae449d49597db84adbe951253b43805e
+- master không thay đổi: 37ef3f189d1cb23ddc61a07f7d463eca8ce8a676
+- Công việc lần này: phân tích yêu cầu thay đổi vòng đời theo dõi đơn, chưa sửa source, chưa thực hiện hành động đơn/thanh toán.
+- Nguồn: tài liệu dự án HUONG_DAN_NOI_API_GIO_HANG_ESC_VN (3).md, client.ts, client.test.ts và MemberCartPanel.astro trên github.
+- Trạng thái: DONE cho phần review/phân tích, NOT IMPLEMENTED cho tính năng theo dõi đơn sau ordered.
 
-## Phản hồi cuối cùng
+## Nội dung phản hồi dự định gửi
 
-Đúng rồi ông, mình đang dùng trạng thái **PARTIAL** hơi rộng, dễ gây hiểu nhầm. Thực tế **phần tích hợp giỏ hàng Member trên Astro DEV đã hoàn thành và kiểm thử thành công**.
+**Có xung đột thật ông nhé, nhưng chỉ ở logic quản lý trạng thái giỏ hàng và đơn hàng.** Không xung đột với kiến trúc tích hợp Member API mà mình đang sử dụng.
 
-Những phần còn lại chủ yếu là kiểm thử nghiệp vụ đặt hàng và hoàn thiện dữ liệu sản phẩm.
+Mình đã đối chiếu yêu cầu mới của bên Member với tài liệu .md và source mới nhất trên escvn-astro@github (commit 5468505). **Bên Member phát hiện đúng một lỗi nghiệp vụ mà bộ test trước đây chưa bao phủ.**
 
-### 1. Những gì đã hoàn tất
+### 1. Những điểm đang xung đột
 
-- Kết nối Member TEST, CORS, CSP: PASS.
-- Kiểm tra tên miền, giá đăng ký: PASS.
-- Thêm/xóa tên miền và dịch vụ: PASS.
-- Hosting, Email, SSL, VPS, SaaS: PASS.
-- Giảm 30% Hosting/Email khi mua cùng tên miền: PASS.
-- Giỏ kết hợp và tổng tiền: PASS.
-- Hiển thị giá, số lượng, chuyển sang Member: PASS.
-- Polling status.php mỗi 60 giây: PASS.
-- Xử lý giỏ ordered: PASS mô phỏng.
+| Hạng mục | Code Astro hiện tại | Yêu cầu mới |
+|---|---|---|
+| Khi giỏ chuyển `ordered` | Xóa mã giỏ ngay | Lưu riêng mã theo dõi trước khi xóa |
+| Polling `status.php` | Dùng mã giỏ đang mua | Dùng mã theo dõi đơn độc lập |
+| Giỏ đã đặt | Badge về 0, polling dừng | Badge về 0, polling đơn tiếp tục |
+| Trạng thái thanh toán | Chưa hiển thị `order.state_text` | Hiển thị 5 trạng thái |
+| Tải lại trang | Mất khả năng theo dõi khi cart key bị xóa | Khôi phục mã theo dõi và tiếp tục polling |
+| Timer | Chưa có cơ chế chống khởi tạo trùng rõ ràng | Chỉ một timer cho mỗi luồng theo dõi |
 
-### 2. Những việc thực sự chưa hoàn tất
+Trong `src/lib/memberCart/client.ts`, `countMemberCart()` đang có `if (data.status !== "open") clearIfCurrent(c)`; `memberOrderStatus()` có `if (["ordered", "expired", "none"].includes(data.cart_status)) clearIfCurrent(c)`. Khi mã giỏ bị xóa, polling dừng vì chỉ đọc `getMemberCartKey()`. Bộ test 10/10 PASS trước đây mới xác nhận xóa mã giỏ khi `ordered`, chưa kiểm tra tiếp trạng thái đơn sau đó.
 
-- **Tạo đơn hàng TEST thật:** Chưa thử chuyển open → ordered bằng đơn thực.
-- **Thanh toán, trạng thái đơn:** Chưa xác minh paid, fulfilled, cancelled thực tế.
-- **Mã khuyến mãi hợp lệ:** Mới thử mã không hợp lệ.
-- **Mapping sản phẩm:** 28 sản phẩm thiếu member_product_id; một số mã khác bị Member từ chối.
-- **Chuyển lên production:** Chưa thực hiện, theo đúng yêu cầu chỉ làm DEV.
+### 2. Cách sửa phù hợp
 
-**Webhook không phải công việc còn thiếu**, vì hai bên đã chọn polling cho DEV. Chúng ta không cần triển khai webhook nữa ở giai đoạn này.
+Không cần thay API hay chuyển sang Astro backend/webhook. Giữ browser frontend fetch tới `https://id.esc.vn`.
 
-### Kết luận
+- Tách `esc_member_cart_test` cho giỏ mua mới khỏi `esc_member_order_tracking_test` cho mã 64-hex theo dõi của đơn đã đặt; copy mã theo dõi **trước mọi nhánh xóa giỏ** trong count.php/view.php/status.php, kể cả lúc quay lại hoặc tải lại. Không đặt mã theo dõi bằng order code.
+- Khi `cart_status: ordered`: badge giỏ về 0 và khách mua giỏ mới bình thường; mã tracking vẫn được giữ, polling tiếp tục qua `status.php?c=<mã_theo_dõi>` mỗi 60 giây khi trang hiển thị.
+- Lấy trạng thái thanh toán duy nhất từ `order.state_text`: `pending`, `unpaid`, `paid`, `fulfilled`, `cancelled`. `ordered` chỉ có nghĩa tạo đơn, không có nghĩa đã thanh toán. `paid` vẫn chưa phải `fulfilled`.
+- Dừng polling khi `fulfilled` hoặc `cancelled`; giữ trạng thái cuối để hiển thị sau reload. Lỗi mạng không xóa tracking. Bảo vệ chống timer/listener trùng, check lại tab focus, đồng bộ đa tab và tránh xóa nhầm giỏ mới do phản hồi chậm.
+- Nếu một khách có nhiều đơn chưa hoàn tất, nên thiết kế danh sách tracking theo từng mã giỏ, không ghi đè đơn cũ bằng đơn mới.
 
-- **Tích hợp kỹ thuật giỏ hàng Astro DEV:** DONE.
-- **Kiểm thử toàn bộ quy trình đặt đơn thực tế:** PARTIAL.
-- **Sẵn sàng production:** Chưa, vì cần hoàn thiện dữ liệu và kiểm thử đơn hàng.
+### 3. Đối chiếu đơn TEST D26112501
 
-Nếu xét đúng phạm vi là kết nối giỏ Member với Astro DEV và polling, thì **phần đó đã xong rồi**.
+Theo dữ liệu Member cung cấp, đơn D26112501 tổng 450.000đ có `cart_status: ordered` và `order.state_text: pending`. Kết quả đúng là badge 0, hiển thị "pending/chờ xử lý", tiếp tục polling sau khi tải lại; không hiển thị "đã thanh toán".
+
+`status.php?c=` nhận **mã giỏ 64 hex của đơn**, không phải mã đơn `D26112501`. Để truy vấn đúng đơn thật, frontend phải có mã theo dõi đã giữ trước khi chuyển trạng thái hoặc Member cung cấp cart key TEST hợp lệ theo kênh bảo mật; không thể tự suy cart key từ order code.
+
+Kiểm thử sau sửa: polling thật (read-only) khi order đang pending, kiểm thử mock cô lập cho `unpaid→paid→fulfilled` và `cancelled`, reload trang, tab ẩn/hiện, mạng lỗi, nhiều timer và giỏ mới song song. Không tạo tiền giả, chuyển tiền, trừ ví hay đăng ký tên miền thật.
+
+**Kết luận:** Đây là yêu cầu sửa **đúng và cần thiết**, tương thích tài liệu Member: tài liệu yêu cầu xóa mã giỏ cũ khi `ordered`, nhưng cũng hỗ trợ `status.php` để theo dõi trạng thái đơn. Giải pháp là **tách mã giỏ và mã theo dõi**, không bỏ việc xóa giỏ. Trong lượt này mình chỉ rà soát theo câu hỏi của ông, **chưa thay đổi mã nguồn hay chạy kiểm thử cho luồng mới**.
 
 Chế độ code: auto-build
 Cổng ghi source: bypass
-Trạng thái: DONE — tích hợp kỹ thuật Astro DEV; PARTIAL — nghiệp vụ đơn thật và production.
+Trạng thái: DONE — hoàn tất

@@ -51,7 +51,7 @@ function replaceCampaign({original,title,detailTitle,image,previousTitle}){
   if(norm(list.textContent).includes('bfh2026')&&norm(list.textContent).includes('bfv2026')
      &&norm(modal.textContent).includes('bfh2026')&&norm(modal.textContent).includes('bfv2026')
      &&!norm(list.textContent).includes('mã km: bf2026')&&!norm(modal.textContent).includes('mã km: bf2026')){
-    const rows=[...list.children].map(x=>norm(x.textContent));
+    const rows=[...list.children].map(x=>norm(x.textContent.replace(/^\s*✓\s*/,'')));
     if(rows[4].startsWith('email:')&&rows[5].startsWith('liên hệ: 1900 2069')&&!rows[5].includes(';')){
       return {changed:false,html:original};
     }

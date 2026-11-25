@@ -1,8 +1,8 @@
-name: QA ESC EDU20 promotion live
+name: QA ESC Black Friday promotion live
 on:
   push:
     branches: [main]
-    paths: ['requests/wordpress-edu20-live-qa.txt']
+    paths: ['requests/wordpress-blackfriday-live-qa.txt']
 permissions:
   contents: read
 concurrency:
@@ -20,15 +20,16 @@ jobs:
       - name: Install matching browser package
         run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
       - name: Inspect live promotion card DOM
-        run: node scripts/wordpress-edu20-inspect.mjs
-      - name: Check desktop mobile EDU20 modal banner and registration CTA
-        run: node scripts/wordpress-edu20-live-qa.mjs
+        run: node --check scripts/wordpress-blackfriday-live-qa.mjs
+      - name: Check desktop mobile Black Friday modal banner and registration CTA
+        run: node scripts/wordpress-blackfriday-live-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: edu20-visual-qa
+          name: bf2026-visual-qa
           path: |
-            edu20-layout-*.png
-            edu20-failure-*.png
+            bf2026-layout-*.png
+            bf2026-popup-*.png
+            bf2026-error-*.png
           if-no-files-found: ignore
           retention-days: 3

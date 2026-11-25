@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      EXPECTED_SHA: 4c44d75778dc6a4baefb6eae7be19884535d0d25
+      EXPECTED_SHA: 42d2080155491952f4fef42a4c5dbadcc9c29249
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:

@@ -1,0 +1,42 @@
+name: ESC Public Link Audit (Read-Only)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/esc-link-audit.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: esc-public-link-audit
+  cancel-in-progress: false
+
+jobs:
+  audit-links:
+    name: Crawl esc.vn and audit broken/legacy links
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install audit dependencies
+        run: |
+          python -m py_compile scripts/esc_link_audit.py
+          pip install --disable-pip-version-check --no-input requests==2.32.3 beautifulsoup4==4.13.3
+      - name: Read-only production audit
+        run: python scripts/esc_link_audit.py --page-limit 12000 --url-limit 30000 --workers 6 --out link-audit-report
+      - name: Upload CSV/JSON report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: esc-public-link-audit
+          path: link-audit-report/
+          retention-days: 14
+          if-no-files-found: warn

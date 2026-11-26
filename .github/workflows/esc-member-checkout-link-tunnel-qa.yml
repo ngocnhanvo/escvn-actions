@@ -107,6 +107,36 @@ jobs:
             assert('NEW_BUYING_CART_PRIORITY',active.href===member+'/cart.php?c='+keyBuying,{correct:active.href===member+'/cart.php?c='+keyBuying,label:active.label});
             assert('OLD_ORDER_REMAINS_PAYABLE_IN_LIST',active.perOrder.length===1&&active.perOrder[0].href===member+'/cart.php?c='+keyOld,{linkCount:active.perOrder.length,correct:active.perOrder[0]?.href===member+'/cart.php?c='+keyOld});
             await active.ctx.close();
+            // Verify service-only and mixed badge counts on the existing DEV site.
+            const badgeContext=await browser.newContext({locale:'vi-VN',viewport:{width:1280,height:900}});
+            try{
+              const badgePage=await badgeContext.newPage();
+              const badgeKey=newKey();
+              let items=[],addons=[];
+              await badgePage.addInitScript(key=>localStorage.setItem('esc_member_cart_test',key),badgeKey);
+              await badgePage.route(/^https:\/\/id\.esc\.vn\/api\/cart\//,async route=>{
+                const endpoint=new URL(route.request().url()).pathname.split('/').at(-1);
+                const body=endpoint==='view.php'?{ok:true,status:'open',count:items.length,items,addons,total:0}:endpoint==='count.php'?{ok:true,status:'open',count:items.length}:{ok:true,cart_status:'open',order:null};
+                await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':site},body:JSON.stringify(body)});
+              });
+              const nav=await badgePage.goto(site+'/san-pham/ecloud-vps-1',{waitUntil:'domcontentloaded',timeout:30000});
+              assert('BADGE_PRODUCT_PAGE_OK',nav?.status()===200);
+              const badge=badgePage.locator('.js-cart-navigation .js-cart-badge').first();
+              const scenarios=[
+                {name:'SERVICE_ONLY',items:[],addons:[{type:'server',product_id:112450}],count:1},
+                {name:'MIXED',items:[{domain:'example.com',years:1,total:0}],addons:[{type:'server',product_id:112450},{type:'hosting',product_id:113400}],count:3},
+                {name:'EMPTY',items:[],addons:[],count:0}
+              ];
+              for(const s of scenarios){
+                items=s.items;addons=s.addons;
+                await badgePage.evaluate(()=>window.dispatchEvent(new CustomEvent('member-cart:updated')));
+                const pass=await badgePage.waitForFunction(expected=>{
+                  const b=document.querySelector('.js-cart-navigation .js-cart-badge');
+                  return b?.textContent?.trim()===String(expected)&&b.classList.contains('hidden')===(expected===0);
+                },s.count,{timeout:15000}).then(()=>true).catch(()=>false);
+                assert('BADGE_'+s.name,pass,{expected:s.count,actual:await badge.textContent().catch(()=>null)});
+              }
+            }finally{await badgeContext.close();}
             const empty=await makeContext({scenario:'EMPTY'});
             assert('EMPTY_CART_NO_ORDERS_DOMAIN_FINDER',empty.href===member+'/domain/checkdomain_smart.php',{correct:empty.href===member+'/domain/checkdomain_smart.php',label:empty.label});
             await empty.ctx.close();

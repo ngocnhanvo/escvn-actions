@@ -84,3 +84,67 @@ fs.writeFileSync(path.join(OUTPUT, 'catalog-snapshot.json'), JSON.stringify(prod
 const counts = Object.fromEntries(['EXACT_KEY','AMBIGUOUS','UNMATCHED'].map(k => [k,audit.filter(x=>x.status===k).length]));
 console.log(JSON.stringify({total_member:csv.length,total_wp:products.length,with_tld:products.filter(p=>normal(p.acf?.tld)).length,...counts,examples:audit.filter(x=>x.status==='EXACT_KEY').slice(0,12).map(x=>({name:x.name,member_id:x.member_id,wp_ids:x.wp_ids}))},null,2));
 console.log('READ ONLY: WordPress was not modified.');
+
+
+// Member Product ID presence audit (read only; ACF field, not WooCommerce ID).
+// Public links follow the Astro product route: /san-pham/<slug> for vi.
+const memberNameIndex = new Map();
+for (const item of csv) {
+  const key = normal(item.name);
+  if (!memberNameIndex.has(key)) memberNameIndex.set(key, []);
+  memberNameIndex.get(key).push(item.member_id);
+}
+const memberIdRows = products.map(p => {
+  const current = String(p.acf?.member_product_id ?? '').trim();
+  const field_status = !current ? 'MISSING' : (/^[1-9]\d*$/.test(current) ? 'SET' : 'INVALID');
+  const language = String(p.acf?.product_lang?.value || 'vi').trim().toLowerCase();
+  const originalSlug = String(p.slug ?? '').trim();
+  const suffix = '-' + language;
+  const slug = originalSlug.endsWith(suffix) ? originalSlug.slice(0, -suffix.length) : originalSlug;
+  const prefix = language === 'en' ? 'products' : 'san-pham';
+  const url = slug ? 'https://esc.vn/' + prefix + '/' + encodeURIComponent(slug) : '';
+  const tld = String(p.acf?.tld ?? '').trim();
+  const catalog = tld ? (memberNameIndex.get(normal(tld)) || []) : [];
+  return {
+    wp_id: p.id,
+    origin_id: String(p.acf?.origin_product_id || p.id),
+    language,
+    service: html(p.title?.rendered),
+    url,
+    member_product_id: current,
+    field_status,
+    member_tld: tld,
+    expected_member_id: catalog.length === 1 ? catalog[0] : '',
+    match_status: catalog.length === 1 ? 'EXACT_TLD' : catalog.length > 1 ? 'AMBIGUOUS_TLD' : 'NO_EXACT_TLD'
+  };
+});
+const fieldNotSet = memberIdRows.filter(r => r.field_status !== 'SET');
+const fieldMissing = fieldNotSet.filter(r => r.field_status === 'MISSING');
+const memberMappedMissing = fieldNotSet.filter(r => r.match_status === 'EXACT_TLD');
+const fieldsMissing = ['wp_id','origin_id','language','service','url','member_product_id','field_status','member_tld','expected_member_id','match_status'];
+const asCsv = rows => [fieldsMissing.map(esc).join(','), ...rows.map(row => fieldsMissing.map(k => esc(row[k])).join(','))].join('\n') + '\n';
+fs.writeFileSync(path.join(OUTPUT, 'products-missing-member-product-id.csv'), asCsv(fieldNotSet));
+fs.writeFileSync(path.join(OUTPUT, 'member-matched-products-missing-id.csv'), asCsv(memberMappedMissing));
+fs.writeFileSync(path.join(OUTPUT, 'member-product-id-coverage.json'), JSON.stringify({
+  generated_at: new Date().toISOString(),
+  wp_host: BASE,
+  total_published_wp_records: memberIdRows.length,
+  set_member_id: memberIdRows.length - fieldNotSet.length,
+  missing_member_id: fieldMissing.length,
+  invalid_member_id: fieldNotSet.length - fieldMissing.length,
+  missing_with_unique_member_reference: memberMappedMissing.length,
+  missing_without_unique_member_reference: fieldNotSet.length - memberMappedMissing.length,
+  unique_missing_origins: new Set(fieldNotSet.map(r => r.origin_id)).size,
+  records: fieldNotSet
+}, null, 2) + '\n');
+console.log('MEMBER_ID_COVERAGE ' + JSON.stringify({
+  total_wp: memberIdRows.length,
+  set: memberIdRows.length - fieldNotSet.length,
+  missing: fieldMissing.length,
+  invalid: fieldNotSet.length - fieldMissing.length,
+  missing_with_exact_tld_member_match: memberMappedMissing.length,
+  missing_without_exact_match: fieldNotSet.length - memberMappedMissing.length,
+  distinct_missing_product_origins: new Set(fieldNotSet.map(r => r.origin_id)).size
+}));
+for (const row of fieldNotSet) console.log('MEMBER_ID_MISSING_RECORD ' + JSON.stringify(row));
+console.log('MEMBER_ID_AUDIT_READ_ONLY: no WordPress products were modified.');

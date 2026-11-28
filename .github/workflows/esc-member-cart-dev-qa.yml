@@ -20,7 +20,7 @@ jobs:
       options: --ipc=host
     timeout-minutes: 30
     env:
-      EXPECTED_SHA: d31d79e4c533462a85e5398cb8bcbc8abbe1d1e7
+      EXPECTED_SHA: d1aa1e0e239f1edcd5c1487e72ec5eab07efcb55
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:
@@ -110,22 +110,28 @@ jobs:
             const target=page.locator('a[data-esc-buy-now][data-esc-member-type]:not([data-esc-member-id=""])').first();
             record('MAPPED_PRODUCT_AVAILABLE',(await target.count())>0);
             const id=await target.getAttribute('data-esc-member-id'),type=await target.getAttribute('data-esc-member-type');
-            const go=page.waitForURL(url=>url.pathname==='/gio-hang'||url.pathname==='/gio-hang/',{timeout:30000});
+            const initialPage=page.url();
             await target.click();
-            try { await go; } catch (error) {
-              console.log('CTA_CLICK_DIAGNOSTICS', JSON.stringify({
-                url:page.url(), memberId:id, memberType:type, cards,
-                cartPath:await page.locator('body').getAttribute('data-member-cart-path').catch(()=>null),
-                preview:await page.locator('body').getAttribute('data-esc-builder-preview').catch(()=>null),
-                errors:await page.locator('[data-esc-buy-error]').allTextContents().catch(()=>[]),
-                memberWrites:writes.length,
-              }));
-              throw error;
-            }
-            record('NAVIGATED_DIRECTLY_TO_CART',page.url().includes('/gio-hang'));
+            await page.locator('[data-esc-buy-status]').first().waitFor({state:'visible',timeout:12000});
+            record('STAYS_ON_PRICING_PAGE',page.url()===initialPage);
+            record('SHOWS_ADDED_TO_CART',/Đã thêm vào giỏ/.test(await page.locator('[data-esc-buy-status]').first().textContent()||''));
             record('MEMBER_POST_ONCE',writes.length===1);
             record('MEMBER_PRODUCT_ID_CORRECT',writes[0]?.product_id===id&&writes[0]?.type===type);
             record('NO_ORDER_CREATED',writes.every(x=>!('price' in x)&&!('checkout' in x)));
+            const headerCart=page.locator('.js-cart-navigation').first();
+            const expectedCart='https://id.esc.vn/cart.php?c='+key;
+            await page.waitForFunction(url=>document.querySelector('.js-cart-navigation')?.getAttribute('href')===url,expectedCart,{timeout:10000});
+            record('HEADER_CART_LINKS_MEMBER_CHECKOUT',(await headerCart.getAttribute('href'))===expectedCart);
+            await page.waitForFunction(()=>document.querySelector('.js-cart-navigation .js-cart-badge')?.textContent?.trim()==='1',{timeout:10000});
+            record('HEADER_BADGE_ONE', (await page.locator('.js-cart-navigation .js-cart-badge').first().textContent())?.trim()==='1');
+            await page.route(/^https:\/\/id\.esc\.vn\/cart\.php\?c=/,route=>route.fulfill({
+              status:200,contentType:'text/html',body:'<!doctype html><title>Member checkout intercepted (QA)</title>'
+            }));
+            await Promise.all([
+              page.waitForURL(url=>url.origin==='https://id.esc.vn'&&url.pathname==='/cart.php'&&url.searchParams.get('c')===key,{timeout:15000}),
+              headerCart.click(),
+            ]);
+            record('CART_ICON_OPENS_MEMBER_CHECKOUT',page.url()===expectedCart);
 
             // Missing ACF mapping must not navigate or create a Member cart entry.
             await page.goto(base+'/google-workspace',{waitUntil:'domcontentloaded'});

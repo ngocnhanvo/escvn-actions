@@ -28,6 +28,8 @@ jobs:
       ESC_FTPS_CA_PEM: ${{ secrets.ESC_FTPS_CA_PEM }}
       ASTRO_FTP_TARGET: /domains/esc.vn/public_html/
       ZIP_PATH: source/upload/escvn.zip
+      PUBLIC_MEMBER_CART_ENABLED: 'true'
+      PUBLIC_MEMBER_CART_BASE: https://member.esc.vn
 
     steps:
       - name: Checkout ESC production deployment scripts
@@ -111,6 +113,14 @@ jobs:
           set -euo pipefail
           umask 077
           printf '%s\n' "$ENV_FILE" > .env
+          python3 - <<'PY'
+          import os,re
+          from pathlib import Path
+          p=Path('.env')
+          raw=p.read_text()
+          raw=re.sub(r'(?m)^\s*(?:export\s+)?PUBLIC_MEMBER_CART_(?:ENABLED|BASE)\s*=.*(?:\n|$)', '', raw)
+          p.write_text(raw.rstrip()+'\nPUBLIC_MEMBER_CART_ENABLED=true\nPUBLIC_MEMBER_CART_BASE=https://member.esc.vn\n')
+          PY
 
       - name: Restore and update Astro cache
         uses: actions/cache@v4
@@ -247,6 +257,19 @@ jobs:
             throw new Error('New Astro homepage HTML is missing WebNext spotlight or CTA.');
           }
           console.log('WebNext homepage build contract passed.');
+          NODE
+
+      - name: Verify production Member cart endpoint in compiled output
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html=fs.readFileSync('dist/client/ecloud-hosting/index.html','utf8');
+          if (!html.includes('https://member.esc.vn/member/baogia.php')) throw Error('Member production history link missing');
+          if (html.includes('https://id.esc.vn/member/baogia.php')) throw Error('TEST Member history link found in production');
+          console.log('Member production history endpoint verified');
           NODE
 
       - name: Validate compiled SSR before packaging

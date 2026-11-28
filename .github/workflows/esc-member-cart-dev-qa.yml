@@ -20,7 +20,7 @@ jobs:
       options: --ipc=host
     timeout-minutes: 30
     env:
-      EXPECTED_SHA: e3d53342321ac6361d4a9c7965da827dfa99a1cd
+      EXPECTED_SHA: b61461a441d8bfed8162856d8b7d51b69586d9b4
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:
@@ -126,6 +126,25 @@ jobs:
             record('MEMBER_POST_ONCE',writes.length===1);
             record('MEMBER_PRODUCT_ID_CORRECT',writes[0]?.product_id===id&&writes[0]?.type===type);
             record('NO_ORDER_CREATED',writes.every(x=>!('price' in x)&&!('checkout' in x)));
+
+            // Missing ACF mapping must not navigate or create a Member cart entry.
+            await page.goto(base+'/google-workspace',{waitUntil:'domcontentloaded'});
+            const missing=page.locator('a[data-esc-buy-now]').first();
+            await missing.evaluate(el=>el.setAttribute('data-esc-member-id',''));
+            const writeBaseline=writes.length;
+            await missing.click();
+            await page.locator('[data-esc-buy-error]').first().waitFor({state:'visible',timeout:10000});
+            record('MISSING_ID_BLOCKS_WRITE',writes.length===writeBaseline&&page.url().includes('/google-workspace'));
+            // The Member service add API has no term parameter; don't silently sell 24-month UI as 12.
+            await missing.evaluate(el=>{
+              el.setAttribute('data-esc-member-id','131600');
+              const b=document.createElement('button');b.dataset.cycleBtn='24';b.className='active';
+              el.closest('section')?.prepend(b);
+            });
+            await missing.click();
+            const termError=await page.locator('[data-esc-buy-error]').first().textContent();
+            record('UNSUPPORTED_TERM_BLOCKS_WRITE',writes.length===writeBaseline&&/24 tháng/.test(termError||''));
+
           }finally{await browser.close()}
           console.log('CTA_BROWSER_QA',JSON.stringify({results,mockMemberWrites:writes.length,realMemberWrites:0,ordersCreated:0}));
           JS

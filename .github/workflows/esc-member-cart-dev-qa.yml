@@ -112,7 +112,16 @@ jobs:
             const id=await target.getAttribute('data-esc-member-id'),type=await target.getAttribute('data-esc-member-type');
             const go=page.waitForURL(url=>url.pathname==='/gio-hang'||url.pathname==='/gio-hang/',{timeout:30000});
             await target.click();
-            await go;
+            try { await go; } catch (error) {
+              console.log('CTA_CLICK_DIAGNOSTICS', JSON.stringify({
+                url:page.url(), memberId:id, memberType:type, cards,
+                cartPath:await page.locator('body').getAttribute('data-member-cart-path').catch(()=>null),
+                preview:await page.locator('body').getAttribute('data-esc-builder-preview').catch(()=>null),
+                errors:await page.locator('[data-esc-buy-error]').allTextContents().catch(()=>[]),
+                memberWrites:writes.length,
+              }));
+              throw error;
+            }
             record('NAVIGATED_DIRECTLY_TO_CART',page.url().includes('/gio-hang'));
             record('MEMBER_POST_ONCE',writes.length===1);
             record('MEMBER_PRODUCT_ID_CORRECT',writes[0]?.product_id===id&&writes[0]?.type===type);

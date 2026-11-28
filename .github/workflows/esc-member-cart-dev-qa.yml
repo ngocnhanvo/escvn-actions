@@ -20,7 +20,7 @@ jobs:
       options: --ipc=host
     timeout-minutes: 30
     env:
-      EXPECTED_SHA: 43d3fd352318af14ae651a1a4b0c055321d2ef22
+      EXPECTED_SHA: 3ee22ce6d5ac4679b31d115a85d0ab7239487976
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:

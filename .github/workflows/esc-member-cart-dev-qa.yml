@@ -20,7 +20,7 @@ jobs:
       options: --ipc=host
     timeout-minutes: 30
     env:
-      EXPECTED_SHA: 3ee22ce6d5ac4679b31d115a85d0ab7239487976
+      EXPECTED_SHA: ada260fc17180d08e6cb443851205c1292a03b91
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:
@@ -150,6 +150,18 @@ jobs:
             await missing.click();
             const termError=await page.locator('[data-esc-buy-error]').first().textContent();
             record('UNSUPPORTED_TERM_BLOCKS_WRITE',writes.length===writeBaseline&&/24 tháng/.test(termError||''));
+
+            const memberAccount='https://id.esc.vn/member/myaccount.php';
+            await page.route(memberAccount,route=>route.fulfill({
+              status:200,contentType:'text/html',body:'<!doctype html><title>Member account intercepted (QA)</title>'
+            }));
+            const history=page.getByRole('link',{name:'Lịch sử đơn hàng',exact:true});
+            record('HEADER_ORDER_STATUS_REMOVED',await page.locator('.js-member-order-status').count()===0);
+            record('DESKTOP_MEMBER_HISTORY_VISIBLE',await history.isVisible()&&await history.innerText()==='Lịch sử đơn hàng');
+            await page.setViewportSize({width:390,height:844});
+            record('MOBILE_MEMBER_HISTORY_VISIBLE',await history.isVisible());
+            record('MEMBER_HISTORY_LINK',await history.getAttribute('href')===memberAccount);
+            await Promise.all([page.waitForURL(memberAccount),history.click()]);
 
           }finally{await browser.close()}
           console.log('CTA_BROWSER_QA',JSON.stringify({results,mockMemberWrites:writes.length,realMemberWrites:0,ordersCreated:0}));

@@ -12,9 +12,12 @@ concurrency:
 jobs:
   qa:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --ipc=host
+    timeout-minutes: 30
     env:
-      EXPECTED_SHA: e8faf3deba71673f62d255cc9bbd2b50140463ac
+      EXPECTED_SHA: e3d53342321ac6361d4a9c7965da827dfa99a1cd
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:
@@ -54,10 +57,67 @@ jobs:
           echo 'PUBLIC_MEMBER_CART_BASE=https://id.esc.vn' >> .env
       - name: Test Member cart API contract with mocked browser fetch
         working-directory: source
-        run: pnpm exec vitest run src/lib/memberCart/client.test.ts scripts/inject-handler.member-cart-csp.test.ts
+        run: pnpm exec vitest run src/lib/memberCart/client.test.ts src/lib/memberCart/registerNow.test.ts scripts/inject-handler.member-cart-csp.test.ts
       - name: Build Astro DEV with Member TEST mode enabled
         working-directory: source
         run: pnpm run build-git
+      - name: Browser QA - add a mapped pricing CTA to a mocked Member cart (no real writes)
+        working-directory: source
+        env:
+          NODE_ENV: production
+          HOST: 127.0.0.1
+          PORT: '4321'
+        run: |
+          set -euo pipefail
+          npm install --prefix /tmp/esc-playwright --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.64.0
+          node dist/server/entry.mjs >/tmp/esc-dev-server.log 2>&1 &
+          srv=$!
+          trap 'kill "$srv" 2>/dev/null || true' EXIT
+          for n in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:4321/google-workspace >/dev/null; then break; fi
+            if ! kill -0 "$srv" 2>/dev/null; then cat /tmp/esc-dev-server.log; exit 1; fi
+            sleep 2
+          done
+          cat >/tmp/esc-dev-cta-qa.mjs <<'JS'
+          import {chromium} from '/tmp/esc-playwright/node_modules/playwright/index.mjs';
+          const base='http://127.0.0.1:4321',key='a'.repeat(64);
+          const browser=await chromium.launch({headless:true});
+          const results=[],writes=[];
+          const record=(name,ok,extra={})=>{results.push({name,pass:!!ok,...extra});if(!ok)throw Error(name)};
+          try{
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            await page.route(/^https:\/\/id\.esc\.vn\/api\/cart\//,async route=>{
+              const url=route.request().url(),pathname=new URL(url).pathname;
+              let body={ok:true};
+              if(pathname.endsWith('/add.php')){
+                const params=new URLSearchParams(route.request().postData()||'');
+                writes.push(Object.fromEntries(params));
+                body={ok:true,cart:key,count:0,cart_url:'https://id.esc.vn/cart.php?c='+key};
+              }else if(pathname.endsWith('/view.php')){
+                body={ok:true,status:'open',count:0,items:[],addons:writes.map(w=>({type:w.type,product_id:Number(w.product_id),name:'QA service',total:10000})),total:10000};
+              }else if(pathname.endsWith('/count.php'))body={ok:true,status:'open',count:0};
+              else if(pathname.endsWith('/status.php'))body={ok:true,cart_status:'open',order:null};
+              else body={ok:false,error:'NO_REAL_WRITES'};
+              await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':base},body:JSON.stringify(body)});
+            });
+            const response=await page.goto(base+'/google-workspace',{waitUntil:'domcontentloaded',timeout:30000});
+            record('GOOGLE_PAGE',response?.status()===200);
+            const cards=await page.locator('[data-esc-buy-now]').evaluateAll(els=>els.map(x=>({memberId:x.getAttribute('data-esc-member-id'),type:x.getAttribute('data-esc-member-type')})));
+            record('GOOGLE_CTA_PRESENT',cards.length>=3,{count:cards.length});
+            const target=page.locator('a[data-esc-buy-now][data-esc-member-type]:not([data-esc-member-id=""])').first();
+            record('MAPPED_PRODUCT_AVAILABLE',(await target.count())>0);
+            const id=await target.getAttribute('data-esc-member-id'),type=await target.getAttribute('data-esc-member-type');
+            const go=page.waitForURL(url=>url.pathname==='/gio-hang'||url.pathname==='/gio-hang/',{timeout:30000});
+            await target.click();
+            await go;
+            record('NAVIGATED_DIRECTLY_TO_CART',page.url().includes('/gio-hang'));
+            record('MEMBER_POST_ONCE',writes.length===1);
+            record('MEMBER_PRODUCT_ID_CORRECT',writes[0]?.product_id===id&&writes[0]?.type===type);
+            record('NO_ORDER_CREATED',writes.every(x=>!('price' in x)&&!('checkout' in x)));
+          }finally{await browser.close()}
+          console.log('CTA_BROWSER_QA',JSON.stringify({results,mockMemberWrites:writes.length,realMemberWrites:0,ordersCreated:0}));
+          JS
+          node /tmp/esc-dev-cta-qa.mjs
       - name: Check built feature references and source boundary
         working-directory: source
         shell: bash

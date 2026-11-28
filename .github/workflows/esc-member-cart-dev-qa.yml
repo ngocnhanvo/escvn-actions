@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git -C source rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "$(git -C source symbolic-ref --short HEAD)" = github
+          # actions/checkout can check out an exact ref in detached HEAD mode; SHA above is authoritative.
           echo "SOURCE_SHA=$EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "ENV=Member TEST; no FTP, no production deploy" >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4

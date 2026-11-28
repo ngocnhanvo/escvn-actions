@@ -333,7 +333,7 @@ jobs:
         run: |
           set -euo pipefail
           start=$SECONDS
-          python3 actions-hub/scripts/esc-runtime-env-ftps.py
+          ENV_FILE="$(cat source/.env)" python3 actions-hub/scripts/esc-runtime-env-ftps.py
           echo "- Verified protected runtime env: $((SECONDS - start))s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload ZIP via Python FTPS with authenticated TLS

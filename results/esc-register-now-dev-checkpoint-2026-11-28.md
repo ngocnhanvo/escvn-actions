@@ -10,3 +10,12 @@
 - DEV deployment BLOCKED pending verified DEV-only credentials/config. Latest examined preflight run: https://github.com/ngocnhanvo/escvn-actions/actions/runs/45550862407 — `ENV_FILE_DEV`, `FTP_SERVER_DEV`, `FTP_USERNAME_DEV`, `FTP_PASSWORD_DEV` missing, `DEV_DEPLOY_READY=NO`.
 - Next: re-run DEV preflight after DEV credentials are configured, use an existing approved DEV-only deployment path (not production deploy.yml), verify deployed SHA, then Playwright click on live DEV for all eligible CTA categories with safe Member test mocks. Also validate live Member product-code acceptance without creating real orders.
 - State: CODE_READY, LOCAL_BUILD_PASS, LOCAL_BROWSER_QA_PASS, DEV_DEPLOY_NOT_DONE, LIVE_DEV_QA_NOT_DONE, PRODUCTION_UNCHANGED.
+
+## Checkout-flow correction — 28/11/2026
+- User clarified the acceptance contract: click pricing `Đăng ký ngay` = add Member cart in place, no navigation; click header cart icon = direct Member checkout `https://id.esc.vn/cart.php?c=...`.
+- DEV source HEAD `43d3fd352318af14ae651a1a4b0c055321d2ef22` (branch `github`), no Astro production source change.
+- Changes: `registerNow.ts` now stays on current page and renders success/error, no `/gio-hang` redirect; `Layout.astro` removes obsolete cart-route prop; regression unit tests updated.
+- Member header already uses `memberCartUrl` (current 64-hex cart key) and counts cart add-ons after `MEMBER_CART_EVENT`; this behavior is exercised in browser QA.
+- Actions run https://github.com/ngocnhanvo/escvn-actions/actions/runs/46096598757: SUCCESS. 30/30 Vitest PASS, Astro build PASS, Playwright 13/13 PASS incl stays-on-page, success label, Member add request, header badge=1, header icon enters Member checkout URL; no real Member writes or order created.
+- Reminder: Live Member TEST previously rejected Google Workspace ID `131600` (HTTP 422); that product mapping/eligibility issue is separate and remains uncorrected, so real add can still show refusal. No DEV remote upload was performed.
+- Current: SOURCE_READY + MOCKED_BROWSER_QA_PASS; LIVE_DEV_API_ACCEPTANCE_UNVERIFIED; PRODUCTION_UNCHANGED.

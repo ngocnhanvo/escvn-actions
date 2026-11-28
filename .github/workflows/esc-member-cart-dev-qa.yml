@@ -20,7 +20,7 @@ jobs:
       options: --ipc=host
     timeout-minutes: 30
     env:
-      EXPECTED_SHA: ada260fc17180d08e6cb443851205c1292a03b91
+      EXPECTED_SHA: 14823ec5eb1eba0ae1bede9332696a28fe32be5d
       PUBLIC_MEMBER_CART_ENABLED: 'true'
       PUBLIC_MEMBER_CART_BASE: https://id.esc.vn
     steps:
@@ -151,7 +151,7 @@ jobs:
             const termError=await page.locator('[data-esc-buy-error]').first().textContent();
             record('UNSUPPORTED_TERM_BLOCKS_WRITE',writes.length===writeBaseline&&/24 tháng/.test(termError||''));
 
-            const memberAccount='https://id.esc.vn/member/myaccount.php';
+            const memberAccount='https://id.esc.vn/member/baogia.php';
             await page.route(memberAccount,route=>route.fulfill({
               status:200,contentType:'text/html',body:'<!doctype html><title>Member account intercepted (QA)</title>'
             }));
